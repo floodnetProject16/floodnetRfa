@@ -1,0 +1,155 @@
+---
+title: "Creation of super regions"
+author: "Martin Durocher"
+date: "17/09/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = FALSE}
+## Set colors for displaying the clusters
+mycol12 <- c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c',
+						 '#fdbf6f','#ff7f00','#cab2d6','#6a3d9a','#ffff99','#b15928')
+
+col2pch <- function(z) z %/%12 + 16 
+palette(mycol12)
+```
+
+## Introduction
+
+When the record length of a site of interest is short, the uncertainty of estimated flood quantiles can be large.
+In these situation, pooled frequency analysis may be used to reduce the uncertainty by transfering information from nearby sites to the target site.
+Such pooling groups are formed according to a notion of distance, for floodNet recommend to use a measure of similarity based on to the seasonality of annual maximum discharges.
+Canada has a vast diversity of flood regime and pool frequency analysis are commonly performed inside specific administrative regions. 
+The idea of super regions was introduced to further enforce similarities that are not accounted for by the selected distance.
+Indeed, limiting the pooling frequency analysis to specific administrative regions, such as provinces, can be seen as a form geographical super regions where sites considered in the analysis are geographically restricted.
+The disavantage of such approach is that the administrative boundary are not generally obtained according to relevant hydrological properties.
+
+The package `floodnetProject16` comes with a set of already selected gauged stations `gaugedSites` for which super regions based on are suggested. This document explained how they were obtained.
+
+## Descriptors
+
+We consider two spaces where the similarity between sites can be represented.
+They is the geographical and the descriptor space.
+The descriptor space has for coordinates the drainage area (AREA) and mean annual precipitation (MAP).
+In Canada, AREA and MAP can be used as surrogate for climate and scale.
+See Mostofi Zadeh and Burn (2019) for more details.
+The graphic below shows the 1114 gauged stations of interest inside these two spaces.
+
+```{r, fig.height=5, fig.width=10}
+
+library(floodnetProject16)
+library(CSHShydRology)
+
+desc <- log(gaugedSites[,c('area','map')])
+coord <- gaugedSites[,c('lon','lat')]
+
+## Generic function to plot the geographical and physical spaces.
+myfig <- function(col = 'black', pch = 16, legend.plot = TRUE){
+  
+  layout(matrix(c(1,2), 1,2))
+  
+  ucol <- sort(unique(col))
+  
+  plot(coord, pch = pch, col = col, ylim = c(42, 73),
+       main = 'Geographical space', xlab = 'LON', ylab = 'LAT')
+  
+  if(legend.plot)
+    legend('top', horiz = TRUE,legend = seq_along(ucol), col = ucol, pch = pch, cex = .8)
+  
+  plot(desc, pch = pch, col = col, 
+  		 xlab = 'AREA (log)',
+  		 ylab = 'MAP (log)',
+  		 main = 'Descriptor space')
+  
+}
+
+myfig(legend.plot = FALSE)
+```
+
+To create super regions, we consider the similarity based on the four descriptors: 
+drainage area (AREA), mean annual precipitation (MAP), longitude (LON) and latitude (LAT).
+We use log transformation on the AREA and MAP to obtain descriptors that are more concentrated around its central values.
+We also use multidimensional scaling to project the geographical coordinates in a 2D space that will better preserve the great-circle when treated as Cartesian coordinates.
+
+```{r}
+## Project the coordinate using Multidimensional scaling
+ecoord <- -cmdscale(GeoDist(coord),2)
+colnames(ecoord) <- c('lon','lat')
+
+xd <- cbind(scale(ecoord), scale(desc))
+```
+
+## Results
+
+Hierarchical clustering techniques have often been used to delineate hydrologically homogenous regions.
+Using more specifically the Ward's method, all sites are initially considered as their own cluster and are gradually paired up according to the similarity between clusters.
+This creates a tree structure that is used to form meaningful groups of sites. 
+
+The graphic below illustrates super regions defined by 6 and 12 clusters.
+We see that the super regions are relatively compact in both the geographical space 
+and the physical space.
+
+```{r, fig.height=6, fig.width=12}
+## Perform the classification
+
+hc <- hclust(dist(xd), method = 'ward.D2')
+
+## Function that reorgnanize the group label by size
+OrderGrp <- function(z){
+  lon <- tapply(coord[,1], z, median)
+  mapid <- match(1:length(lon),order(lon))
+  mapid[z]
+}
+
+## Identify 4 clusters
+hc.grp6 <- OrderGrp(cutree(hc, k = 6))
+hc.grp12 <- OrderGrp(cutree(hc, k = 12))
+
+table(hc.grp6)
+table(hc.grp12)
+
+myfig(col = hc.grp6)
+myfig(col = hc.grp12)
+
+```
+
+Another method that can be used for forming super regions is the k-mean clustering technique, where 
+each cluster, or region, is defined by the set of the nearest stations. 
+In the present context, a predifine number of region must be determined and a station is classified by finding the closet center. 
+Initially, the algorithm start by selecting at random the centers and update them in order to minimize the intra-cluster variances.
+The figures below illustrate super regions of size 6 and 12 using k-mean clustering.
+
+
+```{r, fig.height=6, fig.width=12}
+## Identify 4 clusters
+set.seed(43)
+km.grp6 <- OrderGrp(kmeans(xd, 6, nstart = 100)$cluster)
+km.grp12 <- OrderGrp(kmeans(xd, 12, nstart = 100)$cluster)
+
+myfig(col = km.grp6)
+myfig(col = km.grp12)
+```
+
+
+```{r}
+## Final set of 
+supreg <- data.frame(
+  supreg_hc6  = hc.grp6,
+  supreg_hc12 = hc.grp12,
+  supreg_km6  = km.grp6,
+  supreg_km12 = km.grp12)
+
+gaugedSites <- cbind(gaugedSites[,1:25], supreg)
+```
+
+
+## References
+
+* Mostofi Zadeh, S., & Burn, D. H. (2019). A Super Region Approach to
+Improve Pooled Flood Frequency Analysis. Canadian Water Resources Journal
+/ Revue Canadienne Des Ressources Hydriques, 0(0), 1–14.
+https://doi.org/10.1080/07011784.2018.1548946

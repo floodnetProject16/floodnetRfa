@@ -1,0 +1,22 @@
+Package: floodnetProject16
+Type: Package
+Title: FloodNet Project 1.6
+Version: 0.1.0
+Authors@R: c(person("Martin", "Durocher", email = "mduroche@uwaterloo.ca", role = c("cre")))
+URL: https://github.com/floodnetProject16
+Description: A package implementing FloodNet recommendations for flood frequency analysis.
+Depends: 
+    R (>= 3.1)
+Imports:
+    CSHShydRology,
+    Kendall,
+    trend
+Suggests: 
+    HYDAT,
+    knitr,
+    testthat, 
+    rmarkdown
+Encoding: UTF-8
+VignetteBuilder: knitr
+LazyData: true
+RoxygenNote: 6.1.0
