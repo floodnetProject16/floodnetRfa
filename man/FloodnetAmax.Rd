@@ -4,18 +4,21 @@
 \alias{FloodnetAmax}
 \title{Estimate flood quantiles using using annual maxima}
 \usage{
-FloodnetAmax(period = c(2, 5, 10, 20, 50, 100), x = NULL,
-  site = NULL, db = NULL, distr = NULL, instant = FALSE,
-  nsim = 2000, alpha = 0.05, out.model = FALSE, verbose = TRUE)
+FloodnetAmax(site = NULL, db = NULL, x = NULL, period = c(2, 5, 10,
+  20, 50, 100), distr = NULL, instant = FALSE, nsim = 2000,
+  alpha = 0.05, out.model = FALSE, verbose = TRUE)
 }
 \arguments{
-\item{period}{Return period for which the flood quantiles are estimated.}
-
-\item{x}{Path of a CSV file or data.frame.}
-
 \item{site}{Station ID for HYDAT or a station name for identification.}
 
 \item{db}{Path of the HYDAT database.}
+
+\item{x}{Hydrometric data. Vector of annual maxima.}
+
+\item{period}{Return period for which the flood quantiles are estimated.}
+
+\item{distr}{Distribution. One of \code{'gev'},\code{'gno'},\code{'glo'}
+or \code{'pe3'}}
 
 \item{instant}{Logical, should the instantaneous peaks be used.}
 
@@ -28,37 +31,44 @@ output of \link{FitAmax}. Otherwise only the estimated flood quantiles are
 returned.}
 
 \item{verbose}{Logical. Should message and warnings be returned.}
-
-\item{maximum}{Logical. Should the maxima (or minima) be modeled.}
 }
 \description{
-Return the results of an at-site frequency analysis of floods based on annual
-maxima. Estimation is carried out by L-moments and a best distribution is
-selected using Akaike Information Criterion (AIC) among the
-Generalized Extreme Value (GEV), Generalized logistic (GLO), the
-Generalized Normal (GNO) and the Pearson type 3 distributions. A preference is
-given to the GEV when the AIC of the other distributions is not
-greater than at least two points.
-Inference on the estimated flood quantiles is performed by parametric bootstrap.
+Return the flood quantile, standard deviation,
+of an at-site frequency analysis of floods based on annual
+maxima.
 }
 \details{
-If `x` is a path, it is assumed to point to a CSV file, otherwise
-it must be a data.frame.
-In both cases, there must be at least one column
-called `Max` (or `Min` if low flow are modeled).
-The name of each column is not case sensitive.
-On the website of the Water Survey of Canada, it is suggested to
-download the the Annual Extremes Data.
+Estimation is carried out by L-moments and a best distribution is
+selected using Akaike Information Criterion (AIC) among the
+Generalized Extreme Value (GEV), Generalized logistic (GLO), the
+Generalized Normal (GNO) and the Pearson type 3 distributions.
+A preference is given to the GEV when the AIC of the other distributions is not
+greater than at least two.
+Inference on the estimated flood quantiles is performed by parametric bootstrap.
+
+If \code{verbose == TRUE}, a Mann-Kendall and a Pettitt's test are used
+to verify the presence of trend and change points in the data.
+If the data fails one of the them at significance level 0.05,
+a warning is issued.
 }
 \examples{
 
 \dontrun{
 ## Assuming that the HYDAT database was already downloaded
 db <- "/pathToDB/HYDAT.sqlite"
-FloodnetAmax(period = c(20,50), site = '01AD002', db = db)
+FloodnetAmax(site = '01AD002', db = db, period = c(20,50))
 }
 
 }
-\author{
-Martin Durocher <mduroche@uwaterloo.ca>
+\references{
+Helsel, D. R., & Hirsch, R. M. (2002). Statistical Methods in Water Resources.
+   In Techniques of Water-Resources Investigations of the United States
+   Geological Survey.
+   Retrieved from http://water.usgs.gov/pubs/twri/twri4a3/
+
+Hosking, J. R. M., & Wallis, J. R. (1997). Regional frequency analysis:
+  an approach based on L-moments. Cambridge Univ Pr.
+}
+\seealso{
+\link{FloodnetPot}, \link{FloodnetPool}.
 }

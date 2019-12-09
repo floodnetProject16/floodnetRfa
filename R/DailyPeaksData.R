@@ -1,22 +1,88 @@
 #' Extract Peaks from HYDAT database
 #'
-#' Return a list of extracted independent thresholds.
+#' Return a list of peaks over thresholds data for one or more stations.
+#'
+#' @param info Site information. Must be a data frame with 3
+#'   columns: site, threshold and area, except for function \code{PeaksData} where
+#'   area must be the total number of years.
 #'
 #' @param db Path to the HYDAT database.
-#' @param info Site information. Must be a data frame with 3
-#'   columns: site, area, threshold.
+#'
+#' @param x Hydrometric Data. Must have 3 columns:
+#'   station, threshold and drainage area.
+#'
+#' @param pad Logical. Should the time series be padded.
+#'   See \link[CSHShydRology]{PadPot}.
+#'
 #' @param tol Number of days considered as a complete year.
+#'
+#' @param target Target station of the pooling group.
+#'
+#' @param size Size of the pooling group.
+#'
+#' @param distance Distance between stations. If not provided, the distance
+#'   between the regularity and timing of the annual flood peaks is used.
+#'
+#' @param sorted Logical. Is the data sorted.
+#'
+#' @param ... Other parameters
+#'
+#' @details
+#'
+#' For \code{DailyPeaksData}, if \code{info} has two columns, they are assumed
+#' to be the station and threshold.
+#' The drainage area is then extracted from the HYDAT database.
+#'
+#' The utility function \code{PeaksData} can be used to construct the same output
+#' from already extracted peaks.
 #'
 #' @export
 #'
 #' @examples
 #'
-#' print('hello')
+#' \dontrun{
+#' ## A copy of HYDAT must be installed. Here an example
+#' db <- 'extdata/Hydat.sqlite3'
 #'
+#' sites <- with(gaugedSites, station[supreg_km12 == 11])
 #'
-DailyPeaksData <- function(db, info, tol = 346){
+#' info <-  with(gaugedSites, gaugedSites[station %in% sites,
+#'                                        c('station','auto','area')])
+#'
+#' out <- DailyPeaksData(info, db, target = '01AF009', size = 5)
+#' }
+#'
+DailyPeaksData <- function(info, db, pad = FALSE, tol = 346,
+													 target = NULL, size = 25, distance = NULL){
 
 	info <- as.data.frame(info)
+
+  ###################################
+  ## Find the pooling groups
+  ###################################
+
+  if(!is.null(target)){
+
+  	sites <- as.character(info[,1])
+
+    if(!(target %in% sites))
+      stop('Target must be in the selected sites.')
+
+    if(is.null(distance)){
+      distance <- SeasonDistanceData(sites, db)[target, ]
+
+    } else if(!is.vector(distance)){
+      distance <- as.matrix(distance)[target, ]
+    }
+
+  	size <- pmin(length(distance), size)
+    info <- info[sort(order(distance)[1:size]), ]
+
+  }
+
+	###################################
+  ## Find the pooling groups
+  ###################################
 
 	if(ncol(info) == 2){
 
@@ -28,15 +94,18 @@ DailyPeaksData <- function(db, info, tol = 346){
 
 	  info <- cbind(info, area = area)
 
-	} else
+	} else{
 		info <- info[,1:3]
+  }
 
   ## Read HYDAT. Note xd is sorted
   con <- RSQLite::dbConnect(RSQLite::SQLite(), db)
 	xd <- HYDAT::DailyHydrometricData(con, get_flow = TRUE, info[,1])[,1:3]
 	RSQLite::dbDisconnect(con)
 
-	# If missing drainage area
+	colnames(xd) <- c('station','date','value')
+
+	# If there are some missing drainage areas
 	sid <- which(!is.finite(info[,3]))
 	for(ii in sid){
     isite <- as.character(info[ii,1])
@@ -48,59 +117,8 @@ DailyPeaksData <- function(db, info, tol = 346){
 	info <- info[order(as.character(info[,1])), ]
 
 	## Extract the peaks
-	ans <- ExtractPeaks(xd, info, tol, sorted = TRUE)
+	ans <- ExtractPeaksData(xd, info, pad, tol, sorted = TRUE)
 
 	return(ans)
 }
 
-#' @export
-ExtractPeaks <- function(x, info, tol, sorted = FALSE){
-
-  ## Order by site
-	if(!sorted){
-	  info <- info[order(as.character(info[,1])), ]
-	  x <- as.data.frame(x[order(x[,1], x[,2]), ])
-	}
-
-	## verify that all site in x are in info
-	all.site <- as.character(unique(x[,1]))
-	if(!all(all.site %in% info[,1]))
-     stop('Sites are missing from the info dataset.')
-
-	## remove missing
-	x <- na.omit(x)
-
-	## split the dataset by site
-  xd <- split(x, as.character(x[,1]))
-
-  ## Compute the minimal time difference between peaks
-	rsep <- ceiling(4 + log(info[,3]))
-
-	## allocate memory
-	nyear <- vector('numeric', length(xd))
-	names(nyear) <- names(xd)
-
-	for(ii in 1:length(xd)){
-
-  	## Remove incomplete years
-  	yy <- format(xd[[ii]]$date,'%Y')
-  	yy.nb <- tapply(yy, yy, length)
-  	yy.complete <- names(yy.nb[yy.nb >= tol])
-  	yid <- yy %in% yy.complete
-
-  	nyear[ii] <- length(yy.complete)
-
-  	xd[[ii]] <- xd[[ii]][yid,]
-
-  	## Extract peaks
-    pid <- which.floodPeaks(value ~ date, xd[[ii]],
-    												u = info[ii,2], r = rsep[ii])
-    xd[[ii]] <- xd[[ii]][pid,]
-  }
-
-  xd <- do.call(rbind, xd)
-  rownames(xd) <- NULL
-
-
-	return(list(peaks = xd, nyear = nyear))
-}

@@ -4,165 +4,222 @@ author: "Martin Durocher"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{FloodNet Project 1.6}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: inline
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, fig.align = 'center')
 
 mycols <- c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c',
 						'#fdbf6f','#ff7f00','#cab2d6','#6a3d9a','#ffff99','#b15928')
 
 palette(mycols)
+
+source(system.file("config", package = 'floodnetProject16'))
 ```
 
 ## Introduction
 
-One of the objective of FloodNet Project 1.6 is to provide engineers and hydrologist in Canada with a toolbox that can help them to perform flood frequency analysis.
-To this purpose, a set of functions was developped and added to the R-package (CSHShydRology)[https://github.com/floodnetProject16/CSHShydRology].
-The package gives to advance users access to a variety of functions to perform a flood frequency analysis. 
-Another tool available to the communauty is the R-package (HYDAT)[https://github.com/CentreForHydrology/HYDAT], which allows R to communicate with the (National Water Data Archive)[http://collaboration.cmc.ec.gc.ca/cmc/hydrometrics/www/] maintained by the Water Survey of Canada.
-The hydrometrical archives can be download and save as a SQLite file on a personal computer.
-The goal of the present R-package is to provide simple routines that extract directly the right data from HYDAT and then carry out flood frequency analysis following FloodNet recommendations.
+One objective of [FloodNet](http://www.nsercfloodnet.ca/) Project 1.6  is to provide Canadian engineers and hydrologist with a toolbox that can help them to perform flood frequency analysis.
+To this end, a set of functions was developed and added to the R-package [CSHShydRology](https://github.com/floodnetProject16/CSHShydRology).
+The package provides advanced users with a variety of functions to perform flood frequency analysis. 
+Another tool available to the hydrologist community is the R-package [HYDAT](https://github.com/CentreForHydrology/HYDAT) that allows R to communicate with the [National Water Data Archive](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey/data-products-services/national-archive-hydat.html) maintained by the [Water Survey of Canada](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey.html).
+This database can be downloaded and used to extract the necessary hydrological information.
+The goal of the  R-package `FloodnetProject16` is to provide simple routines that extract directly the data from HYDAT and carry out flood frequency analysis according to FloodNet recommendations.
 
-## At-site flood frequency analysis
+## Flood frequency analysis using annual maxima
 
-The functionality of the package will be presented on the analysis of the station '01AF009' located on the Iroquois River (NB).
-A flood frequency analysis consist in fitting a distribution on extreme events and evaluate the risk of a flood in terms of flood quantiles.
-The example below extract the annual maximum flows from the HYDAT database and perform such analysis.
+The functionality of the package will be illustrated on the station '01AF009' located on the Iroquois River (NB).
+In general, a flood frequency analysis consist in fitting a distribution of extreme events and evaluating the risk of occurence of events of given magnitudes.
+Such risk is commonly quantify in terms of a return period $T$ defined as the expected waiting time between events of a given magnitude. 
+If flood risk does not change over time (_i.e._ stationarity), this is equivalent to evaluate the flood quantiles of probability $1-1/T$. 
+The example below extract the annual maxima of the station '01AF009' from HYDAT and output the results of the flood frequency analysis in the form of a table.
+
 
 ```{r}
 library(floodnetProject16)
 library(CSHShydRology)
 
 ## Station of interest and path to HYDAT
-station.number <- '01AF009'
-db <- 'inst/extdata/Hydat.sqlite3' 
+mystation <- '01AF009'
 
-set.seed(1)
-FloodnetAmax(period = c(10,100), site = station.number, db = db)
+## Path to database
+db <- DB_HYDAT
 ```
-
-To use data coming from alternative source, the argument `db` must be replaced by a vector `x`.
-In that situation, the argument `site`, may be used to specified the station number.
-This can be useful if the function `FloodnetAmax` is used in a loop.
-
-```{r, fig.width = 8, fig.height=4}
-library(HYDAT)
-library(CSHShydRology)
-library(RSQLite)
-
-## Extract annual data from HYDAT
-con <- dbConnect(SQLite(), db)
-an <- AnnualPeakData(con, get_flow = TRUE, station.number)
-dbDisconnect(con)
-
-an <- an[an$peak == 'MAXIMUM', c('year','value')]
-
-set.seed(1)
-out <- FloodnetAmax(period = 100, site = 'Site_01AF009', x = an$value, 
-								    verbose = FALSE, out.model = TRUE)
-print(out)
-```
-
-The function `FloodnetAmax` is built on top of the function `FitAmax` of the package `CSHShydRology`.
-and it is used to automatize the process of reading the data, fitting the distribution and evaluating the flood quantiles. 
-The output return the flood quantiles, the selected distribution, the standard deviation and confidence intervals.
-Inference is performed using a parametric bootstrap approach.
-If the argument `out.model = TRUE` the output of `FitAmax` will be return along the estimated flood quantiles
-By default the argument `verbose = TRUE`, will perform further verifications and will warns the user if there is less than 20 observations or if it detect a trend or a change points according respectively to the Mann-Kendall and Pettitt test (Helsel and Hirsch, 2002).
-
-```{r}
-an.mod <- an$value + 20 * (1:nrow(an) > 14) ## add a change point
-
-set.seed(1)
-out <- FloodnetAmax(period = 100, site = 'Site_01AF009', x = an.mod)
-```
-
-
-An alternative to the analysis of the annual maxima in flood frequency analysis is peak over threshold (POT), which models not only the annual maxima, but all exceedances above a given threshold.   
-The evaluation of flood quantiles using POT can be obtained similarly using the function `floodnetPot` that is built upon the function `FitPot` in `CSHShdRology`.
-The POT method further require a threshold above which independent exceedances are extracted.
-The drainage area is also needed to define a minimal separating time between peaks as suggested the by Water Resources Council (USWRC) (lang et al., 1999).
-For station `01AF009` a good threshold would be $u = 15$, which roughly correspond to 2.5 peaks per year (PPY) and the drainage area is 184.1 $km^2$. 
 
 ```{r}
 set.seed(1)
-FloodnetPot(period = 100, site = station.number, db = db, 
-						u = 15, area = 184.1)
+FloodnetAmax(site = mystation, db = db, period = c(10,100), nsim = 2000)
 ```
+More precisely, it fits the distribution using L-moments and evaluates its uncertainty using a parametric bootstrap technique. 
+If not specified, a best distribution among the Generalized Extreme Value (GEV), Generalized Logistic (GLO), Generalized Normal (GNO) and Pearson type III (PE3) distributions is selected as the one having the lowest AIC.
+In addition, the GEV is prioritized if the AIC of the best distribution is not lower of at least two.
 
-If the data comes from other source, it must be passed as a `data.frame` where the first column is of the class `Date` and the second column is the daily observations.
+To use data from alternative sources, the argument `db` must be replaced by `x`.
+In that case, the argument `site` is optional and may be used to specified the station number.
+In the example below the function `AmaxData` is used to extract the Annual maxima of station `01AF009` from HYDAT. 
+The dataset is then passed to `FloodnetAmax`.
 
 ```{r}
-## Extract annual data from HYDAT
-con <- dbConnect(SQLite(), db)
-daily <- DailyHydrometricData(con, get_flow = TRUE, station.number)
-dbDisconnect(con)
+an <- AmaxData('01AF009', db)
+head(an,3)
+```
 
-daily <- daily[,c('date','value')]
+```{r}
+set.seed(1)
+out <- FloodnetAmax(period = 100, x = an$value, verbose = FALSE, 
+										out.model = TRUE, nsim = 0)
+names(out)
+```
 
-## First row of the daily data
-head(daily)
+The function `FloodnetAmax` is built on top of the function `FitAmax` in the R-package `CSHShydRology`.
+If the argument `out.model = TRUE` the output of `FitAmax` is returned.
+The example below shows that a return level plot can be easily obtained from the output model.
+The latter indicates that apart one peaks slightly above the upper confidence interval, the GEV distribution is a reasonable choice.
 
+```{r fig.height = 4, fig.width = 6}
+plot(out$fit, ci = TRUE)
+```
+
+By default the argument `verbose = TRUE`, will perform further verifications and will warn the user if there is less than 20 observations or if it detects a trend or a change points according respectively to the Mann-Kendall and Pettitt test (Helsel and Hirsch, 2002).
+
+```{r}
+an.mod <- an$value + 50 * (1:nrow(an) > 14) ## add a change point
+
+set.seed(1)
+out <- FloodnetAmax(period = 100, site = '01AF009', x = an.mod)
+```
+
+## Flood frequency analysis using peaks over threshold
+
+An alternative to the analysis of annual maxima (AMAX) is Peak Over Threshold (POT).
+For this approach, all exceedances above a given threshold are analyzed. 
+Similarly to AMAX, flood quantiles from POT can be obtained using the function `floodnetPot` that is built upon the function `FitPot` in `CSHShdRology`.
+
+```{r}
+set.seed(1)
+FloodnetPot(period = 100, site = mystation, db = db, 
+						u = 20, area = 184.1, nsim = 2000, verbose = FALSE)
+```
+
+The POT method require a threshold `u` above which independent exceedances are extracted.
+The drainage area is needed because it defines a minimal separating time between peaks as suggested by the US Water Resources Council (USWRC) (lang et al., 1999).
+For the station `01AF009`, the drainage area is 184.1 $km^2$ and $u = 20$ was found to be a proper threshold leading roughly to 2.07 peaks per year (PPY).
+The Generalized Pareto (GPA) distribution is used to model the distribution of the exceedances.
+The T-year flood quantiles of a POT model is defined as the flood quantiles of probability $1 - (\lambda T)^{-1}$ of the exceedance distribution, where $\lambda$ is the average number of peaks per year.
+
+If the user wishes to use data from another sources, this must be passed as a data.frame where the first column is a date (_i.e._ class `Date`) and the second column is daily observations.
+The function `DailyData` can be used to extract these hydrometric data in the proper format.
+
+
+```{r}
+daily <- DailyData(mystation, db)[,-1]
+head(daily, 3)
+```
+
+```{r}
 ## POT analysis
 set.seed(1)
-FloodnetPot(period = 100, site = station.number, x = daily,
-                       u = 15, area = 184.1, verbose = FALSE)
+FloodnetPot(period = 100, site = mystation, x = daily,
+                       u = 20, area = 184.1, verbose = FALSE, nsim = 0)
 
 ```
 
-The POT analysis use more observations than AMAX to evaluate the flood quantiles, which explained the reduction in the standard deviation  (16.4) in comparison with AMAX (26.8) for the 100-year flood quantile.
+Generally, the POT analysis implies more observations than AMAX, which
+in many situations contributes to lower the uncertainty associated with the estimated flood quantiles. 
+In this example, the standard deviation of the 100-year flood quantile for the POT model is 20.1 and was 26.8 for AMAX.
 
-During the development of FloodNet, 1114 stations of HYDAT were identified as having at least 20 years of observations and a natural flow regime.
-The table `gaugedSites` of the present package contains information about these stations.
-It includes among others the coordinates, the drainage area, the mean annual precipitation and 
-candidate thresholds.
-One of the these threshold (column `auto`) is based on the p-value of goodness-of-fit test of Anderson-Darting (Durocher et al. 2019). 
-The other thresholds are associated with specific number of peaks per years (PPY).
+During the development of FloodNet, 1114 stations of HYDAT were identified as having a natural flow regime and at least 20 years of observations.
+The table `gaugedSites` of the present package contains some more information about these stations collected during the Floodnet Project.
+It includes among others candidate thresholds.
+One of the these thresholds (column `auto`) is based on the p-value of goodness-of-fit test of Anderson-Darting (Durocher et al. 2019). 
+The other thresholds are associated with specific PPY.
 For instance, the column `ppy175` is a threshold associated with approximately 1.75 PPY.
-It must be pointed out that these threshold were obtained from the database dating from July 2019.
-In this case, the automatic threshold is 13.9, which is slightly lower than the suggested threshold. 
+It must be pointed out that these thresholds were derived from a version of the database dating from July 2019.
+The automatic threshold found for `01AF009` was 15.9, which is lower than the one previously used. 
 
 ```{r}
 gaugedSites[5, c('station','description', 'area','auto','ppy250')]
 ```
 
-If a threshold is not provided, the function `FloodnetPot` will automatically searches for one and in the rare occasions that the drainage area would be unknown, the drainage area ($A$) may be approximated by its relationship with the mean daily flow (M).   
+If a threshold is not provided to the function `FloodnetPot`, it will automatically be sougth. 
+In the rare occasions that the drainage area would also be unknown, the drainage area ($A$) will be approximated by an empirical relationship with the mean daily flow (M).   
 
 $$
 \log(A) = 4.0934 + 0.9944 \, \log(M)
 $$
-The exemple below show the result of the POT analysis based on the automatically selected threshold.
+The exemple below shows that the result of the POT analysis where the threshold was selected automatically.
+The return level plot and the p-value of the goodness-of-fit test of Anderson-Darling indicates that GPA is a proper model for the exceedance.
 
 ```{r}
 set.seed(1)
-FloodnetPot(period = 100, site = station.number, db = db, 
-									 area = 184.1, verbose = FALSE)
+out <- FloodnetPot(period = 100, site = mystation, db = db, 
+									 area = 184.1, verbose = FALSE, out.model = TRUE)
+
+GofTest(out$fit, method = 'ad')
+
 ```
 
-## Regional flood frequency analysis
+```{r, echo = FALSE, fig.height = 4, fig.width = 6}
+plot(out$fit, ci = TRUE)
+```
 
-The quality of the estimaton of the flood quantiles for longer return period depends heavily on the estimation of the shape parameter of the fitted distribution. 
-For stations with short records, this parameter is often estimated with important uncertainty.
-Regional Frequency Analysis (RFA) was suggested to transfert information from groups of stations that has similar characteristics, to help reducing uncertainty. 
-The strategy recommended by FloodNet consists to use pooling groups corresponding to the nearest sites to a station of interest (target), based on a similarity measure based on the regualarity and average date of the annual flood peak (Mostofi Zadeh and Burn, 2019).
-In addition, the pooling groups are pick among an initial set of stations, called super regions, that have similar basin characteristics.
-The dataset `gaugedsites` contains pre-delineated super regions based on the Ward's method and k-means clustering. 
-These super regions represent cluster identified in space based on the drainage area, mean annual precipitation (MAP) and geographical coordinates.
-In the following, the presentation of RFA method is done using the 12 super regions proposed by column `supreg_km12` obtained from k-means clustering. 
-The super regions are displayed in the figure below where spatial clustering can be observed in both the descriptor and the geographical space.
+When `out.model = TRUE` with function `FloonetPot` and the threshold was selected automatically, the output also include information to validate the choice of the threshold.
+The graphics below represent common diagnostics plot for POT. 
+The both thresholds pass the Anderson-Darling test and are properly approximated by a GPA. 
+For a well-chosen threshold, the Mean Residual Life plot should be approximately linear. 
+The results suggests that a threshold of 20 as previously selected better fullfill that criterion.
 
-```{r, fig.height=6, fig.width = 12}
-layout(matrix(c(1,2), 1,2), widths = c(.55,.45))
+```{r, fig.width=6, fig.height=10}
+uval <- out$u[out$u[,"ppy"] > 1.2,]
+par(mfrow = c(3,1))
+
+Fplot <- function(vname, mainLab, ylab){ 
+  plot(uval[,'u'], uval[, vname], type = 'l', main = mainLab ,
+  	 xlab = 'Threshold', ylab = ylab)
+  abline(v = 15.9, col = 6, lwd = 2)
+  abline(v = 20, col = 2, lwd = 2)
+}
+
+Fplot('mrl', 'Mean Residual Life', 'MRL')
+legend('topright', col = c(6,2), lty = rep(1,2), 
+			 legend = c('auto','manual'))
+Fplot('ad', 'Anderson-Darling', 'p-value')
+Fplot('kap', 'Shape parameter', 'Kappa')
+```
+ 
+
+## Regional flood frequency analysis using AMAX
+
+The quality of the flood quantile estimates for longer return period depends heavily on the shape of the tail of the distribution. 
+For common distributions in flood frequency analysis, this is control by a shape parameter. 
+When there is only few year of observation at the site of interest, its likely a large variability will result from its estimation.
+To reduce model uncertainty, Regional Frequency Analysis (RFA) was suggested to transfert information from a group of stations that has similar characteristics to the station of interest. 
+In this section we start by considering RFA for AMAX data.
+
+The strategy recommended by FloodNet consists in using pooling groups corresponding to the nearest sites of the target site.
+More precisely, the pooling groups are delineated based on a similarity measure that account for the regularity and timing of the annual flood peaks (Mostofi Zadeh and Burn, 2019).
+Initially, the stations that will formed the pooling groups are selected among larger groups of stations called super regions. 
+Such super regions could be based on common administrative boundaries, but as this may not reflect actual hydrological properties, it may be better to create super regions based on site characteristics.
+The combination of super regions and pooling groups allows to identifies sites that are similar to the target in terms of the characteristics that help to define the super regions and the similarity measure based on flood seasonality.
+
+The dataset `gaugedsites` contains pre-delineated super regions based on clustering techniques that identified meaningful groups of stations.
+Both the Ward's method or k-means clustering are consideres to delineate super regions according to their drainage area, mean annual precipitation (MAP) and geographical coordinates.
+In the following, the presentation of RFA method is done using the super regions of station '01AF009' proposed in column `supreg_km12`, which was obtained by the k-means clustering method. 
+The figure below displays the super regions for the 1114 station in both the descriptor and the geographical space.
+
+```{r, fig.height=10, fig.width = 6, echo = FALSE}
+layout(matrix(c(1,2), 2,1))
 
 plot(lat~lon, gaugedSites, pch = 16, col = supreg_km12,
 		 main = 'Geographical space', ylim = c(42,72))
 
 legend('top', horiz = TRUE, col = 1:12, legend = 1:12, pch = 16,
-			 cex = .8)
+			 cex = .6)
 
 legend('bottomleft', pch = 10, legend = 'Target')
 
@@ -177,121 +234,315 @@ with(gaugedSites[5, ],
 
 ```
 
-Another information provided in `gaugedSites` is the result of trend tests that are used to diagnose stations that are nonstationnary, _i.e._ stations where the flood risk is not constant in time.
-For AMAX data, it includes the result of the nonparametrtic test of Mann-Kendall and the Pettitt test.
-Overall, the information in `gaugedSites` is useful to select for `01AF009` a super-regions where only stationary stations are included.
+Another information provided by `gaugedSites` is the result of basic trend tests.
+This can used to diagnose stations presenting signs of nonstationnary, _i.e._ stations where flood risks is changing over time.
+However, the user should be aware that the results of such trends will change when new data are available.
+For AMAX data, it includes the result of the nonparametrtic test of Mann-Kendall (`trend_mk`) and the Pettitt's test (`trend_pt`).
+Overall, the information in `gaugedSites` is useful to select a super regions for `01AF009` where only stationary stations are included.
 In this case, the super region includes 107 stations, among which 100 are stationary.
 
 ```{r}
 ## Filter nonstationary sites from the super region of the target
-target.supreg <- gaugedSites$supreg_km12[gaugedSites$station == station.number]
+target.supreg <- with(gaugedSites, supreg_km12[station == mystation])
 cond_supreg <- with(gaugedSites, supreg_km12 == target.supreg)
 
 pval.mk <- gaugedSites$trend_mk ## Mann-Kendall
 pval.pt <- gaugedSites$trend_pt ## Pettitt
-cond_trend <- pval.mk >= .05 & pval.pt >= .05
-mysites <- gaugedSites[cond_supreg & cond_trend,'station']
+cond.trend <- pval.mk >= .05 & pval.pt >= .05
+mysites <- gaugedSites[cond_supreg & cond.trend,'station']
 
-addmargins(table(cond_supreg, cond_trend))
+addmargins(table(cond_supreg, cond.trend))
 ```
 
-The RFA analysis of a target site can be performed using the function `FloodnetPoolAmax`as shown below, which is built upon the function `FitRegLmom` in `CSHShydRology`.
-The standard deviation of the 100-year flood quantile is 13.0, which is lower than the ones of the at-site AMAX and POT models.
+
+First hydrometric data for the pooling group must be prepared in the form of a dataset.
+As shown earlier, this information can be extracted by passing to the function `AmaxData` all the station in the super regions.
+Optionally, a target can be supplied to return only the stations that are part of the pooling group of a given target. 
+The user can also provide a custom measure of similarity in the form of a vector or a distance matrix.
+
+```{r}
+season.dist <- SeasonDistanceData(mysites, db)
+
+xd <- AmaxData(mysites, db, target = mystation, size = 25,
+							 distance = season.dist)
+```
+
+The RFA analysis of a target site can be performed using the function `FloodnetPool`that is built upon the function `FitRegLmom` in `CSHShydRology`.
+The output of the RFA is presented below and the method is briefly explained in the following.
 
 ```{r}
 set.seed(1)
-FloodnetPoolAmax(period = 100, db = db, target = station.number, sites = mysites)
+out <- FloodnetPool(x = xd, target = mystation, 
+								 period = 100, distr = 'gev', out.model = TRUE, verbose = FALSE)
+print(out$fit)
+
 ```
 
-The function fit an index-flood model using the L-moment algorithm.
-For this model, all distribution are assumed to be proportional up to a scaling factor, generally taken as its mean.
-As consequence, the coefficient of variation of all sites in an homogenous regions should be the same.
-The heterogenous measure $H$ (Hosking and Wallis, 1997) of a pooling group represents the variability of the L-coefficient of variation (LCV) and can be used to judge the validity the hypothesis of the index-flood model. 
-If not specified, the best distribution is selected using the Z-statistic (Hosking and Wallis, 1997).
+```{r}
+print(out$qua)
+```
+It can be noted that RFA appears to have improve the estimation as the standard deviation of the 100-year flood quantile is 14.0, which is lower than the ones of the at-site AMAX and POT estimates. 
 
-The function `FloodnetPoolAmax` first extracts the annual maxima of all stations in HYDAT and identifies a pooling group of the 25 nearest.
+In summary, the function fits an index-flood model (IFM) using the L-moment algorithm.
+IFM assumes that inside an homogenous region, all distribution are proportional up to a scaling factor. 
+Here this factor is taken as the average.
+One consequence of this hypothesis is that the coefficient of variation of all sites in an homogenous regions must be the same.
+The heterogenous measure $H$ (Hosking and Wallis, 1997) of a pooling group represents the variability of the L-coefficient of variation (LCV), which can be used to judge the validity the IFM hypothesis. 
+Also, if not specified, the best distribution among GEV, GLO, GNO and PE3 is selected using the Z-statistic (Hosking and Wallis, 1997) that identify the distribution where the theoritical L-kurtosis best match the theoritical one.
+
+The function `FloodnetPool` starts with an initial pooling group of size 25.
 If $H > 2$ the pooling groups is considered heterogenous and should be updated.
-In turn, each neighbor is removed and $H$ is re-evaluated. 
-The station leading to the largest improvement in $H$ is removed and the process is repeated
-until $H \leq 2$ or a stopping criterion is met.
-This criterion ensure that at least 5T station-years are found in the pooling group where T is the return period.
-Practically, `FloodnetPoolAmax` use the largest return period requested to evaluate the stopping criterion.
-Note that a warning will be issued if `FloodnetPoolAmax` fail to encounter a pooling groups with $H \geq 2$.
-The standard deviation and the confidence intervals of the flood quantile are estimated using parametric bootstrap.
-The simulations used in this resampling schement are done using a multivariate Normal distribution where the correlation coefficients corresponds to the average intersite correlation.
+In turn, each neighboring site is removed and $H$ is re-evaluated. 
+The station leading to the largest improvement in $H$ is removed and the process is repeated until $H \leq 2$. 
+In addition, a stopping criterion is used to ensure that at least 5T station-years are found in the pooling group where T is the return period (Robinson and Reed, 1999).
+Please note that the function `FloodnetPool` uses the largest return period requested to evaluate the stopping criterion.
+For example, to evaluate a 100-year return period, at least 500 station-years are necessary.
+A warning will is issued if it fails to encounter a pooling groups with $H \geq 2$.
 
-If the data are coming from another source than HYDAT, the hydrometric data must be passed in the argument `x` and must in the form of a data.frame with 3 columns: site, date and value.
-In particular, the date variable must be of the class 'Date'.
-See the example below.
+The standard deviation and the confidence intervals of the flood quantile are estimated using parametric bootstrap.
+The simulations are obtained from a multivariate Normal distribution and the marginal distribution are adjusted according to the at-site distribution. 
+The correlation coefficients of the normal distribution are derived from the empirical correlation matrix.
+
+An alternative to the L-moments algorithm for fitting a RFA model is to optimize the independent likelihood (ILIK) of the model, _i.e._ the likelihood of the RFA model assuming that all observations are independent. 
+This fitting can be done using the function `FloodnetPoolMle` that works like `FloodnetPool`, but that is using the underlying function `FitPoolMle` of the package `CSHShydRology`.  
+One different in the call of the function is the argument `type` that specified the type of the regional model. 
+The IFM model, can be specified using `type = 'mean'`, which will implies that all sites are standardized by the empirical mean and the parameters of the regional distribution are estimated using the ILIK techniques.  
+A similar model is specified by `type = 'cv'`.
+In this case, It is assumed that all sites share the same distribution with common shape parameter, but a location is estimated for each site.
+The scale parameter of each site is determined by a regional "coefficient of variation" and is assumed proportional to the location parameter.
+A third model resulting from `type = 'shape'`, will assumes that all sites have the same distribution with common shape parameter, but a location and scale parameters is estimated for each site. 
+
+Another difference with `FloodnetPoolMle` is that the degree of heterogeneity $H$ is not verified and the pooling group is not updated.
+The example below fit the RFA-AMAX model using the ILIK approach, which take some time as the boostrap precedure is more demanding. 
+However, we can notice a substantial reduction of the standard deviation.
 
 ```{r}
-## Extract the annual maxima for all sites in the super region
-con <- dbConnect(SQLite(), db)
-an <- AnnualPeakData(con, get_flow = TRUE, mysites)
-dbDisconnect(con)
-
-## Create a date variable
-an$date <- with(an, as.Date(paste(year,month,day, sep = '/')) )
-
-## Filter and sort the data
-an <- an[an$peak == 'MAXIMUM',  c('station_number', 'date', 'value')]
-an <- an[order(an[,1], an[,2]), ]
-an <- na.omit(an)
-
-head(an)
-
-## Perform the pooling analysis.
 set.seed(1)
-FloodnetPoolAmax(period = 100, target = station.number, x = an)
+FloodnetPoolMle(x = xd, target = mystation, period = 100, distr = 'gev',
+								type = 'mean', nsim = 500, verbose = FALSE)
+
+FloodnetPoolMle(x = xd, target = mystation, period = 100, distr = 'gev',
+								type = 'cv', nsim = 0)
+
+FloodnetPoolMle(x = xd, target = mystation, period = 100, distr = 'gev',
+								type = 'shape', nsim = 0)
 
 ```
-Please note that similarly to the previous functions of this package, the argument `out.model = TRUE` can be used to obtain an output from `FitRegLmom`. 
 
-Finally, the function `FloodnetPoolPot` can be used to carry out RFA using a POT approach instead of AMAX.
-Similarly, the information in `gaugedSites` about trend tests and super regions can be used to select a super regions from which to perform the pooling analysis. 
-In this case, the p-value of the Mann-Kendall test (column `trend_mx`) and logistic regression model (column `trend_lg`), that looks respectively at potiential trend in the mean excess and the probability of exceeding the threshold, can be used to remove nonstationary stations. 
+
+## Regional frequency analysis using POT
+
+The function `FloodnetPool` can also be used to carry out RFA using POT.
+Similarly, the information in `gaugedSites` about trend tests and super regions can be used to select a initial set of stations. 
+In this case, the Mann-Kendall test for the exceedances (column `trend_mx`) and logistic regression model (column `trend_lg`) that looks respectively at potiential trends in the mean excess and the exceedance probability can be used to remove nonstationary stations.
+Below we observed that 96 stations of the super regions respect these criteria.
 
 ```{r}
 ## Filter nonstationary sites from the super region of the target
 pval.mx <- gaugedSites$trend_mx ## Mann-Kendall
 pval.lg <- gaugedSites$trend_lg ## logistic regression
-cond_trend <- pval.lg >= .05 & pval.mx >= .05
+cond.trend <- pval.lg >= .05 & pval.mx >= .05
 
-mysites <- gaugedSites[cond_supreg & cond_trend, c('station','auto','area')]
+info <- gaugedSites[cond_supreg & cond.trend, c('station','auto','area')]
 
-head(mysites)
+season.dist <- SeasonDistanceData(info$station, db)
 
-addmargins(table(cond_supreg, cond_trend))
-
-```
-For this model, the threshold and the drainage area of all stations must be provided as shown in the example below. 
-
-```{r}
-FloodnetPoolPot(period = c(10, 100), target = station.number, 
-											 sites = mysites, db = db, verbose = 'FALSE')
+head(info,3)
 ```
 
-As before, if the daily data are coming from another source, this information can be passed to the argument `x` as illustrated below.
+```{r}
+addmargins(table(cond_supreg, cond.trend))
+```
+
+For performing RFA using POT the input data must be an object of the class `peaksdata`.
+The easiest way to extract the hydrometric data in that format is to use the function `DailyPeaksData` that will directly extract the peaks form HYDAT. 
+A target can also be specified to limits the output to a specific pooling group.
+If the peaks were obtained from another source, the right formation can be obtained by passing this information to the function `PeaksData` along with the required element informations: the threshold used and the total number of years. 
 
 ```{r}
-con <- dbConnect(SQLite(), db)
-daily <- DailyHydrometricData(con, get_flow = TRUE, mysites$station)
-dbDisconnect(con)
+xd <- DailyPeaksData(info, db, target = '01AF009', 
+										 size = 25, distance = season.dist)
 
-x <- na.omit(daily[,-4])
+```
 
-FloodnetPoolPot(period = 100, target = station.number, sites = mysites, x = x)
+The code below fits the POT-IFM model and return the flood quantiles.
+In this case, regionalization has reduce the variability of the 100-year flood quantiles in comparison with the at-site POT model and is similar to the one estimated using the ILIK method.
+
+```{r}
+set.seed(1)
+out <- FloodnetPool(xd, target = mystation, period = 100, verbose = TRUE,
+						 out.model = TRUE)
+
+out$qua
+```
+
+In the previous example the intersite correlation was not considered in the estimation of the flood, which may lead to underestimate the variability of the estimated flood quantiles.
+It should be noted that if peaks are passed in `FloodnetPool` as a usual `data.frame`, 
+they will be treated as AMAX data.
+Therefore, one can obtained estimates of the flood quantile by selecting the GPA and by multiply the return period by the target PPY.
+Note that in that case, a 3 parameters GPA is used instead of a 2 parameter distribution.
+The example below show the standard deviation obtained using that approach, where two
+scenario are considered.
+One without intersite correlation and one with a common coefficient of 0.5.
+We can see here, that the intersite correlation does not affect the variability of the estimation.
+The standard deviation found is similar to the one of the RFA-AMAX model (14.0), which leads to conclude that the reduction in the modeling uncertainty following the previous appproach is mostly the result of a GPA distribution with 2 parameters.
+
+
+```{r}
+ppy <- with(xd, npeak[1]/nyear[1])
+xp <- xd$peaks
+
+FloodnetPool(xp, target = mystation, distr = 'gpa', tol.H = Inf, nsim = 5000,
+										period = 100 * ppy, verbose = FALSE, corr = 0)[2,]
+
+FloodnetPool(xp, target = mystation, distr = 'gpa', tol.H = Inf, nsim = 5000,
+										period = 100 * ppy, verbose = FALSE, corr = .5)[2,]
+```
+
+Another way of fitting the POT model would be to use the ILIK approach.
+The results were obtained using `type = 'shape'` which implies a GPA where individual scale parameters are used and a common shape parameter.
+
+
+```{r}
+set.seed(1)
+FloodnetPoolMle(xd, target = mystation, period = 100, nsim = 500, type = 'shape')
+```
+
+
+
+## Prediction at ungauged basins
+
+When there is no hydrometric data at the site of interest, frequency analysis cannot be done by fitting directly a distribution of extreme events. 
+The quantile regression techniques (QRT) is a method that is used in this situation to predict flood quantiles based on the characteristics of the site of interest.
+First, it evaluates the flood quantiles of gauged stations using at-site information.
+Next, a regression model is used to predict the flood quantile at a (ungauged) site of interest based on its descriptors.
+
+Similar to the dataset `gaugedSites`, this package includes a dataset `descriptors` that contains meteorological and physical characteristics for 770 stations that are also in `gaugedSites`. 
+This information can be used to fit a QRT model that predicts flood quantiles at sites of interest.
+In the example below, we create a dataset including 6 descriptors: Drainage area (AREA), mean annual precipitation (MAP), percentage of waterbody (WB), stream density (STREAM), elevation (ELEV) and slope (SLOPE).
+
+
+```{r}
+xd <- with(descriptors,
+  data.frame(
+  	site = station,
+    area = log(area),
+    map  = log(map_ws),
+    wb   = log(.01 + wb),
+    stream = log(.01 + stream),
+  	elev = elev_ws,
+  	slope = log(.01 + slope)))
+
+coord <- descriptors[, c('lon', 'lat')]
+
+```
+Logarithmic transformations are used above for most variables in order to make the distributions looks more normally shaped.
+In addition, multidimentional scaling is used here to project the geographical coordinates in a Cartesian space that aims to preserve the great-circle distance.
+
+In this section, the station `01AF009` is treated as ungauged and the objective is to evaluate the 100-year flood quantile (Q100) according to its descriptors.
+Remember that we derived a 100-year flood quantile of 98.0 $m^3/s$ from an at-site flood frequency analysis of the annual maxima.  
+
+```{r}
+target.id <- (xd$site == '01AF009')
+
+target <- xd[target.id,]
+xd <- xd[-target.id,]
+```
+
+
+
+The function `FloodnetRoi` is built upon the function `FitRoi` in `CSHShydRology` and performs flood frequency at ungauded sites using the QRT. 
+First, it extracts the annual maxima of HYDAT and evaluates the flood quantiles $q_i$ of each gauged station ($i$). 
+Next, a locally log-linear model is applied on the nearest stations to the target $j$:
+$$
+\log(q_j) = \mathbf{X}_j\beta_j + e_j
+$$
+where $\mathbf{X}_j$ is a design matrix of descriptors, $\beta_j$ is local parameters and $e_j$ is a term of error.
+The distance between sites is taken as the Euclidean distance between standardized descriptors.
+In addition, weights proportional to the Epanechnikov kernel are used to give more importance to more similar sites.
+Please note that the support of the Epanechnikov kernel is bounded and hence the bandwidth parameter that control the relative importance of the nearest sites is expressed in terms of the number of gauged stations inside these bounds, which corresponds to the size of the region of influence (`size`). 
+If more than one size is provided, `FloodnetRoi` uses 10-fold cross-validation to find the parameter that optimizes the Mean Absolute Deviation (MAD).
+The results of the cross-validation scheme can be obtained by passing the argument `out.model = TRUE`.
+The figure below shows that a sizes between 60 and 90 stations is optimal.
+
+```{r}
+set.seed(1)
+out <- FloodnetRoi(target = target, sites = xd,
+						db = db, period = 100, size = seq(25, 200, 10), 
+						nsim = 0, verbose = FALSE, out.model = TRUE)
+```
+
+```{r, echo = FALSE, fig.height = 4, fig.width = 6}
+plot(out$cv, 'mad', ylab = 'Mean Absolute Deviation (MAD)', main = 'Cross-validation')
+```
+
+The function `FloodnetRoi` use a bootstrap technique to evaluate the uncertainty of the estimated flood quantiles.
+As done previously for the RFA using gauged sites, annual maxima are simulated using a multivariate normal distribution with marginal transformed to the respective at-site distributions. 
+This leads to a bootstrap sample of flood quantiles $q_i^\ast$ at each gauged site $i$. 
+In parallel, prediction errors $e^\ast_i$ are sampled (balance bootstrap) from the residuals of the QRT model based on 10-fold cross-validation.
+The final bootstrap sample is composed of the flood quantiles values 
+$\q_i^{\ast\ast} = \q_i^\ast+e^\ast_i$ that account for the modeling error of the QRT model and the sampling error due to the at-site estimation of the flood quantiles.
+
+```{r}
+set.seed(1)
+FloodnetRoi(target = target, sites = xd, db = db, 
+						period = 100, size = 85, nsim = 100)
+```
+
+Moreover, the set of existing site characteristics does not fully characterize the relationship between the descriptors and the flood quantiles. 
+In particular, several potentially missing descriptors could be spatially distributed, which would lead to spatially correlated residuals.
+If coordinates are provided to the function `FloodnetRoi`, it will further perform a simple kriging technique on the residual of the QRT model to improve the prediction of the flood quantiles when there is spatial correlation among them. 
+The example below shows that the criterion MAD improves from 38.0 to 34.0 when the kriging step is added to the QRT model. 
+
+
+```{r}
+## Extract the coordinates
+coord <- descriptors[, c('lon', 'lat')]
+coord <- as.data.frame(cmdscale(GeoDist(coord), 2))
+
+target.coord <- coord[target.id,]
+coord <- coord[-target.id,]
+```
+
+
+```{r}
+set.seed(1)
+out <- FloodnetRoi(target = target, sites = xd,
+						target.coord = target.coord, sites.coord = coord,
+						size = 209:211, db = db, period = 100, 
+						nsim = 0, verbose = FALSE, out.model = TRUE)
+
+head(out$cv)
 ```
 
 ## Conclusion
 
+In summary, this document showed how the R-package `floodnetProject16` can be used to perform flood frequency analysis using the hydrometric data found in the HYDAT database.
+The function `FloodnetAmax` and `FloodnetPot` were shown to carry out at-site frequency analysis based on annual maximum and peaks over threshold.
+The functions `FloodnetPool` and `FloodnetPoolMle` were used to obtain flood quantiles from regional analysis based on either AMAX and POT.
+Finally, it was shown how evaluation of flood quantiles at ungauged sites can be performed using the function `FloodnetRoi`.
+
+In addition, two datasets : `gaugedSites`, `descriptors` were presented.
+These two datasets contain useful information derived from HYDAT that 
+suggests candidate thresholds for POT analysis, super regions for delineating pooling groups, trend tests to identify stationary stations and site descriptors to predict hydrological variables at ungauged sites. 
+Some of this information will become outdated as new data becomes available.
+Please see the extras coming with the developing package that contain codes to update these values from new version of HYDAT.
+
+
 ## References
 
-Durocher, M., Zadeh, S. M., Burn, D. H., & Ashkar, F. (2018). Comparison of automatic procedures for selecting flood peaks over threshold based on goodness-of-fit tests. Hydrological Processes. https://doi.org/10.1002/hyp.13223
+* Durocher, M., Burn, D. H., & Mostofi Zadeh, S. (2018). A nationwide regional flood frequency analysis at ungauged sites using ROI/GLS with copulas and super regions. Journal of Hydrology, 567, 191–202. https://doi.org/10.1016/j.jhydrol.2018.10.011
 
-Helsel, D. R., & Hirsch, R. M. (2002). Statistical Methods in Water Resources. In Techniques of Water-Resources Investigations of the United States Geological Survey. Retrieved from http://water.usgs.gov/pubs/twri/twri4a3/
+* Durocher, M., Zadeh, S. M., Burn, D. H., & Ashkar, F. (2018). Comparison of automatic procedures for selecting flood peaks over threshold based on goodness-of-fit tests. Hydrological Processes. https://doi.org/10.1002/hyp.13223
 
-Lang, M., Ouarda, T. B. M. J., & Bobée, B. (1999). Towards operational guidelines for over-threshold modeling. Journal of Hydrology, 225(3), 103–117. https://doi.org/10.1016/S0022-1694(99)00167-5
+* Durocher, M., Burn, D. H., Zadeh, S. M., & Ashkar, F. (2019). Estimating flood quantiles at ungauged sites using nonparametric regression methods with spatial components. Hydrological Sciences Journal, 64(9), 1056–1070. https://doi.org/10.1080/02626667.2019.1620952
 
-Mostofi Zadeh, S., & Burn, D. H. (2019). A Super Region Approach to Improve Pooled Flood Frequency Analysis. Canadian Water Resources Journal / Revue Canadienne Des Ressources Hydriques, 0(0), 1–14. https://doi.org/10.1080/07011784.2018.1548946
+* Helsel, D. R., & Hirsch, R. M. (2002). Statistical Methods in Water Resources. In Techniques of Water-Resources Investigations of the United States Geological Survey. Retrieved from http://water.usgs.gov/pubs/twri/twri4a3/
+
+* Lang, M., Ouarda, T. B. M. J., & Bobée, B. (1999). Towards operational guidelines for over-threshold modeling. Journal of Hydrology, 225(3), 103–117. https://doi.org/10.1016/S0022-1694(99)00167-5
+
+* Mostofi Zadeh, S., & Burn, D. H. (2019). A Super Region Approach to Improve Pooled Flood Frequency Analysis. Canadian Water Resources Journal / Revue Canadienne Des Ressources Hydriques, 0(0), 1–14. https://doi.org/10.1080/07011784.2018.1548946
+
+* Robson, A., & Reed, D. (1999). Flood estimation handbook. Institute of Hydrology, Wallingford.
+
 

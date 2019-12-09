@@ -1,3 +1,5 @@
+#Sys.setenv('R_TEST' = '')
+
 library(testthat)
 library(floodnetProject16)
 

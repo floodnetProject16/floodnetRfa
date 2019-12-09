@@ -5,17 +5,23 @@ Version: 0.1.0
 Authors@R: c(person("Martin", "Durocher", email = "mduroche@uwaterloo.ca", role = c("cre")))
 URL: https://github.com/floodnetProject16
 Description: A package implementing FloodNet recommendations for flood frequency analysis.
+License: AGPL-3 | file LICENSE
 Depends: 
-    R (>= 3.1)
+    R (>= 3.4)
 Imports:
     CSHShydRology,
-    Kendall,
-    trend
-Suggests: 
     HYDAT,
+    RSQLite,
+    Kendall,
+    stats,
+    trend,
+    utils
+Suggests: 
+    doParallel,
+    foreach,
     knitr,
-    testthat, 
-    rmarkdown
+    rmarkdown,
+    testthat 
 Encoding: UTF-8
 VignetteBuilder: knitr
 LazyData: true

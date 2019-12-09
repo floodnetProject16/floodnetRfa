@@ -1,25 +1,19 @@
 #' Estimate flood quantiles using using annual maxima
 #'
-#' Return the results of an at-site frequency analysis of floods based on annual
-#' maxima. Estimation is carried out by L-moments and a best distribution is
-#' selected using Akaike Information Criterion (AIC) among the
-#' Generalized Extreme Value (GEV), Generalized logistic (GLO), the
-#' Generalized Normal (GNO) and the Pearson type 3 distributions. A preference is
-#' given to the GEV when the AIC of the other distributions is not
-#' greater than at least two points.
-#' Inference on the estimated flood quantiles is performed by parametric bootstrap.
-#'
-#' @author Martin Durocher <mduroche@@uwaterloo.ca>
-#'
-#' @param period Return period for which the flood quantiles are estimated.
-#'
-#' @param x Path of a CSV file or data.frame.
+#' Return the flood quantile, standard deviation,
+#' of an at-site frequency analysis of floods based on annual
+#' maxima.
 #'
 #' @param site Station ID for HYDAT or a station name for identification.
 #'
 #' @param db Path of the HYDAT database.
 #'
-#' @param maximum Logical. Should the maxima (or minima) be modeled.
+#' @param x Hydrometric data. Vector of annual maxima.
+#'
+#' @param period Return period for which the flood quantiles are estimated.
+#'
+#' @param distr Distribution. One of \code{'gev'},\code{'gno'},\code{'glo'}
+#'   or \code{'pe3'}
 #'
 #' @param instant Logical, should the instantaneous peaks be used.
 #'
@@ -35,14 +29,32 @@
 #'
 #' @details
 #'
-#' If `x` is a path, it is assumed to point to a CSV file, otherwise
-#' it must be a data.frame.
-#' In both cases, there must be at least one column
-#' called `Max` (or `Min` if low flow are modeled).
-#' The name of each column is not case sensitive.
-#' On the website of the Water Survey of Canada, it is suggested to
-#' download the the Annual Extremes Data.
+#' Estimation is carried out by L-moments and a best distribution is
+#' selected using Akaike Information Criterion (AIC) among the
+#' Generalized Extreme Value (GEV), Generalized logistic (GLO), the
+#' Generalized Normal (GNO) and the Pearson type 3 distributions.
+#' A preference is given to the GEV when the AIC of the other distributions is not
+#' greater than at least two.
+#' Inference on the estimated flood quantiles is performed by parametric bootstrap.
 #'
+#' If \code{verbose == TRUE}, a Mann-Kendall and a Pettitt's test are used
+#' to verify the presence of trend and change points in the data.
+#' If the data fails one of the them at significance level 0.05,
+#' a warning is issued.
+#'
+#' @seealso \link{FloodnetPot}, \link{FloodnetPool}.
+#'
+#' @references
+#'
+#' Helsel, D. R., & Hirsch, R. M. (2002). Statistical Methods in Water Resources.
+#'    In Techniques of Water-Resources Investigations of the United States
+#'    Geological Survey.
+#'    Retrieved from http://water.usgs.gov/pubs/twri/twri4a3/
+#'
+#' Hosking, J. R. M., & Wallis, J. R. (1997). Regional frequency analysis:
+#'   an approach based on L-moments. Cambridge Univ Pr.
+#'
+#' @import stats
 #' @export
 #'
 #' @import CSHShydRology
@@ -52,14 +64,14 @@
 #' \dontrun{
 #' ## Assuming that the HYDAT database was already downloaded
 #' db <- "/pathToDB/HYDAT.sqlite"
-#' FloodnetAmax(period = c(20,50), site = '01AD002', db = db)
+#' FloodnetAmax(site = '01AD002', db = db, period = c(20,50))
 #' }
 #'
 FloodnetAmax <-
-	function(period = c(2,5,10,20,50,100),
-					 x = NULL,
-					 site = NULL,
+	function(site = NULL,
 					 db = NULL,
+					 x = NULL,
+					 period = c(2,5,10,20,50,100),
 					 distr = NULL,
 					 instant = FALSE,
 					 nsim = 2000,
@@ -67,8 +79,8 @@ FloodnetAmax <-
 					 out.model = FALSE,
 					 verbose = TRUE){
 
-	## Probability associate with the flood quantiles
-  p <- 1-1/period
+	## Probabilities associated with the flood quantiles
+  period.p <- 1-1/period
 
 	############################################
 	## Reading the data
@@ -147,11 +159,11 @@ FloodnetAmax <-
 	if(verbose)
 	  cat('\n[Estimating the flood quantiles (bootstrap)]\n')
 
-	hat <- predict(fit, p = p, ci = 'boot', alpha = alpha, nsim = nsim,
-								 out.matrix = TRUE)
+	if(nsim > 1){
+  	hat <- predict(fit, p = period.p, ci = 'boot', alpha = alpha, nsim = nsim,
+	  							 out.matrix = TRUE)
 
-	ans <-
-		replicate(4,
+  	ans <- replicate(4,
 	    data.frame(site = site,
 			  			   method = 'amax',
 				  		   distribution = fit$distr,
@@ -160,15 +172,27 @@ FloodnetAmax <-
 						     value= hat$pred[,1]),
 	    simplify = FALSE)
 
-	ans[[2]]$variable <- 'se'
-	ans[[3]]$variable <- 'lower'
-	ans[[4]]$variable <- 'upper'
+	  ans[[2]]$variable <- 'se'
+	  ans[[3]]$variable <- 'lower'
+	  ans[[4]]$variable <- 'upper'
 
-	ans[[2]]$value <- apply(hat$qua, 2, sd)
-	ans[[3]]$value <- hat$pred[,2]
-	ans[[3]]$value <- hat$pred[,3]
+	  ans[[2]]$value <- apply(hat$qua,2,sd)
+	  ans[[3]]$value <- hat$pred[,2]
+	  ans[[4]]$value <- hat$pred[,3]
 
-	ans <- do.call(rbind,ans)
+	  ans <- do.call(rbind,ans)
+
+  } else{
+	  hat <- predict(fit, p = period.p)
+
+	  ans <- data.frame(site = site,
+			  			   method = 'amax',
+				  		   distribution = fit$distr,
+					  	   period = period,
+						     variable = 'quantile',
+						     value= hat)
+	}
+
 
 	if(out.model)
 		ans <- list(fit = fit, qua = ans)

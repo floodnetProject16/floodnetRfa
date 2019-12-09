@@ -2,20 +2,20 @@
 % Please edit documentation in R/FloodnetPot.R
 \name{FloodnetPot}
 \alias{FloodnetPot}
-\title{Estimate flood quantiles using using peaks over threshold}
+\title{Estimating flood quantiles using using peaks over threshold}
 \usage{
-FloodnetPot(period = c(2, 5, 10, 20, 50, 100), x = NULL, site = NULL,
-  db = NULL, u = NULL, area = NULL, nsim = 2000, alpha = 0.05,
+FloodnetPot(site = NULL, db = NULL, x = NULL, period = c(2, 5, 10,
+  20, 50, 100), u = NULL, area = NULL, nsim = 2000, alpha = 0.05,
   tol.year = 346, out.model = FALSE, verbose = TRUE)
 }
 \arguments{
-\item{period}{Return period for which the flood quantiles are estimated.}
-
-\item{x}{Path of a CSV file or data.frame.}
-
 \item{site}{Station ID for HYDAT or a station name for identification.}
 
 \item{db}{File name of the HYDAT database.}
+
+\item{x}{Hydrometric data. Dataset having two columns: Date and value.}
+
+\item{period}{Return period for which the flood quantiles are estimated.}
 
 \item{u}{Threshold value provided by the user.}
 
@@ -34,35 +34,39 @@ returned.}
 \item{verbose}{Logical. Should message and warnings be output.}
 }
 \description{
-Return the flood quantiles estimated by (at-site) Peaks Over Threshold (POT).
+Return the flood quantiles, standard deviation, lower and upper bounds
+of the confidence interval based on a Peaks Over Threshold (POT) model.
+}
+\details{
 Estimation is carried out by maximum likelihood using the Generalized
 Pareto distribution. If not provided, a best candiate threshold is searched.
-Apart some restrictions, it corresponds to the lowest
-threshold that passes the goodness of fit test of Anderson-Darling with
+It corresponds to the lowest
+threshold where the goodness-of-fit test of Anderson-Darling has
 a p-value greater that 0.25.
-In addition, the selected threshold is forced to have in
-average less than 2.5 peaks per year and at least 30 peaks. If
-no threshold is associated to p-value greater that 0.25, the threshold
-with the maximimum p-value is used instead.
-The declustering technique for extracting the independend peaks
+In addition, the selected threshold is forced to have (in
+average) less than 2.5 peaks per year and at least 30 peaks. If
+no threshold is found, the threshold with the maximimum p-value is used instead.
+The declustering technique for extracting the flood peaks
 follows the recommendations of the Water Ressources council of United States.
 In particular, peaks must be separated by at least 4 + log(A) days, where
 A is the drainage area of the basin in square kilometers.
 Inference on the estimated flood quantiles is performed by parametric bootstrap.
-}
-\details{
+
 If the HYDAT database is used as input, the the drainage area
 is extracted from the database. If no drainage area is provided,
-its value is approximated by a log-log relationship with mean river
-discharge. This relationship was estimated using the 1114 sites found in the
+its value is approximated by an empirical relationship with the river mean flow.
+This relationship was estimated using the 1114 sites found in the
 dataset `gaugedSites`.
-It has the form $log(A) <- 4.0934 + 0.9944 * log(M)$, where M is the mean
-streamflow.
+It has the form $log(A) <- 4.0934 + 0.9944 * log(M)$, where M is the river mean
+flow.
 
-For the CSV file, there must be at least two columns: Date and Value. The
-names of the variables are not case sensitive. On the website of the
-Water Survey of Canada, it is suggested to download the format
-`Daily Data: Date-Data Format`.
+If \code{verbose == TRUE}, a Mann-Kendall test and logistic regression are used
+to verify the presence of trends in the mean excess and the number of peaks per years.
+If the data fails one of the tests, a warning is issued.
+For the logistic regression, an analyse of deviance (F-test) is used to compare the
+constant model with polynomial trends.
+#' If the data fails one of the tests at significance level 0.05,
+a warning is issued.
 }
 \examples{
 
@@ -72,4 +76,18 @@ db <- "/pathToDB/HYDAT.sqlite"
 FloodnetPot(period = c(20,50), site = '01AD003', db = db)
 }
 
+}
+\references{
+Durocher, M., Zadeh, S. M., Burn, D. H., & Ashkar, F. (2018). Comparison of
+  automatic procedures for selecting flood peaks over threshold based on
+  goodness-of-fit tests. Hydrological Processes, 0(0).
+  https://doi.org/10.1002/hyp.13223
+
+Durocher, M., Burn, D. H., & Ashkar, F. (2019). Comparison of estimation
+  methods for a nonstationary index-flood model in flood frequency analysis
+  using peaks over threshold. Water Resources Research.
+  https://doi.org/10.1029/2019WR025305
+}
+\seealso{
+\link{FloodnetAmax}, \link{FloodnetPool}.
 }

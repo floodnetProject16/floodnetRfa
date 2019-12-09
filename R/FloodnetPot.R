@@ -1,28 +1,15 @@
-#' Estimate flood quantiles using using peaks over threshold
+#' Estimating flood quantiles using using peaks over threshold
 #'
-#' Return the flood quantiles estimated by (at-site) Peaks Over Threshold (POT).
-#' Estimation is carried out by maximum likelihood using the Generalized
-#' Pareto distribution. If not provided, a best candiate threshold is searched.
-#' Apart some restrictions, it corresponds to the lowest
-#' threshold that passes the goodness of fit test of Anderson-Darling with
-#' a p-value greater that 0.25.
-#' In addition, the selected threshold is forced to have in
-#' average less than 2.5 peaks per year and at least 30 peaks. If
-#' no threshold is associated to p-value greater that 0.25, the threshold
-#' with the maximimum p-value is used instead.
-#' The declustering technique for extracting the independend peaks
-#' follows the recommendations of the Water Ressources council of United States.
-#' In particular, peaks must be separated by at least 4 + log(A) days, where
-#' A is the drainage area of the basin in square kilometers.
-#' Inference on the estimated flood quantiles is performed by parametric bootstrap.
-#'
-#' @param period Return period for which the flood quantiles are estimated.
-#'
-#' @param x Path of a CSV file or data.frame.
+#' Return the flood quantiles, standard deviation, lower and upper bounds
+#' of the confidence interval based on a Peaks Over Threshold (POT) model.
 #'
 #' @param site Station ID for HYDAT or a station name for identification.
 #'
 #' @param db File name of the HYDAT database.
+#'
+#' @param x Hydrometric data. Dataset having two columns: Date and value.
+#'
+#' @param period Return period for which the flood quantiles are estimated.
 #'
 #' @param u Threshold value provided by the user.
 #'
@@ -40,24 +27,55 @@
 #'
 #' @param verbose Logical. Should message and warnings be output.
 #'
-#' @export
-#'
-#' @import CSHShydRology
-#'
 #' @details
+#'
+#' Estimation is carried out by maximum likelihood using the Generalized
+#' Pareto distribution. If not provided, a best candiate threshold is searched.
+#' It corresponds to the lowest
+#' threshold where the goodness-of-fit test of Anderson-Darling has
+#' a p-value greater that 0.25.
+#' In addition, the selected threshold is forced to have (in
+#' average) less than 2.5 peaks per year and at least 30 peaks. If
+#' no threshold is found, the threshold with the maximimum p-value is used instead.
+#' The declustering technique for extracting the flood peaks
+#' follows the recommendations of the Water Ressources council of United States.
+#' In particular, peaks must be separated by at least 4 + log(A) days, where
+#' A is the drainage area of the basin in square kilometers.
+#' Inference on the estimated flood quantiles is performed by parametric bootstrap.
 #'
 #' If the HYDAT database is used as input, the the drainage area
 #' is extracted from the database. If no drainage area is provided,
-#' its value is approximated by a log-log relationship with mean river
-#' discharge. This relationship was estimated using the 1114 sites found in the
+#' its value is approximated by an empirical relationship with the river mean flow.
+#' This relationship was estimated using the 1114 sites found in the
 #' dataset `gaugedSites`.
-#' It has the form $log(A) <- 4.0934 + 0.9944 * log(M)$, where M is the mean
-#' streamflow.
+#' It has the form $log(A) <- 4.0934 + 0.9944 * log(M)$, where M is the river mean
+#' flow.
 #'
-#' For the CSV file, there must be at least two columns: Date and Value. The
-#' names of the variables are not case sensitive. On the website of the
-#' Water Survey of Canada, it is suggested to download the format
-#' `Daily Data: Date-Data Format`.
+#' If \code{verbose == TRUE}, a Mann-Kendall test and logistic regression are used
+#' to verify the presence of trends in the mean excess and the number of peaks per years.
+#' If the data fails one of the tests, a warning is issued.
+#' For the logistic regression, an analyse of deviance (F-test) is used to compare the
+#' constant model with polynomial trends.
+#' #' If the data fails one of the tests at significance level 0.05,
+#' a warning is issued.
+#'
+#' @references
+#'
+#' Durocher, M., Zadeh, S. M., Burn, D. H., & Ashkar, F. (2018). Comparison of
+#'   automatic procedures for selecting flood peaks over threshold based on
+#'   goodness-of-fit tests. Hydrological Processes, 0(0).
+#'   https://doi.org/10.1002/hyp.13223
+#'
+#' Durocher, M., Burn, D. H., & Ashkar, F. (2019). Comparison of estimation
+#'   methods for a nonstationary index-flood model in flood frequency analysis
+#'   using peaks over threshold. Water Resources Research.
+#'   https://doi.org/10.1029/2019WR025305
+#'
+#'
+#' @seealso \link{FloodnetAmax}, \link{FloodnetPool}.
+#'
+#' @import CSHShydRology stats
+#' @export
 #'
 #' @examples
 #'
@@ -68,10 +86,10 @@
 #' }
 #'
 FloodnetPot <-
-	function(period = c(2,5,10,20,50,100),
-					 x = NULL,
-					 site = NULL,
+	function(site = NULL,
 					 db = NULL,
+					 x = NULL,
+					 period = c(2,5,10,20,50,100),
 					 u = NULL,
 					 area = NULL,
 					 nsim = 2000,
@@ -108,7 +126,7 @@ FloodnetPot <-
 
     RSQLite::dbDisconnect(con)
 
-	## USING CSV file or data.frame
+	## USING data.frame
 	} else {
 
 		xd <- as.data.frame(x)
@@ -119,18 +137,8 @@ FloodnetPot <-
       site <- 'site'
 
     ## Verify the date format
-    dd <- as.Date(xd$date[1])
-    yy <- as.integer(format(as.Date(as.character(xd$date[1])),'%Y'))
-
-    ## if ddmmyy
-    if(yy < 32){
-    	xd$date <- as.Date(xd$date,
-    										 tryFormats = c("%d-%m-%Y", "%d-%b-%Y","%d/%m/%Y"))
-    ## or yymmdd
-   	} else{
-    	xd$date <- as.Date(xd$date,
-    										 tryFormats = c("%Y-%m-%d", "%Y-%b-%d","%Y/%m/%d"))
-   	}
+    if(class(xd[,1]) != 'Date' )
+    	stop('Must be a valid date format.')
 
   }
 
@@ -148,8 +156,8 @@ FloodnetPot <-
 	  area <- exp(4.0934 + 0.9944 * log(mean(xd$value, na.rm = TRUE)) )
 
 	  if(verbose)
-		 	warning('The drainage area was approximated using the mean ',
-		 					'river discharge')
+		 	warning('The drainage area was approximated using the',
+		 					'river mean flow')
 	}
 
   ## Compute the minimum separating time between peaks
@@ -159,7 +167,9 @@ FloodnetPot <-
 	## Automatic selection of the threshold
 	############################################
 
-	if(is.null(u)){
+	u.auto <- is.null(u)
+
+	if(u.auto){
 
 		if(verbose)
 	    cat('\n[Searching for a threshold]')
@@ -169,23 +179,28 @@ FloodnetPot <-
 
 	  ## Compute the p-value of the Anderson Darling test for all candidates
 	  xiter <- seq(30, length(xs))
-	  umat <- matrix(-1, length(xs), 3)
+	  umat <- matrix(-1, length(xs), 5)
+
+	  colnames(umat) <- c('u','ppy', 'ad', 'mrl', 'kap')
+
 	  for(ii in xiter){
 
 		  fit0 <- try(FitPot(value~date, xd, u = xs[ii], declust = 'wrc', r = rarea))
 
 		  ## POT fails
       if(class(fit0) != 'fpot'){
-        umat[ii,] <- c(xs[ii], 0, 0)
+        umat[ii,] <- c(xs[ii], 0, 0, 0, 0)
 
       ## IF less than 30 peaks
       } else if(fit0$nexcess < 30){
-        umat[ii,] <- c(xs[ii], fit0$nexcess/fit0$nyear, 0)
+        umat[ii,] <- c(xs[ii], fit0$nexcess/fit0$nyear, 0,
+        							 fit0$mrl, fit0$estimate[2])
 
       ## Normal condition perform the AD test
       } else{
         gof0 <- GofTest(fit0)$pvalue
-        umat[ii,] <- c(xs[ii], fit0$nexcess/fit0$nyear, gof0)
+        umat[ii,] <- c(xs[ii], fit0$nexcess/fit0$nyear, gof0,
+        							 fit0$mrl, fit0$estimate[2])
       }
 
 		  ## Terminate loops id PPY is greater than 2.5
@@ -255,11 +270,11 @@ FloodnetPot <-
 	if(verbose)
 	  cat('\n[Estimating the flood quantiles (bootstrap)]\n')
 
-  hat <- predict(fit,	period, ci = 'boot', alpha = alpha, nsim = nsim,
+	if(nsim > 1){
+    hat <- predict(fit,	period, ci = 'boot', alpha = alpha, nsim = nsim,
 								 out.matrix = TRUE)
 
-	ans <-
-		replicate(4,
+	  ans <- replicate(4,
 	    data.frame(site = site,
 			  			   method = 'pot',
 				  		   distribution = 'gpa',
@@ -268,18 +283,35 @@ FloodnetPot <-
 						     value= hat$pred[,1]),
 	    simplify = FALSE)
 
-	ans[[2]]$variable <- 'se'
-	ans[[3]]$variable <- 'lower'
-	ans[[4]]$variable <- 'upper'
+	  ans[[2]]$variable <- 'se'
+	  ans[[3]]$variable <- 'lower'
+	  ans[[4]]$variable <- 'upper'
 
-	ans[[2]]$value <- apply(hat$qua, 2, sd)
-	ans[[3]]$value <- hat$pred[,2]
-	ans[[3]]$value <- hat$pred[,3]
+  	ans[[2]]$value <- apply(hat$qua, 2, sd)
+	  ans[[3]]$value <- hat$pred[,2]
+	  ans[[4]]$value <- hat$pred[,3]
 
-	ans <- do.call(rbind,ans)
+	  ans <- do.call(rbind,ans)
 
-	if(out.model)
+	} else{
+	  hat <- predict(fit,	period)
+
+	  ans <- data.frame(site = site,
+			  			        method = 'pot',
+				  		        distribution = 'gpa',
+					  	        period = period,
+						          variable = 'quantile',
+						          value= hat)
+
+	}
+
+	if(out.model){
 		ans <- list(fit = fit, qua = ans)
+
+		if(u.auto)
+			ans$u <- as.data.frame(umat)
+
+	}
 
 	return(ans)
 
