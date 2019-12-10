@@ -36,20 +36,15 @@
 #' The utility function \code{PeaksData} can be used to construct the same output
 #' from already extracted peaks.
 #'
+#' @seealso \{DailyData}.
+#'
 #' @export
 #'
 #' @examples
 #'
 #' \dontrun{
-#' ## A copy of HYDAT must be installed. Here an example
-#' db <- 'extdata/Hydat.sqlite3'
 #'
-#' sites <- with(gaugedSites, station[supreg_km12 == 11])
 #'
-#' info <-  with(gaugedSites, gaugedSites[station %in% sites,
-#'                                        c('station','auto','area')])
-#'
-#' out <- DailyPeaksData(info, db, target = '01AF009', size = 5)
 #' }
 #'
 DailyPeaksData <- function(info, db, pad = FALSE, tol = 346,

@@ -6,10 +6,12 @@ FloodnetPoolMle <- function(x, target,
 					 distr,
 					 type = 'mean',
 					 nsim = 2000,
-					 alpha = 0.05,
+					 level = 0.95,
 					 corr = NULL,
 					 out.model = FALSE,
 					 verbose = TRUE){
+
+	alpha <- 1 - level
 
 	if(class(x) == 'peaksdata'){
 	  nyear <- x$nyear

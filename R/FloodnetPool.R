@@ -19,7 +19,7 @@
 #'
 #' @param nsim Number of bootstrap samples used for inference.
 #'
-#' @param alpha Probability outside the confidence interval.
+#' @param level Confidence level.
 #'
 #' @param corr Coefficient of correlation used for simulation.
 #'   The same value is assumed between each pair of sites.
@@ -46,14 +46,35 @@
 #' @examples
 #'
 #' \dontrun{
-#' ## Assuming that a downloaded version of HYDAT database is available
-#' db <- "extdata/Hydat.sqlite3"
-#' target <- '01AF009'
-#' supreg <- with(gaugedSites, station[supreg_km12 == 11])
+#'	## Path the HYDAT database
+#'  db <- DB_HYDAT
 #'
-#' an <- AmaxData(sites = supreg, target = target, db = db)
+#'  ## Compute distance
+#'  coord <- gaugedSites[,c('lon','lat')]
+#'  rownames(coord) <- gaugedSites$station
 #'
-#' FloodnetPoolAmax(an, target, period = c(20,50))
+#'  ## Read Amax data
+#'  x <- AmaxData(rownames(coord), db, target = '01AF009',
+#'  							size = 15, distance = dist(coord))
+#'
+#'  ## Performing AMAX analysis using L-moments
+#'  FloodnetPool(x, '01AF009', distr = 'gev', period = c(20,50), nsim = 30)
+#'
+#'  ## Performing AMAX analysis using Independent Likelhood
+#'  FloodnetPoolMle(x, '01AF009', distr = 'gev', type = 'cv',
+#'   								period = c(20,50), nsim = 30)
+#'
+#'  ## Read Pot data
+#'  info <- gaugedSites[, c('station','auto','area')]
+#'  xd <- DailyPeaksData(info, db, target = '01AF009',
+#'  							size = 15, distance = dist(coord))
+#'
+#'  ## Performing POT analysis using L-moments
+#'  FloodnetPool(xd, '01AF009', period = c(20,50), nsim = 30)
+#'
+#'  ## Performing POT analysis using Independent Likelhood
+#'  FloodnetPoolMle(xd, '01AF009', type = 'shape',
+#'  								period = c(20,50), nsim = 30)
 #' }
 #'
 FloodnetPool <-
@@ -62,10 +83,12 @@ FloodnetPool <-
 					 distr = NULL,
 					 tol.H = 2,
 					 nsim = 2000,
-					 alpha = 0.05,
+					 level = 0.95,
 					 corr = NULL,
 					 out.model = FALSE,
 					 verbose = TRUE){
+
+	alpha <- 1 - level
 
 	if(class(x) == 'peaksdata'){
 	  nyear <- x$nyear

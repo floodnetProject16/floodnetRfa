@@ -19,7 +19,7 @@
 #'
 #' @param nsim Number of bootstrap samples used for inference.
 #'
-#' @param alpha Probability outside the confidence interval.
+#' @param level Confidence level.
 #'
 #' @param out.model Logical. Should the model be output. This correspond to the
 #'   output of \link{FitAmax}. Otherwise only the estimated flood quantiles are
@@ -42,7 +42,7 @@
 #' If the data fails one of the them at significance level 0.05,
 #' a warning is issued.
 #'
-#' @seealso \link{FloodnetPot}, \link{FloodnetPool}.
+#' @seealso \link{AmaxData}, \link{FloodnetPot} and \link{FloodnetPool}.
 #'
 #' @references
 #'
@@ -54,10 +54,8 @@
 #' Hosking, J. R. M., & Wallis, J. R. (1997). Regional frequency analysis:
 #'   an approach based on L-moments. Cambridge Univ Pr.
 #'
-#' @import stats
+#' @import CSHShydRology stats
 #' @export
-#'
-#' @import CSHShydRology
 #'
 #' @examples
 #'
@@ -75,9 +73,11 @@ FloodnetAmax <-
 					 distr = NULL,
 					 instant = FALSE,
 					 nsim = 2000,
-					 alpha = 0.05,
+					 level = 0.95,
 					 out.model = FALSE,
 					 verbose = TRUE){
+
+	alpha = 1- level
 
 	## Probabilities associated with the flood quantiles
   period.p <- 1-1/period

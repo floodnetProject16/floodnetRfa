@@ -18,27 +18,40 @@
 #' @param pad,tol Logical and number of days. Should the daily data be padded.
 #'   See \link[CSHShydRology]{PadPot}.
 #'
+#' @seealso \link{DailyPeaksData}.
+#'
 #' @export
 #'
 #' @examples
 #'
 #' \dontrun{
-#' ## Path the HYDAT database
-#' db <- "extdata/Hydat.sqlite3"
+#' ## This create a variable DB_HYDAT that point to database
+#' db <- DB_HYDAT
 #'
+#' ## Reading AMAX data for one station
 #' x <- AmaxData(c('01AD002'), db)
 #' head(x, 3)
 #'
+#' ## Reading multiple stations
 #' x <- AmaxData(c('01AD002','01AF009'), db, year = FALSE)
 #' x[seq(85,95),]
 #'
+#' ## Reading Daily data
 #' x <- DailyData(c('01AD002','01AF009'), db)
 #' head(x)
 #'
-#' ## Only the pooling group of the target is returned
-#' sites <- with(gaugedSites, station[supreg_km12 == 11])
-#' x <- DailyData(sites, db, target = '01AF009', size = 5)
+#' ## Filter the stations to keep only a pooling group of size 5
+#' sid <- gaugedSites$supreg_km12 == 11
+#' sites <- gaugedSites$station[sid]
+#'
+#' coord <- gaugedSites[sid, c('lon','lat')]
+#' rownames(coord) <- sites
+#'
+#' h <- as.matrix(dist(coord))
+#'
+#' x <- AmaxData(sites, db, target = '01AF009', size = 5,  distance = h)
 #' table(x$station)
+#' round(sort(h['01AF009',])[1:10],2)
 #' }
 #'
 AmaxData <- function(sites, db, year = TRUE,

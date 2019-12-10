@@ -1,0 +1,5 @@
+## Example of file "inst/config" for building and testing the package
+##======================================================================
+
+## Location of the HYDAT database
+DB_HYDAT <- 'C:/Data/HYDAT_11AUG19/Hydat.sqlite3'

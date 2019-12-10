@@ -17,7 +17,7 @@
 #'
 #' @param nsim Number of bootstrap samples used for inference.
 #'
-#' @param alpha Probability outside the confidence interval.
+#' @param level Confidence level.
 #'
 #' @param tol.year Number of days necessary to consider a year complete.
 #'
@@ -93,11 +93,13 @@ FloodnetPot <-
 					 u = NULL,
 					 area = NULL,
 					 nsim = 2000,
-					 alpha = 0.05,
+					 level = 0.95,
 					 tol.year = 346,
 					 out.model = FALSE,
 					 verbose = TRUE){
 
+
+	alpha <- 1- level
 
 	############################################
 	## Reading of the data
