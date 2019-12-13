@@ -1,5 +1,5 @@
 
-context('Exemple tests')
+context('Testing examples')
 
 ## This is a config file that once loaded create a variable DB_HYDAT that point to the location of a downloaded version of HYDAT database
 source(system.file("config", package = 'floodnetProject16'))
@@ -47,8 +47,17 @@ test_that('Example DailyPeaksData', {
   info <- gaugedSites[1:2, c('station','ppy200','area')]
 
   ## Reading AMAX data for one station
-  x <- DailyPeaksData(info, db)
-  head(x, 3)
+  x <- DailyPeaksData(info, db, pad = TRUE)
+  head(x$peaks, 3)
+
+  ## Manually extracting the data
+  xd <- DailyData(info$station,db)
+  x2 <- ExtractPeaksData(xd, info, pad = TRUE)
+  head(x2$peaks, 3)
+
+  ## Create and merged Peaks
+  p1 <- PeaksData(x2$peaks, info)
+  p2 <- BindPeaksdata(p1, p1)
 
   expect_true(TRUE)
 
@@ -58,9 +67,6 @@ test_that('Example FloodnetAmax', {
 
 	## Path the HYDAT database
   db <- DB_HYDAT
-
-  ## Read Amax data
-  x <- AmaxData(c('01AD002'), db)
 
   ## Performing the analysis
   FloodnetAmax(site = '01AD002', db = db, period = c(20,50),
@@ -74,9 +80,6 @@ test_that('Example FloodnetPot', {
 
 	## Path the HYDAT database
   db <- DB_HYDAT
-
-  ## Read Amax data
-  x <- DailyData('01AD002', db)
 
   ## Performing the analysis
   FloodnetPot('01AD002', db = db, period = c(20,50), u = 1000,
@@ -120,4 +123,33 @@ test_that('Example FloodnetPool', {
 
   expect_true(TRUE)
 
+})
+
+test_that('Example FloodnetRoi', {
+
+	## Path the HYDAT database
+  db <- DB_HYDAT
+
+	## Extract catchment descriptors
+	xd <- with(descriptors,
+  data.frame(
+  	site = station,
+    area = log(area),
+    map  = log(map_ws),
+    wb   = log(.01 + wb),
+    stream = log(.01 + stream),
+  	elev = elev_ws,
+  	slope = log(.01 + slope)))
+
+	## Put the target site apart
+	target.id <- (xd$site == '01AF009')
+
+  target <- xd[target.id,]
+  xd <- xd[-target.id,]
+
+  ## Fit the model
+  FloodnetRoi(target = target, sites = xd, db = db,
+						period = 100, size = 30, nsim = 30, verbose = FALSE)
+
+	expect_true(TRUE)
 })

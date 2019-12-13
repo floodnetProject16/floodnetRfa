@@ -80,9 +80,15 @@
 #' @examples
 #'
 #' \dontrun{
-#' ## Assuming that the HYDAT database was already downloaded
-#' db <- "/pathToDB/HYDAT.sqlite"
-#' FloodnetPot(period = c(20,50), site = '01AD003', db = db)
+#'	## Path the HYDAT database
+#'  db <- DB_HYDAT
+#'
+#'  ## Read Amax data
+#'  x <- DailyData('01AD002', db)
+#'
+#'  ## Performing the analysis
+#'  FloodnetPot('01AD002', db = db, period = c(20,50), u = 1000,
+#'  						 area = 14400, nsim = 30, verbose = FALSE)
 #' }
 #'
 FloodnetPot <-
@@ -109,9 +115,6 @@ FloodnetPot <-
 		stop('Must provide an input data.')
 
   if(!is.null(db)){
-
-		if(verbose)
-	    cat('\n[Reading the HYDAT database]')
 
 		## open a connection to the database
 	  con <- RSQLite::dbConnect(RSQLite::SQLite(), db)
@@ -173,8 +176,10 @@ FloodnetPot <-
 
 	if(u.auto){
 
-		if(verbose)
-	    cat('\n[Searching for a threshold]')
+		if(verbose){
+	    cat('\n[Searching for a threshold]\n')
+		  bar <- txtProgressBar()
+		}
 
   	## preselect a set of candidate thresholds
 	  xs <- sort(unique(xd$value), decreasing = TRUE)
@@ -186,6 +191,9 @@ FloodnetPot <-
 	  colnames(umat) <- c('u','ppy', 'ad', 'mrl', 'kap')
 
 	  for(ii in xiter){
+
+	  	if(verbose)
+	  		setTxtProgressBar(bar, ii /length(xiter))
 
 		  fit0 <- try(FitPot(value~date, xd, u = xs[ii], declust = 'wrc', r = rarea))
 
@@ -231,17 +239,10 @@ FloodnetPot <-
 	}
 
 	############################################
-	## Fitting and prediction
+	## Fitting and Performing model checking
 	############################################
-
-	if(verbose)
-	    cat('\n[Fitting the POT model with u =', round(u,1), ']')
 
 	fit <- FitPot(value~date, xd, u = u, declust = 'wrc', r = rarea)
-
-	############################################
-	## Perform model checking
-	############################################
 
 	if(verbose){
 
@@ -268,9 +269,6 @@ FloodnetPot <-
 	############################################
 	## Evaluate flood quantiles
 	############################################
-
-	if(verbose)
-	  cat('\n[Estimating the flood quantiles (bootstrap)]\n')
 
 	if(nsim > 1){
     hat <- predict(fit,	period, ci = 'boot', alpha = alpha, nsim = nsim,

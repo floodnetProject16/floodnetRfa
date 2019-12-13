@@ -60,9 +60,15 @@
 #' @examples
 #'
 #' \dontrun{
-#' ## Assuming that the HYDAT database was already downloaded
-#' db <- "/pathToDB/HYDAT.sqlite"
-#' FloodnetAmax(site = '01AD002', db = db, period = c(20,50))
+#' 	## Path the HYDAT database
+#'  db <- DB_HYDAT
+#'
+#'  ## Read Amax data
+#'  x <- AmaxData(c('01AD002'), db)
+#'
+#'  ## Performing the analysis
+#'  FloodnetAmax(site = '01AD002', db = db, period = c(20,50),
+#'  						 nsim = 30, verbose = FALSE)
 #' }
 #'
 FloodnetAmax <-
@@ -92,9 +98,6 @@ FloodnetAmax <-
 
   ## Using HYDAT
   if(!is.null(db)){
-
-		if(verbose)
-		  cat('\n[Reading HYDAT database]')
 
 		## open a connection to the database
 	  con <- RSQLite::dbConnect(RSQLite::SQLite(), db)
@@ -146,18 +149,12 @@ FloodnetAmax <-
 	## Fitting and prediction
 	############################################
 
-	if(verbose)
-	  cat('\n[Estimating the parameters of the best distribution]')
-
 	## Fit the distribution
 	if(is.null(distr))
 	  distr <- c('gev','glo','gno', 'pe3')
 
 	fit <- FitAmax(xd, distr = distr, method = 'lmom',
 								 varcov = out.model, tol.gev = 2)
-
-	if(verbose)
-	  cat('\n[Estimating the flood quantiles (bootstrap)]\n')
 
 	if(nsim > 1){
   	hat <- predict(fit, p = period.p, ci = 'boot', alpha = alpha, nsim = nsim,

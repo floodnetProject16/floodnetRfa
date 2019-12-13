@@ -3,7 +3,7 @@
 #' @rdname FloodnetPool
 FloodnetPoolMle <- function(x, target,
 					 period = c(2,5,10,20,50,100),
-					 distr,
+					 distr = NULL,
 					 type = 'mean',
 					 nsim = 2000,
 					 level = 0.95,
@@ -11,6 +11,7 @@ FloodnetPoolMle <- function(x, target,
 					 out.model = FALSE,
 					 verbose = TRUE){
 
+	# Convert level to alpha
 	alpha <- 1 - level
 
 	if(class(x) == 'peaksdata'){
@@ -45,9 +46,6 @@ FloodnetPoolMle <- function(x, target,
 	## Make sure that the target is the first columns
 	xw <- xw[,unique(c(target,colnames(xw)))]
 
-	## Fit a distribution for each margin
-	margin <- FitPoolMargin(xw, distr = distr)
-
 	## Compute the exceeding probability associated with the return period
 	if(model == 'amax'){
 		p <- 1-1/period
@@ -58,15 +56,33 @@ FloodnetPoolMle <- function(x, target,
 	  p <- 1-1/(ppy*period)
 	}
 
-	if(type == 'shape' & model == 'amax')
+	## function that properly the parameters specific to each site
+	if(type == 'shape' & model == 'amax'){
   	GetIndx <- function(z) z$index[,1]
-  else
+  } else{
   	GetIndx <- function(z) z$index[1]
+  }
 
-	## Fit the model
-  fit <- FitPoolMle(xw, distr = distr, type = type)
+
+	if(!is.null(distr)){
+		## Fit the model
+	  fit <- FitPoolMle(xw, distr = distr, type = type)
+
+	} else {
+		## Fit common distributions
+	  dlist <- c('gev', 'glo', 'gno', 'pe3')
+	  Fnllik <- function(d) FitPoolMle(xw, distr = d, type = type)
+	  f <- lapply(dlist, Fnllik)
+
+	  ## Keep the best fit
+	  nllik <- -vapply(f, getElement, 'llik', FUN.VALUE = double(1))
+		fit <- f[[which.min(nllik)]]
+		distr <- fit$distr
+	}
+
   hat <- predict(fit, p, index = GetIndx(fit))
 
+  ## Add the threshold
   if(model == 'pot')
     	hat <- hat + u
 
@@ -80,7 +96,12 @@ FloodnetPoolMle <- function(x, target,
   		stop('The correlation coefficient must be between 0 and 1.')
 
   } else if(model == 'amax'){
-      suppressWarnings(corr <- Intersite(xw)$para)
+  	nn <- crossprod(!is.na(xw))
+  	nn <- nn[lower.tri(nn)]
+  	cc <- cor(xw, use = 'pairwise.complete.obs')
+  	cc <- cc[lower.tri(cc)]
+    corr <- weighted.mean(cc, w = nn, na.rm = TRUE)
+
   } else if(model == 'pot'){
       corr <- 0
   }
@@ -89,15 +110,21 @@ FloodnetPoolMle <- function(x, target,
   ## Bootstrap
   if(nsim > 1){
 
+  	if(verbose)
+  	  cat('\n[Bootstrapping flood quantiles]\n')
+
   	qboot <- matrix(0, nsim, length(hat))
     bar <- txtProgressBar()
+
+    ## Fit a distribution for each margin
+	  marg <- FitPoolMargin(xw, distr = distr)
 
     for(ii in 1:nsim){
 
       if(verbose)
     	  setTxtProgressBar(bar, ii/nsim)
 
-  	  sim <- simulate(margin, corr = corr[1])
+  	  sim <- simulate(marg, corr = corr[1])
   	  f <- FitPoolMle(sim, distr = distr, type = type)
       qboot[ii,] <- predict(f, p = p, index = GetIndx(f))
     }
@@ -114,11 +141,21 @@ FloodnetPoolMle <- function(x, target,
 						     value = hat),
 	    simplify = FALSE)
 
-	  ans[[2]]$variable <- 'se'
+	  ans[[2]]$variable <- 'rmse'
 	  ans[[3]]$variable <- 'lower'
 	  ans[[4]]$variable <- 'upper'
 
-	  ans[[2]]$value <- apply(qboot, 2, sd)
+    ## Compute root mean square error
+	  if(ncol(qboot) == 1){
+	    res <- as.matrix(qboot - hat)
+	  } else{
+      res <- t(apply(qboot, 1, '-', hat))
+	  }
+
+    rmse <- sqrt(colSums(res^2)/nrow(res))
+
+
+	  ans[[2]]$value <- rmse
 	  ans[[3]]$value <- apply(qboot, 2, quantile, alpha/2)
 	  ans[[4]]$value <- apply(qboot, 2, quantile, 1-alpha/2)
 

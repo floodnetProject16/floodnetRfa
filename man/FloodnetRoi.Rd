@@ -6,7 +6,7 @@
 \usage{
 FloodnetRoi(target, target.coord = NULL, sites, sites.coord = NULL,
   db = NULL, x = NULL, size = 20, period = 100, distr = "gev",
-  nsim = 0, out.model = FALSE, verbose = TRUE)
+  corr = NULL, nsim = 0, out.model = FALSE, verbose = TRUE)
 }
 \arguments{
 \item{target}{Descriptors of the target sites. A data.frame where the first
@@ -29,6 +29,10 @@ column is the name of the basin.}
 
 \item{distr}{Distribution of the gauged sites. Can a common distribution or
 a vector of the individual distributions.}
+
+\item{corr}{Correlation matrix or coefficient that represent
+the intersite correlation. If no specified the average coefficient
+of correlation is used between for all pairs.}
 
 \item{nsim}{Number of bootstrap samples.}
 
@@ -71,7 +75,29 @@ bootstraps for the QRT model is used to evaluate model uncertainty.
 \examples{
 
 \dontrun{
-db <- "/pathToDB/HYDAT.sqlite"
+	## Path the HYDAT database
+ db <- DB_HYDAT
+
+## Extract catchment descriptors
+xd <- with(descriptors,
+ data.frame(
+ 	site = station,
+   area = log(area),
+   map  = log(map_ws),
+   wb   = log(.01 + wb),
+   stream = log(.01 + stream),
+ 	elev = elev_ws,
+ 	slope = log(.01 + slope)))
+
+## Put the target site apart
+target.id <- (xd$site == '01AF009')
+
+ target <- xd[target.id,]
+ xd <- xd[-target.id,]
+
+ ## Fit the model
+ FloodnetRoi(target = target, sites = xd, db = db,
+					period = 100, size = 30, nsim = 30)
 
 }
 

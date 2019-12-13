@@ -25,8 +25,8 @@ PeaksData <- function(x, info){
 		stop('There is missing sites in the hydrometric data.')
 
 	## Format the output
-	ans$peak <- x[sites %in% info.sites,]
-	rownames(ans$peaks) <-
+	ans$peaks <- x[sites %in% ans$sites,]
+	rownames(ans$peaks) <- NULL
 
 	ans$npeak <- tapply(sites, sites, length)
 	names(ans$npeak) <- NULL

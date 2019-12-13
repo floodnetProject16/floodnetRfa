@@ -6,7 +6,7 @@
 \usage{
 FloodnetAmax(site = NULL, db = NULL, x = NULL, period = c(2, 5, 10,
   20, 50, 100), distr = NULL, instant = FALSE, nsim = 2000,
-  alpha = 0.05, out.model = FALSE, verbose = TRUE)
+  level = 0.95, out.model = FALSE, verbose = TRUE)
 }
 \arguments{
 \item{site}{Station ID for HYDAT or a station name for identification.}
@@ -24,7 +24,7 @@ or \code{'pe3'}}
 
 \item{nsim}{Number of bootstrap samples used for inference.}
 
-\item{alpha}{Probability outside the confidence interval.}
+\item{level}{Confidence level.}
 
 \item{out.model}{Logical. Should the model be output. This correspond to the
 output of \link{FitAmax}. Otherwise only the estimated flood quantiles are
@@ -54,9 +54,15 @@ a warning is issued.
 \examples{
 
 \dontrun{
-## Assuming that the HYDAT database was already downloaded
-db <- "/pathToDB/HYDAT.sqlite"
-FloodnetAmax(site = '01AD002', db = db, period = c(20,50))
+	## Path the HYDAT database
+ db <- DB_HYDAT
+
+ ## Read Amax data
+ x <- AmaxData(c('01AD002'), db)
+
+ ## Performing the analysis
+ FloodnetAmax(site = '01AD002', db = db, period = c(20,50),
+ 						 nsim = 30, verbose = FALSE)
 }
 
 }
@@ -70,5 +76,5 @@ Hosking, J. R. M., & Wallis, J. R. (1997). Regional frequency analysis:
   an approach based on L-moments. Cambridge Univ Pr.
 }
 \seealso{
-\link{FloodnetPot}, \link{FloodnetPool}.
+\link{AmaxData}, \link{FloodnetPot} and \link{FloodnetPool}.
 }

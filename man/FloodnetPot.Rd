@@ -5,7 +5,7 @@
 \title{Estimating flood quantiles using using peaks over threshold}
 \usage{
 FloodnetPot(site = NULL, db = NULL, x = NULL, period = c(2, 5, 10,
-  20, 50, 100), u = NULL, area = NULL, nsim = 2000, alpha = 0.05,
+  20, 50, 100), u = NULL, area = NULL, nsim = 2000, level = 0.95,
   tol.year = 346, out.model = FALSE, verbose = TRUE)
 }
 \arguments{
@@ -23,7 +23,7 @@ FloodnetPot(site = NULL, db = NULL, x = NULL, period = c(2, 5, 10,
 
 \item{nsim}{Number of bootstrap samples used for inference.}
 
-\item{alpha}{Probability outside the confidence interval.}
+\item{level}{Confidence level.}
 
 \item{tol.year}{Number of days necessary to consider a year complete.}
 
@@ -71,9 +71,15 @@ a warning is issued.
 \examples{
 
 \dontrun{
-## Assuming that the HYDAT database was already downloaded
-db <- "/pathToDB/HYDAT.sqlite"
-FloodnetPot(period = c(20,50), site = '01AD003', db = db)
+## Path the HYDAT database
+ db <- DB_HYDAT
+
+ ## Read Amax data
+ x <- DailyData('01AD002', db)
+
+ ## Performing the analysis
+ FloodnetPot('01AD002', db = db, period = c(20,50), u = 1000,
+ 						 area = 14400, nsim = 30, verbose = FALSE)
 }
 
 }

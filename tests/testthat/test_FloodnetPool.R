@@ -27,11 +27,11 @@ test_that('Verifying FloodnetPool- output', {
 
   expect_equal(as.character(unique(out$method)), 'pool_amax')
 
-  sname <- c('quantile','se','lower','upper')
+  sname <- c('quantile','rmse','lower','upper')
   expect_equal(as.character(unique(out$variable)), sname)
 
   qua <- with(out, value[variable == 'quantile'])
-  se <- with(out, value[variable == 'se'])
+  se <- with(out, value[variable == 'rmse'])
   lb <- with(out, value[variable == 'lower'])
   ub <- with(out, value[variable == 'upper'])
 
@@ -62,14 +62,14 @@ test_that('Verifying FloodnetPool- output', {
 	expect_equal(as.character(unique(out$variable)), 'quantile')
 
 
-	## Test confidence interval alpha
+	## Test confidence interval
 	set.seed(13)
 	out1 <- FloodnetPool(an, ref, period = 100, distr = 'gev',
-											nsim = 500, verbose = FALSE, alpha = .01)
+											nsim = 500, verbose = FALSE, level = .99)
 	rg1 <- diff(out1[3:4,6])
 
 	out2 <- FloodnetPool(an, ref, period = 100, distr = 'gev',
-											nsim = 500, verbose = FALSE, alpha = .2)
+											nsim = 500, verbose = FALSE, level = .8)
   rg2 <- diff(out2[3:4,6])
 
   expect_true(rg2<rg1)

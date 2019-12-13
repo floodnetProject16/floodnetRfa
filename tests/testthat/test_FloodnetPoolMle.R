@@ -7,19 +7,20 @@ ref <- '01AF009'
 
 test_that('Verifying FloodnetPoolMle', {
 
+	set.seed(1)
 	sreg <- with(gaugedSites,gaugedSites[supreg_km12 == 11,1])
 	sdist <- SeasonDistanceData(sreg, DB_HYDAT)
 
 	an <- AmaxData(sreg, db = DB_HYDAT, target = ref, size = 5, distance = sdist)
 
   out <- FloodnetPoolMle(an, ref, distr = 'gev', verbose = FALSE,
-  											 nsim = 5)
+  											 nsim =10)
 
   out.cv <- FloodnetPoolMle(an, ref, distr = 'gno', verbose = FALSE,
-  											 nsim = 5, type = 'cv')
+  											 nsim = 10, type = 'cv')
 
   out.mean <- FloodnetPoolMle(an, ref, distr = 'glo', verbose = FALSE,
-  											 nsim = 5, type = 'shape')
+  											 nsim = 10, type = 'shape')
 
   ## output format
   expect_equal(class(out),'data.frame' )
@@ -36,11 +37,11 @@ test_that('Verifying FloodnetPoolMle', {
   expect_equal(as.character(unique(out.cv$method)), 'pool_amax_cv')
   expect_equal(as.character(unique(out.mean$method)), 'pool_amax_shape')
 
-  sname <- c('quantile','se','lower','upper')
+  sname <- c('quantile','rmse','lower','upper')
   expect_equal(as.character(unique(out$variable)), sname)
 
   qua <- with(out, value[variable == 'quantile'])
-  se <- with(out, value[variable == 'se'])
+  se <- with(out, value[variable == 'rmse'])
   lb <- with(out, value[variable == 'lower'])
   ub <- with(out, value[variable == 'upper'])
 
@@ -60,9 +61,6 @@ test_that('Verifying FloodnetPoolMle', {
   expect_equivalent(hat, qq)
 
 
-	## no distribution
-	expect_error(FloodnetPoolMle(an, ref, verbose = FALSE))
-
 	## only one period
   out <- FloodnetPoolMle(an, ref, distr = 'gev', nsim = 5,
   											 period = 100, verbose = FALSE)
@@ -76,14 +74,14 @@ test_that('Verifying FloodnetPoolMle', {
 	expect_equal(as.character(unique(out$variable)), 'quantile')
 
 
-	## Test confidence interval alpha
+	## Test confidence interval
 	set.seed(13)
 	out1 <- FloodnetPoolMle(an, ref, period = 100, distr = 'gev',
-											nsim = 50, verbose = FALSE, alpha = .01)
+											nsim = 50, verbose = FALSE, level = .99)
 	rg1 <- diff(out1[3:4,6])
 
 	out2 <- FloodnetPoolMle(an, ref, period = 100, distr = 'gev',
-											nsim = 50, verbose = FALSE, alpha = .2)
+											nsim = 50, verbose = FALSE, level = .8)
   rg2 <- diff(out2[3:4,6])
 
   expect_true(rg2<rg1)

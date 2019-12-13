@@ -131,10 +131,10 @@ FloodnetPool <-
 
  	## Update the pooling group base on its heterogeneity
  	if(verbose)
-  	cat('\n[Updating pooling group]')
+  	cat('\n[Updating pooling group]\n')
 
   suppressWarnings(
-  	fit <- PoolRemove(fit, verbose = FALSE, nmin = 1, tol = tol.H,
+  	fit <- PoolRemove(fit, verbose = verbose, nmin = 1, tol = tol.H,
   										ntot.min = 5 * max(period),  distr.fix = distr.fix))
 
   if(verbose){
@@ -147,9 +147,6 @@ FloodnetPool <-
 
   }
 
-  if(verbose)
-  	cat('\n[Estimating the flood quantile]\n')
-
   ## Evaluate the average intersite-correlation and exceeding probability
   ## if not specified
   if(!is.null(corr)){
@@ -161,8 +158,13 @@ FloodnetPool <-
   		stop('The correlation coefficient must be between 0 and 1.')
 
   } else if(type == 'amax'){
-   	pool.sites <- rownames(fit$lmom)
-    suppressWarnings(corr <- Intersite(xw[,pool.sites])$para)
+   	xw <- xw[, rownames(fit$lmom)]
+   	nn <- crossprod(!is.na(xw))
+  	nn <- nn[lower.tri(nn)]
+  	cc <- cor(xw, use = 'pairwise.complete.obs')
+  	cc <- cc[lower.tri(cc)]
+    corr <- weighted.mean(cc, w = nn, na.rm = TRUE)
+
   } else if(type == 'pot'){
     corr <- 0
   }
@@ -198,7 +200,7 @@ FloodnetPool <-
 						     value = hat[,1]),
 	    simplify = FALSE)
 
-	  ans[[2]]$variable <- 'se'
+	  ans[[2]]$variable <- 'rmse'
 	  ans[[3]]$variable <- 'lower'
 	  ans[[4]]$variable <- 'upper'
 

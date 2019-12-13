@@ -7,7 +7,7 @@ BindPeaksdata <- function(...){
 	ans <- vector('list',5)
 	names(ans) <- c('peaks','sites','npeak','nyear','thresh')
 
-	ans$peaks <- do.call(rbind, lapply(arg,getElement, 'peaks'))
+	ans$peaks <- do.call(rbind, lapply(arg, getElement, 'peaks'))
 	rownames(ans$peaks) <- NULL
 
 	for(vname in names(ans)[-1]){

@@ -26,6 +26,10 @@
 #' @param distr Distribution of the gauged sites. Can a common distribution or
 #'   a vector of the individual distributions.
 #'
+#' @param corr Correlation matrix or coefficient that represent
+#'   the intersite correlation. If no specified the average coefficient
+#'   of correlation is used between for all pairs.
+#'
 #' @param nsim Number of bootstrap samples.
 #'
 #' @param out.model Logical. Should the model be returned.
@@ -78,7 +82,29 @@
 #' @examples
 #'
 #' \dontrun{
-#' db <- "/pathToDB/HYDAT.sqlite"
+#' 	## Path the HYDAT database
+#'  db <- DB_HYDAT
+#'
+#'	## Extract catchment descriptors
+#'	xd <- with(descriptors,
+#'  data.frame(
+#'  	site = station,
+#'    area = log(area),
+#'    map  = log(map_ws),
+#'    wb   = log(.01 + wb),
+#'    stream = log(.01 + stream),
+#'  	elev = elev_ws,
+#'  	slope = log(.01 + slope)))
+#'
+#'	## Put the target site apart
+#'	target.id <- (xd$site == '01AF009')
+#'
+#'  target <- xd[target.id,]
+#'  xd <- xd[-target.id,]
+#'
+#'  ## Fit the model
+#'  FloodnetRoi(target = target, sites = xd, db = db,
+#'						period = 100, size = 30, nsim = 30)
 #'
 #' }
 #'
@@ -92,6 +118,7 @@ FloodnetRoi <- function(
 	size = 20,
 	period = 100,
 	distr = 'gev',
+	corr = NULL,
 	nsim = 0,
 	out.model = FALSE,
 	verbose = TRUE){
@@ -159,9 +186,6 @@ FloodnetRoi <- function(
 
   ## Using HYDAT
   if(!is.null(db)){
-
-		if(verbose)
-		  cat('\n[Reading HYDAT database]')
 
   	## open a connection to the database
 	  con <- RSQLite::dbConnect(RSQLite::SQLite(), db)
@@ -237,36 +261,29 @@ FloodnetRoi <- function(
   	if(verbose)
 		  cat('\n[Finding the ROI size]\n')
 
+
     if(do.krig){
       suppressWarnings(
   	  cv <- CvRoi(x = xsite, phy = phy.form, similarity = sim.form,
   		  					kriging = krig.form, model = 'Exp',
-  		  					nk = size, fold = 10, verbose = verbose))
+  		  					nk = size, fold = 10, verbose = FALSE))
     } else {
     	suppressWarnings(
       cv <- CvRoi(x = xsite, phy = phy.form, similarity = sim.form,
-      						nk = size, fold = 10, verbose = verbose))
+      						nk = size, fold = 10, verbose = FALSE))
     }
 
     size <- cv$nk[which.min(cv$mad)]
 
   }
 
-  if(verbose)
-		  cat('\n[Performing at-site analyses]')
 
   ## Fit the model
   if(do.krig){
-  	if(verbose)
-		  cat('\n[Predicting target using ROI (n=',size,') and kriging]', sep ='')
-
   	fit <- suppressWarnings(FitRoi(x = xsite, xnew = xtarget, nk = size,
   							phy = phy.form, similarity = sim.form, kriging = krig.form))
 
   } else{
-  	if(verbose)
-		  cat('\n[Predicting target using ROI(n=', size,')]', sep = '')
-
     fit <- suppressWarnings(FitRoi(x = xsite, xnew = xtarget, nk = size,
   							phy = phy.form, similarity = sim.form))
   }
@@ -275,24 +292,46 @@ FloodnetRoi <- function(
   # Bootstrapping
   ###############################################
 
+
   if(nsim > 1){
 
+  	if(verbose)
+		  cat('\n[Bootstrapping]\n')
+
     ## Compute the intersite correlation matrix
+    if(!is.null(corr)){
 
-    if(verbose)
-		  cat('\n[Evaluating Intersite correlation]')
+  	  if(any(corr > 1 | corr < 0))
+  		  stop('The correlation coefficient must be between 0 and 1.')
 
-    an.wide <- DataWide(value ~ site + year, an)
-    icor <- suppressWarnings(try(Intersite(an.wide), silent = TRUE)$model)
-    decomp <- svd(icor)
-    demi <- diag(sqrt(decomp$d)) %*% t(decomp$v)
+    } else {
+   	  xw <- DataWide(value ~ site + year, an)
+   	  nn <- crossprod(!is.na(xw))
+  	  nn <- nn[lower.tri(nn)]
+  	  cc <- cor(xw, use = 'pairwise.complete.obs')
+  	  cc <- cc[lower.tri(cc)]
+      corr <- weighted.mean(cc, w = nn, na.rm = TRUE)
 
-    if(verbose)
-		  cat('\n[Performing bootstrap]\n')
+    }
+
+  	if(all(corr == 0)){
+  	  nocorr <- TRUE
+
+  	} else {
+
+  		if(length(corr) == 1){
+    	  corr <- matrix(corr, nrow(sites), nrow(sites))
+    	  diag(corr) <- 1
+  		}
+
+    	demi <- chol(corr)
+    	nocorr <- FALSE
+    }
 
     ## At-site info for simulation
-    an.para <- do.call(rbind, an.para)
     an.size <- sapply(an.lst,length)
+    an.nsite <- nrow(sites)
+    an.nmax <- max(an.size)
 
     ## allocate memory
     xsite0 <- xsite
@@ -315,11 +354,18 @@ FloodnetRoi <- function(
     	if(verbose)
     		setTxtProgressBar(bar, ii/nsim)
 
-    	## At-site quantile
-	    oo <- RegSim(an.para, distr, nrec = an.size, long = TRUE,
-      							corr = demi, corr.sqrt = TRUE, lmom = FALSE)
-      oo <- split(oo[,3], oo[,2])
+      ##------- At site simulation ----------##
+      if(nocorr){
+        ## Simulate directly uniform variable
+        u <- lapply(an.size, runif)
+      } else {
+        ## Simulate from multivariate normal
+        z <- matrix(rnorm(an.nsite * an.nmax), an.nsite, an.nmax)
+        z <- pnorm(crossprod(demi, z))
+        u <- lapply(1:an.nsite, function(jj) z[jj, 1:an.size[jj]])
+      }
 
+      oo <- mapply(qAmax, u, an.para, distr)
       pp <- mapply(fAmax, oo, distr, SIMPLIFY = FALSE)
       qq <- log(mapply(qAmax, pp, distr, MoreArgs = list(p = period.p)))
       xsite0$y <- qq + res.boot[[ii]]

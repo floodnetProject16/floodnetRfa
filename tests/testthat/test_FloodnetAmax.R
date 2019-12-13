@@ -58,13 +58,13 @@ test_that('Verifying FloodnetAmax - option', {
 	expect_equal(as.character(unique(out$variable)), 'quantile')
 
 
-	## Test confidence interval alpha
+	## Test confidence interval
 	out1 <- FloodnetAmax(ref, period = 100, db = DB_HYDAT, distr = 'gev',
-											nsim = 500, verbose = FALSE, alpha = .01)
+											nsim = 500, verbose = FALSE, level = .99)
 	rg1 <- diff(out1[3:4,6])
 
 	out2 <- FloodnetAmax(ref, period = 100, db = DB_HYDAT, distr = 'gev',
-											nsim = 500, verbose = FALSE, alpha = .2)
+											nsim = 500, verbose = FALSE, level = .8)
   rg2 <- diff(out2[3:4,6])
 
   expect_true(rg2<rg1)

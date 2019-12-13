@@ -44,7 +44,11 @@ station, threshold and drainage area.}
 \item{sorted}{Logical. Is the data sorted.}
 }
 \description{
-Return a list of peaks over thresholds data for one or more stations.
+The function `DailyPeaksData` return an object containing exccedances above
+given thresholds extracted from HYDAT.
+The function `ExtractPeaksData` extract the same object from a data.frame.
+The function `PeaksData` serves to create the same output object from known
+exceedances and `BindPeaksData` can merged together 2 of these objectes.
 }
 \details{
 For \code{DailyPeaksData}, if \code{info} has two columns, they are assumed
@@ -57,15 +61,28 @@ from already extracted peaks.
 \examples{
 
 \dontrun{
-## A copy of HYDAT must be installed. Here an example
-db <- 'extdata/Hydat.sqlite3'
+ ## Path the HYDAT database
+ db <- DB_HYDAT
 
-sites <- with(gaugedSites, station[supreg_km12 == 11])
+ ## Data.frame containing the threshold and drainage area
+ info <- gaugedSites[1:2, c('station','ppy200','area')]
 
-info <-  with(gaugedSites, gaugedSites[station \%in\% sites,
-                                       c('station','auto','area')])
+ ## Reading AMAX data for one station
+ x <- DailyPeaksData(info, db, pad = TRUE)
+ head(x$peaks, 3)
 
-out <- DailyPeaksData(info, db, target = '01AF009', size = 5)
+ ## Manually extracting the data
+ xd <- DailyData(info$station,db)
+ x2 <- ExtractPeaksData(xd, info, pad = TRUE)
+ head(x2$peaks, 3)
+
+ ## Create and merged Peaks
+ p1 <- PeaksData(x2$peaks, info)
+ p2 <- BindPeaksdata(p1, p1)
+
 }
 
+}
+\seealso{
+\link{DailyData}.
 }

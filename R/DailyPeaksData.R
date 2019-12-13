@@ -1,6 +1,10 @@
 #' Extract Peaks from HYDAT database
 #'
-#' Return a list of peaks over thresholds data for one or more stations.
+#' The function `DailyPeaksData` return an object containing exccedances above
+#' given thresholds extracted from HYDAT.
+#' The function `ExtractPeaksData` extract the same object from a data.frame.
+#' The function `PeaksData` serves to create the same output object from known
+#' exceedances and `BindPeaksData` can merged together 2 of these objectes.
 #'
 #' @param info Site information. Must be a data frame with 3
 #'   columns: site, threshold and area, except for function \code{PeaksData} where
@@ -36,14 +40,31 @@
 #' The utility function \code{PeaksData} can be used to construct the same output
 #' from already extracted peaks.
 #'
-#' @seealso \{DailyData}.
+#' @seealso \link{DailyData}.
 #'
 #' @export
 #'
 #' @examples
 #'
 #' \dontrun{
+#'  ## Path the HYDAT database
+#'  db <- DB_HYDAT
 #'
+#'  ## Data.frame containing the threshold and drainage area
+#'  info <- gaugedSites[1:2, c('station','ppy200','area')]
+#'
+#'  ## Reading AMAX data for one station
+#'  x <- DailyPeaksData(info, db, pad = TRUE)
+#'  head(x$peaks, 3)
+#'
+#'  ## Manually extracting the data
+#'  xd <- DailyData(info$station,db)
+#'  x2 <- ExtractPeaksData(xd, info, pad = TRUE)
+#'  head(x2$peaks, 3)
+#'
+#'  ## Create and merged Peaks
+#'  p1 <- PeaksData(x2$peaks, info)
+#'  p2 <- BindPeaksdata(p1, p1)
 #'
 #' }
 #'
