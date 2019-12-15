@@ -132,7 +132,7 @@ FloodnetPoolMle <- function(x, target,
     if(model == 'pot')
       qboot <- qboot + u
 
-    ans <- replicate(4,
+    ans <- replicate(7,
 	    data.frame(site = target,
 			  			   method = metho,
 				  		   distribution = distr,
@@ -141,9 +141,16 @@ FloodnetPoolMle <- function(x, target,
 						     value = hat),
 	    simplify = FALSE)
 
-	  ans[[2]]$variable <- 'rmse'
-	  ans[[3]]$variable <- 'lower'
-	  ans[[4]]$variable <- 'upper'
+    ans[[2]]$variable <- 'qmean'
+    ans[[3]]$variable <- 'qmed'
+    ans[[4]]$variable <- 'se'
+	  ans[[5]]$variable <- 'rmse'
+	  ans[[6]]$variable <- 'lower'
+	  ans[[7]]$variable <- 'upper'
+
+	  ans[[2]]$value <- apply(qboot, 2, mean)
+	  ans[[3]]$value <- apply(qboot, 2, median)
+	  ans[[4]]$value <- apply(qboot, 2, sd)
 
     ## Compute root mean square error
 	  if(ncol(qboot) == 1){
@@ -152,12 +159,10 @@ FloodnetPoolMle <- function(x, target,
       res <- t(apply(qboot, 1, '-', hat))
 	  }
 
-    rmse <- sqrt(colSums(res^2)/nrow(res))
+	  ans[[5]]$value <- sqrt(colSums(res^2)/nrow(res))
 
-
-	  ans[[2]]$value <- rmse
-	  ans[[3]]$value <- apply(qboot, 2, quantile, alpha/2)
-	  ans[[4]]$value <- apply(qboot, 2, quantile, 1-alpha/2)
+	  ans[[6]]$value <- apply(qboot, 2, quantile, alpha/2)
+	  ans[[7]]$value <- apply(qboot, 2, quantile, 1-alpha/2)
 
 	  ans <- do.call(rbind,ans)
 	  rownames(ans) <- NULL

@@ -10,6 +10,8 @@ to interact directly with a downloaded version of the database.
 This interfacing is facilitated by the R-package (of the same name) provided by 
 the [centre for hydrology](https://github.com/CentreForHydrology/HYDAT).
 
+A demo of the package is presented [here](http://htmlpreview.github.io/?https://github.com/floodnetProject16/floodnetProject16/blob/master/vignettes/floodNetProject16.html)
+
 ## Installation
 
 To install the R-package `floodnetProject16`, it is first required that the packages `CSHShydRology` and `HYDAT` be installed. This can be done using the R terminal.

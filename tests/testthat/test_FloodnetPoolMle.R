@@ -37,17 +37,19 @@ test_that('Verifying FloodnetPoolMle', {
   expect_equal(as.character(unique(out.cv$method)), 'pool_amax_cv')
   expect_equal(as.character(unique(out.mean$method)), 'pool_amax_shape')
 
-  sname <- c('quantile','rmse','lower','upper')
+  sname <- c('quantile','qmean','qmed','se','rmse','lower','upper')
   expect_equal(as.character(unique(out$variable)), sname)
 
-  qua <- with(out, value[variable == 'quantile'])
-  se <- with(out, value[variable == 'rmse'])
+  qua <- with(out, value[variable == 'qmean'])
+  se <- with(out, value[variable == 'se'])
+  rmse <- with(out, value[variable == 'rmse'])
   lb <- with(out, value[variable == 'lower'])
   ub <- with(out, value[variable == 'upper'])
 
   expect_true(all(qua >= lb))
   expect_true(all(qua <= ub))
   expect_true(all(se > 0))
+  expect_true(all(rmse > 0))
 
   ## test output model
   out <- FloodnetPoolMle(an, ref, distr = 'pe3', verbose = FALSE,
@@ -99,6 +101,10 @@ test_that('Verifying FloodnetPoolMle', {
 
   out <- FloodnetPoolMle(an, ref, verbose = FALSE, distr = 'glo', nsim = 0)
   expect_equal(as.character(unique(out$distribution)), 'glo')
+
+  out <- FloodnetPoolMle(an, ref, verbose = FALSE,nsim = 0)
+  expect_true(as.character(unique(out$distribution))
+  	           %in% c('gev','gno','glo','pe3'))
 
 })
 
