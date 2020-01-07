@@ -25,9 +25,7 @@ vignettes/*.pdf
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
-inst/doc
 
 # Configuration file
 inst/config
-doc
 Meta
