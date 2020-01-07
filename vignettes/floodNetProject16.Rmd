@@ -7,8 +7,6 @@ vignette: >
   %\VignetteIndexEntry{FloodNet Project 1.6}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
-editor_options: 
-  chunk_output_type: inline
 ---
 
 ```{r setup, include = FALSE}
