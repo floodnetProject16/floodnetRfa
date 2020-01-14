@@ -28,4 +28,5 @@ vignettes/*.pdf
 
 # Configuration file
 inst/config
+doc
 Meta

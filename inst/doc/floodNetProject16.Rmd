@@ -22,7 +22,7 @@ source(system.file("config", package = 'floodnetProject16'))
 
 ## Introduction
 
-One objective of [FloodNet](http://www.nsercfloodnet.ca/) Project 1.6  is to provide Canadian engineers and hydrologist with a toolbox that can help them to perform flood frequency analysis.
+One objective of [FloodNet](http://www.nsercfloodnet.ca/) Project 1.6  is to provide Canadian engineers and hydrologists with a toolbox that can help them to perform flood frequency analysis.
 To this end, a set of functions was developed and added to the R-package [CSHShydRology](https://github.com/floodnetProject16/CSHShydRology).
 The package provides advanced users with a variety of functions to perform flood frequency analysis. 
 Another tool available to the hydrologist community is the R-package [HYDAT](https://github.com/CentreForHydrology/HYDAT) that allows R to communicate with the [National Water Data Archive](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey/data-products-services/national-archive-hydat.html) maintained by the [Water Survey of Canada](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey.html).
@@ -32,10 +32,10 @@ The goal of the  R-package `FloodnetProject16` is to provide simple routines tha
 ## Flood frequency analysis using annual maxima
 
 The functionality of the R-package will be illustrated on the station '01AF009' that is located on the Iroquois River (NB).
-In general, a flood frequency analysis consists of fitting a distribution of extreme events and evaluating the risk of occurrence for events of specific magnitudes.
+In general, a flood frequency analysis consists of fitting a distribution for extreme events and evaluating the risk of occurrence for events of specific magnitudes.
 Such risk is commonly quantified in terms of a return period $T$ defined as the expected waiting time between the extreme events. 
-If flood risk does not change over time, _i.e._ we have a stationary time series, evaluating a return period is equivalent to find the quantiles of the distribution associated with the probability $1-1/T$. 
-The example below extract the annual maxima of the station '01AF009' from HYDAT and output the results of the flood frequency analysis in the form of a table.
+If flood risk does not change over time, _i.e._ a stationary time series, evaluating a return period is equivalent to evaluating the quantiles of the distribution associated with the probability $1-1/T$. 
+The example below extracts the annual maxima of the station '01AF009' from HYDAT and output the results of the flood frequency analysis in the form of a table.
 
 
 ```{r}
@@ -52,7 +52,7 @@ set.seed(1)
 FloodnetAmax(site = mystation, db = db, period = c(10,100))
 ```
 More precisely, it fits the distribution using L-moments and evaluates its uncertainty using a parametric bootstrap technique. 
-If not specified, the best distribution among the Generalized Extreme Value (GEV), Generalized Logistic (GLO), Generalized Normal (GNO) and Pearson type III (PE3) is selected on the basis of the Akaike Information Criterion (AIC).
+If not specified, the best distribution among the Generalized Extreme Value (GEV), Generalized Logistic (GLO), Generalized Normal (GNO) and Pearson type III (PE3) is selected based on the Akaike Information Criterion (AIC).
 The distribution with the lowest AIC is compared to the GEV. If the difference between the two criteria lower than two, they assumed to fit the data equally well and the GEV is preferred. Otherwise, the distribution with the lowest AIC is selected.
 
 To use data from alternative sources, the argument `db` must be replaced by `x`.

@@ -12,7 +12,7 @@
 
 <meta name="author" content="Martin Durocher" />
 
-<meta name="date" content="2020-01-07" />
+<meta name="date" content="2020-01-14" />
 
 <title>FloodNet Project 1.6</title>
 
@@ -303,17 +303,17 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 
 <h1 class="title toc-ignore">FloodNet Project 1.6</h1>
 <h4 class="author">Martin Durocher</h4>
-<h4 class="date">2020-01-07</h4>
+<h4 class="date">2020-01-14</h4>
 
 
 
 <div id="introduction" class="section level2">
 <h2>Introduction</h2>
-<p>One objective of <a href="http://www.nsercfloodnet.ca/">FloodNet</a> Project 1.6 is to provide Canadian engineers and hydrologist with a toolbox that can help them to perform flood frequency analysis. To this end, a set of functions was developed and added to the R-package <a href="https://github.com/floodnetProject16/CSHShydRology">CSHShydRology</a>. The package provides advanced users with a variety of functions to perform flood frequency analysis. Another tool available to the hydrologist community is the R-package <a href="https://github.com/CentreForHydrology/HYDAT">HYDAT</a> that allows R to communicate with the <a href="https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey/data-products-services/national-archive-hydat.html">National Water Data Archive</a> maintained by the <a href="https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey.html">Water Survey of Canada</a>. This database can be downloaded and used to extract the necessary hydrological information. The goal of the R-package <code>FloodnetProject16</code> is to provide simple routines that extract directly the data from HYDAT and carry out flood frequency analysis according to FloodNet recommendations.</p>
+<p>One objective of <a href="http://www.nsercfloodnet.ca/">FloodNet</a> Project 1.6 is to provide Canadian engineers and hydrologists with a toolbox that can help them to perform flood frequency analysis. To this end, a set of functions was developed and added to the R-package <a href="https://github.com/floodnetProject16/CSHShydRology">CSHShydRology</a>. The package provides advanced users with a variety of functions to perform flood frequency analysis. Another tool available to the hydrologist community is the R-package <a href="https://github.com/CentreForHydrology/HYDAT">HYDAT</a> that allows R to communicate with the <a href="https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey/data-products-services/national-archive-hydat.html">National Water Data Archive</a> maintained by the <a href="https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey.html">Water Survey of Canada</a>. This database can be downloaded and used to extract the necessary hydrological information. The goal of the R-package <code>FloodnetProject16</code> is to provide simple routines that extract directly the data from HYDAT and carry out flood frequency analysis according to FloodNet recommendations.</p>
 </div>
 <div id="flood-frequency-analysis-using-annual-maxima" class="section level2">
 <h2>Flood frequency analysis using annual maxima</h2>
-<p>The functionality of the R-package will be illustrated on the station ‘01AF009’ that is located on the Iroquois River (NB). In general, a flood frequency analysis consists of fitting a distribution of extreme events and evaluating the risk of occurrence for events of specific magnitudes. Such risk is commonly quantified in terms of a return period <span class="math inline">\(T\)</span> defined as the expected waiting time between the extreme events. If flood risk does not change over time, <em>i.e.</em> we have a stationary time series, evaluating a return period is equivalent to find the quantiles of the distribution associated with the probability <span class="math inline">\(1-1/T\)</span>. The example below extract the annual maxima of the station ‘01AF009’ from HYDAT and output the results of the flood frequency analysis in the form of a table.</p>
+<p>The functionality of the R-package will be illustrated on the station ‘01AF009’ that is located on the Iroquois River (NB). In general, a flood frequency analysis consists of fitting a distribution for extreme events and evaluating the risk of occurrence for events of specific magnitudes. Such risk is commonly quantified in terms of a return period <span class="math inline">\(T\)</span> defined as the expected waiting time between the extreme events. If flood risk does not change over time, <em>i.e.</em> a stationary time series, evaluating a return period is equivalent to evaluating the quantiles of the distribution associated with the probability <span class="math inline">\(1-1/T\)</span>. The example below extracts the annual maxima of the station ‘01AF009’ from HYDAT and output the results of the flood frequency analysis in the form of a table.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="kw">library</span>(floodnetProject16)</a>
 <a class="sourceLine" id="cb1-2" title="2"><span class="kw">library</span>(CSHShydRology)</a>
 <a class="sourceLine" id="cb1-3" title="3"></a>
@@ -331,7 +331,7 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 <a class="sourceLine" id="cb2-9" title="9"><span class="co">## 6 01AF009   amax          gev    100    lower  61.147203</span></a>
 <a class="sourceLine" id="cb2-10" title="10"><span class="co">## 7 01AF009   amax          gev     10    upper  72.275943</span></a>
 <a class="sourceLine" id="cb2-11" title="11"><span class="co">## 8 01AF009   amax          gev    100    upper 162.740380</span></a></code></pre></div>
-<p>More precisely, it fits the distribution using L-moments and evaluates its uncertainty using a parametric bootstrap technique. If not specified, the best distribution among the Generalized Extreme Value (GEV), Generalized Logistic (GLO), Generalized Normal (GNO) and Pearson type III (PE3) is selected on the basis of the Akaike Information Criterion (AIC). The distribution with the lowest AIC is compared to the GEV. If the difference between the two criteria lower than two, they assumed to fit the data equally well and the GEV is preferred. Otherwise, the distribution with the lowest AIC is selected.</p>
+<p>More precisely, it fits the distribution using L-moments and evaluates its uncertainty using a parametric bootstrap technique. If not specified, the best distribution among the Generalized Extreme Value (GEV), Generalized Logistic (GLO), Generalized Normal (GNO) and Pearson type III (PE3) is selected based on the Akaike Information Criterion (AIC). The distribution with the lowest AIC is compared to the GEV. If the difference between the two criteria lower than two, they assumed to fit the data equally well and the GEV is preferred. Otherwise, the distribution with the lowest AIC is selected.</p>
 <p>To use data from alternative sources, the argument <code>db</code> must be replaced by <code>x</code>. In that case, the argument <code>site</code> is optional and may be used to specify a station name. In the example below the function <code>AmaxData</code> is used to extract the Annual maxima of the station <code>01AF009</code> from HYDAT and pass to <code>FloodnetAmax</code>.</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1"><span class="kw">set.seed</span>(<span class="dv">1</span>)</a>
 <a class="sourceLine" id="cb3-2" title="2"></a>
