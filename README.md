@@ -8,7 +8,7 @@ The package allows interacting with the
 [HYDAT database](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey/data-products-services/national-archive-hydat.html)
 trough the [centre for hydrology](https://github.com/CentreForHydrology/HYDAT).
 
-Further descriptions of the package capabilities are presented [here](http://htmlpreview.github.io/?https://github.com/floodnetProject16/floodnetRfa/blob/master/inst/floodnetRfa.html), which is also found in the install folder.
+Further descriptions of the package capabilities are presented [here](http://htmlpreview.github.io/?https://github.com/floodnetProject16/floodnetRfa/blob/master/inst/floodnetRfa.html), which are also found in the install folder.
 
 **_Please note that the package is in active development and may frequently change._**
 
