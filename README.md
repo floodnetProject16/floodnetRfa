@@ -8,20 +8,20 @@ The package allows interacting with the
 [HYDAT database](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey/data-products-services/national-archive-hydat.html)
 trough the [centre for hydrology](https://github.com/CentreForHydrology/HYDAT).
 
-Further descriptions of the package capabilities are presented [here](http://htmlpreview.github.io/?https://github.com/floodnetProject16/floodnetProject16/blob/master/inst/doc/floodNetProject16.html), which can also be consulted locally once the package installed.
+Further descriptions of the package capabilities are presented [here](http://htmlpreview.github.io/?https://github.com/floodnetProject16/floodnetRfa/blob/master/inst/doc/floodNetProject16.html), which can also be consulted locally once the package installed.
 
 **_Please note that the package is in active development and may frequently change._**
 
 ## Installation
 
-Before installing `floodnetRfa`, it is necessary that the packages `CSHShydRology` and `HYDAT` are present on the machine. 
-The installation can be done using the R terminal.
+Before installing `floodnetRfa`, the packages `CSHShydRology` and `HYDAT` must be present on the machine. 
+The installation can be done manually or using the R terminal.
 
     library(devtools)
     install_github('floodnetProject16/CSHShydRology')
     install_github('CentreForHydrology/HYDAT')
 
-Afterwards, the R-package itself can be installed.
+Afterward, the R-package itself can be installed.
 
     install_github('floodnetProject16/floodnetRfa')
 
@@ -36,11 +36,11 @@ The version used for developing and testing the package is dated August 11, 2019
 
 For building the vignette and testing the R-package locally, the path of the HYDAT database must be saved in the file `inst/config` that defines the variable `DB_HYDAT`. 
 See the example `inst/config-example`.
-Afterwards the package is built, the variable `DB_HYDAT` can be loaded using the command.
+Afterward, the package is built, the variable `DB_HYDAT` can be loaded using the command.
 
     source(system.file('config','floodnetRfa'))
     
-and will point to the desired database file and the vignette can be rebuild using the command.
+and will point to the desired database file and the vignette can be rebuilt using the command.
 
     devtools::build_vignettes()
 
