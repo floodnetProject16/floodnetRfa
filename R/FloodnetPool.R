@@ -7,9 +7,6 @@
 #'
 #' @param target Station ID of the target.
 #'
-#' @param type Type of regional models to be fitted.
-#'   See \link[CSHShydRology]{FitPoolMle}.
-#'
 #' @param period Return periods for which the flood quantiles are estimated.
 #'
 #' @param distr Regional distribution.
@@ -32,13 +29,16 @@
 #'
 #' @details
 #'
-#' Estimation is carried out by the L-moment algoritms.
+#' Estimation is carried out by the L-moment algorithms.
+#' See \link{FitRegLmom} and \link{PoolRemove} for more details.
 #' If not provided the distance between sites is evaluated using the distance
 #' between the regularity and timing of the annual flood peaks.
 #' Confidence intervals and standard deviation are evaluated by a
 #' parametric bootstrap.
-#' An empirical matrix of intersite correlation is estimated and used to simulate
+#' An intersite correlation is estimated and used to simulate
 #' from a multivariate normal distribution.
+#'
+#' @seealso \link{FitRegLmom}, \link{PoolRemove}.
 #'
 #' @import CSHShydRology stats
 #' @export
@@ -60,10 +60,6 @@
 #'  ## Performing AMAX analysis using L-moments
 #'  FloodnetPool(x, '01AF009', distr = 'gev', period = c(20,50), nsim = 30)
 #'
-#'  ## Performing AMAX analysis using Independent Likelhood
-#'  FloodnetPoolMle(x, '01AF009', distr = 'gev', type = 'cv',
-#'   								period = c(20,50), nsim = 30)
-#'
 #'  ## Read Pot data
 #'  info <- gaugedSites[, c('station','auto','area')]
 #'  xd <- DailyPeaksData(info, db, target = '01AF009',
@@ -71,10 +67,6 @@
 #'
 #'  ## Performing POT analysis using L-moments
 #'  FloodnetPool(xd, '01AF009', period = c(20,50), nsim = 30)
-#'
-#'  ## Performing POT analysis using Independent Likelhood
-#'  FloodnetPoolMle(xd, '01AF009', type = 'shape',
-#'  								period = c(20,50), nsim = 30)
 #' }
 #'
 FloodnetPool <-

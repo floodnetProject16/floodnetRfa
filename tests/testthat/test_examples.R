@@ -2,7 +2,7 @@
 context('Testing examples')
 
 ## This is a config file that once loaded create a variable DB_HYDAT that point to the location of a downloaded version of HYDAT database
-source(system.file("config", package = 'floodnetProject16'))
+source(system.file("config", package = 'floodnetRfa'))
 
 test_that('Example AmaxData', {
 
@@ -106,9 +106,6 @@ test_that('Example FloodnetPool', {
   FloodnetPool(x, '01AF009', distr = 'gev', period = c(20,50),
   						 nsim = 30, verbose = FALSE)
 
-  FloodnetPoolMle(x, '01AF009', distr = 'gev', type = 'cv',
-  								period = c(20,50), nsim = 30, verbose = FALSE)
-
   ## Read Pot data
   info <- gaugedSites[, c('station','auto','area')]
   xd <- DailyPeaksData(info, db, target = '01AF009',
@@ -116,10 +113,6 @@ test_that('Example FloodnetPool', {
 
   ## Performing the analysis with POT data
   FloodnetPool(xd, '01AF009', period = c(20,50), nsim = 30, verbose = FALSE)
-
-  FloodnetPoolMle(xd, '01AF009', type = 'shape',
-  								period = c(20,50), nsim = 30, verbose = FALSE)
-
 
   expect_true(TRUE)
 

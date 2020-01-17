@@ -1,10 +1,10 @@
 ---
-title: "FloodNet Project 1.6"
+title: "A guide to flood frequency analysis using floodnetRfa"
 author: "Martin Durocher"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{FloodNet Project 1.6}
+  %\VignetteIndexEntry{FloodNetRfa}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 ---
@@ -17,7 +17,7 @@ mycols <- c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c',
 
 palette(mycols)
 
-source(system.file("config", package = 'floodnetProject16'))
+source(system.file("config", package = 'floodnetRfa'))
 ```
 
 ## Introduction
@@ -27,7 +27,7 @@ To this end, a set of functions was developed and added to the R-package [CSHShy
 The package provides advanced users with a variety of functions to perform flood frequency analysis. 
 Another tool available to the hydrologist community is the R-package [HYDAT](https://github.com/CentreForHydrology/HYDAT) that allows R to communicate with the [National Water Data Archive](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey/data-products-services/national-archive-hydat.html) maintained by the [Water Survey of Canada](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey.html).
 This database can be downloaded and used to extract the necessary hydrological information.
-The goal of the  R-package `FloodnetProject16` is to provide simple routines that extract directly the data from HYDAT and carry out flood frequency analysis according to FloodNet recommendations.
+The goal of the  R-package `floodnetRfa` is to provide simple routines that extract directly the data from HYDAT and carry out simple flood frequency analysis according to FloodNet recommendations.
 
 ## Flood frequency analysis using annual maxima
 
@@ -39,7 +39,7 @@ The example below extracts the annual maxima of the station '01AF009' from HYDAT
 
 
 ```{r}
-library(floodnetProject16)
+library(floodnetRfa)
 library(CSHShydRology)
 
 ## Station of interest and path of the HYDAT database
@@ -134,7 +134,7 @@ gaugedSites[5, c('station','description', 'area','auto','ppy250')]
 ```
 
 If a threshold is not provided to the function `FloodnetPot`, it will be sought by the automatic method. 
-On rare occasions where the drainage area ($A$) would also be unknown, it will be approximated by its empirical relationship with the mean daily flow ($M$).   
+On rare occasions where the drainage area ($A$) would also be unknown, it will be approximated by the empirical relationship with the mean daily flow ($M$).   
 
 $$
 \log(A) = 4.0934 + 0.9944 \, \log(M)
@@ -287,32 +287,6 @@ The standard deviation and the confidence intervals of the flood quantile are es
 The simulations are obtained from a multivariate normal distribution and the marginal distributions are adjusted according to the at-site distribution. 
 The correlation coefficients of the normal distribution represent the average value of all pairs of sites.
 
-An alternative to the L-moments algorithm for fitting an RFA model is to optimize the independent likelihood of the model, _i.e._ the likelihood of the RFA model assuming that all observations are independent. 
-This fitting can be done using the function `FloodnetPoolMle` that works like `FloodnetPool`, but that is using the underlying function `FitPoolMle` of the R-package `CSHShydRology`.  
-One difference in the call of this function is the argument `type` that specified the type of the regional model. 
-The IFM model can be specified using `type = 'mean'`, which will imply that all sites are standardized by the empirical mean and the parameters of the regional distribution are estimated using the likelihood technique.  
-A similar model is specified by `type = 'cv'`, which assumed that all sites share the same distribution with a common shape parameter. For each site, the model estimates a different location parameter and
-the scale parameter is proportional to the location parameter up to a regional parameter that plays a similar role to a coefficient of variation.
-A third model resulting from choosing `type = 'shape'`, assumes that all sites have a common shape parameter with different location and scale parameters for each site. 
-
-Other differences with `FloodnetPoolMle` are that the pooling group is not updated according to its homogeneity and the best distribution is selected as the one having the highest independent likelihood. 
-The example below fit the RFA-AMAX model using the likelihood approach, which takes some time due to the demanding bootstrap procedure. 
-
-
-```{r}
-set.seed(1)
-FloodnetPoolMle(x = xd, target = mystation, period = 100,
-                                type = 'mean', nsim = 500)
-
-FloodnetPoolMle(x = xd, target = mystation, period = 100,
-                                type = 'cv', nsim = 0)
-
-FloodnetPoolMle(x = xd, target = mystation, period = 100, 
-                                type = 'shape', nsim = 0)
-
-```
-
-
 ## Regional frequency analysis using POT
 
 The function `FloodnetPool` can also be used to carry out RFA using POT.
@@ -374,17 +348,6 @@ out <- FloodnetPool(xp, target = mystation, distr = 'gpa', tol.H = Inf,
                                         period = 100 * ppy, verbose = FALSE, corr = .5)
 ```
 
-Another way of fitting the POT model is to use the likelihood approach.
-The results below were obtained by passing the argument `type = 'shape'` which specifies GPA distributions where site-specific scale parameters are used with a common shape parameter.
-
-
-```{r}
-set.seed(1)
-FloodnetPoolMle(xd, target = mystation, period = 100, nsim = 500, type = 'shape')
-```
-
-
-
 ## Prediction at ungauged basins
 
 When there is no hydrometric data at the site of interest, frequency analysis cannot be done by fitting directly a distribution of extreme events. 
@@ -408,11 +371,8 @@ xd <- with(descriptors,
   	elev = elev_ws,
   	slope = log(.01 + slope)))
 
-coord <- descriptors[, c('lon', 'lat')]
-
 ```
 Logarithmic transformations are used above for most variables to make the input variables more normally shaped.
-In addition, multidimensional scaling is used here to project the geographical coordinates in a Cartesian space that aims to preserve the great-circle distance.
 
 In this section, the station `01AF009` is treated as ungauged and the objective is to evaluate the 100-year flood quantile (Q100) according to its descriptors.
 Remember that we derived a Q100 of 98.0 $m^3/s$ from an at-site flood frequency analysis of the annual maxima.  
@@ -423,7 +383,6 @@ target.id <- (xd$site == '01AF009')
 target <- xd[target.id,]
 xd <- xd[-target.id,]
 ```
-
 
 
 The function `FloodnetRoi` is built upon the function `FitRoi` in `CSHShydRology` and performs flood frequency at ungauged sites using QRT. 
@@ -441,6 +400,7 @@ The results of the cross-validation scheme can be obtained by passing the argume
 The figure below shows that sizes between 60 and 90 stations are optimal.
 
 ```{r}
+
 set.seed(1)
 out <- FloodnetRoi(target = target, sites = xd,
                         db = db, period = 100, size = seq(25, 200, 10), 
@@ -457,7 +417,7 @@ As done previously for the RFA using gauged sites, annual maxima are simulated u
 This leads to a bootstrap sample of flood quantiles $q_i^\ast$ at each gauged site $i$. 
 In parallel, prediction errors $e^\ast_i$ are sampled (balance bootstrap) from the residuals of the QRT model based on 10-fold cross-validation.
 The final bootstrap sample is composed of the flood quantiles values 
-$\q_i^{\ast\ast} = \q_i^\ast+e^\ast_i$ that account for the modeling error of the QRT model and the sampling error due to the at-site estimation of the flood quantiles.
+$q_i^{\ast\ast} = q_i^\ast+e^\ast_i$ that account for the modeling error of the QRT model and the sampling error due to the at-site estimation of the flood quantiles.
 
 ```{r}
 set.seed(1)
@@ -467,9 +427,7 @@ FloodnetRoi(target = target, sites = xd, db = db,
 
 Moreover, the set of existing site characteristics does not fully characterize the relationship between the descriptors and the flood quantiles. 
 In particular, several potentially missing descriptors could be spatially distributed, which would lead to spatially correlated residuals.
-If coordinates are provided to the function `FloodnetRoi`, it will further perform a simple kriging technique on the residual of the QRT to improve the prediction of the flood quantiles when there is spatial correlation among them. 
-The example below shows that the criterion MAD improves from 38.0 to 34.0 when the kriging step is added to the QRT model. 
-
+The code below use multidimensional scaling to project the geographical coordinates in a Cartesian space that aims to preserve the great-circle distance.
 
 ```{r}
 ## Extract the coordinates
@@ -480,6 +438,8 @@ target.coord <- coord[target.id,]
 coord <- coord[-target.id,]
 ```
 
+If coordinates are provided to the function `FloodnetRoi`, it will further perform a simple kriging technique on the residual of the QRT to improve the prediction of the flood quantiles when. 
+The example below shows that the criterion MAD improves from 38.0 to 34.0 when the kriging step is added to the QRT model. 
 
 ```{r}
 set.seed(1)
@@ -493,15 +453,15 @@ head(out$cv)
 
 ## Conclusion
 
-In summary, this document showed how the R-package `floodnetProject16` can be used to perform flood frequency analysis using the hydrometric data found in the HYDAT database.
+In summary, this document showed how the R-package `floodnetRfa` can be used to perform flood frequency analysis using the hydrometric data found in the HYDAT database.
 The function `FloodnetAmax` and `FloodnetPot` were shown to carry out at-site frequency analysis based on annual maximum and peaks over threshold.
-The functions `FloodnetPool` and `FloodnetPoolMle` were used to obtain flood quantiles from regional analysis based on either AMAX and POT.
+The function `FloodnetPool` were used to obtain flood quantiles from regional analysis based on either AMAX and POT.
 Finally, it was shown how evaluation of flood quantiles at ungauged sites can be performed using the function `FloodnetRoi`.
 
 Two datasets : `gaugedSites`, `descriptors` were presented
-that contain useful information derived from HYDAT. In particular, they suggest candidate thresholds for POT analysis, super regions for delineating pooling groups, trend tests to identify stationary stations and site descriptors to predict hydrological variables at ungauged sites. 
+that contain useful information derived from HYDAT. In particular, they suggest candidate thresholds for POT analysis, super regions, trend tests and site descriptors. 
 Some of this information will become outdated, but represent a good starting point.
-Please see the extra materials that contain more codes examples.
+Please see the [extra materials]() that contain more codes examples.
 
 
 ## References

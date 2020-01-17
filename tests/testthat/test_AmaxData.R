@@ -1,7 +1,7 @@
 context('Testing AmaxData')
 
 ## This is a config file that once loaded create a variable DB_HYDAT that point to the location of a downloaded version of HYDAT database
-source(system.file("config", package = 'floodnetProject16'))
+source(system.file("config", package = 'floodnetRfa'))
 
 test_that('Verifying AmaxData', {
 

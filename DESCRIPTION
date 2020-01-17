@@ -1,6 +1,6 @@
-Package: floodnetProject16
+Package: floodnetRfa
 Type: Package
-Title: FloodNet Project 1.6
+Title: FloodNet Regional Frequency Analysis
 Version: 0.1.0
 Authors@R: c(person("Martin", "Durocher", email = "mduroche@uwaterloo.ca", role = c("cre")))
 URL: https://github.com/floodnetProject16

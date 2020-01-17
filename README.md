@@ -1,22 +1,21 @@
-# FloodnetProject16 (Under construction)
+# FloodnetRfa (Under construction)
 
 ## Introduction
 
-As part of the objectives in theme 1.6, the [NSERC FloodNet project](http://www.nsercfloodnet.ca/) will contribute to the R-package `CSHShydRology`, which contains various tools for Canadian hydrologists, including flood frequency analysis.
-The present R-package is built on top of `CSHShydRology` and has for objective to further automatize flood estimation according to FloodNet guidelines.
-The package also provides a direct interface to the 
+As part of its objectives of theme 1.6, the [NSERC FloodNet project](http://www.nsercfloodnet.ca/) contributes to the R-package `CSHShydRology` by introducing various tools for Canadian hydrologists related to flood frequency analysis.
+The R-package `floodnetRfa` is built on top of `CSHShydRology` and has for objective to further automatize flood estimation according to FloodNet guidelines.
+The package allows interacting with the 
 [HYDAT database](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey/data-products-services/national-archive-hydat.html)
-to interact directly with a downloaded version of the database.
-This interfacing is made possible by the R-package (of the same name) provided by 
-the [centre for hydrology](https://github.com/CentreForHydrology/HYDAT).
+trough the [centre for hydrology](https://github.com/CentreForHydrology/HYDAT).
 
-Further descriptions of the package capabilities are presented [here](http://htmlpreview.github.io/?https://github.com/floodnetProject16/floodnetProject16/blob/master/inst/doc/floodNetProject16.html).
+Further descriptions of the package capabilities are presented [here](http://htmlpreview.github.io/?https://github.com/floodnetProject16/floodnetProject16/blob/master/inst/doc/floodNetProject16.html), which can also be consulted locally once the package installed.
 
-Please note that the package is in active development and may frequently change.
+**_Please note that the package is in active development and may frequently change._**
 
 ## Installation
 
-To install the R-package `floodnetProject16`, it is necessary that the packages `CSHShydRology` and `HYDAT` be installed. This can be done using the R terminal.
+Before installing `floodnetRfa`, it is necessary that the packages `CSHShydRology` and `HYDAT` are present on the machine. 
+The installation can be done using the R terminal.
 
     library(devtools)
     install_github('floodnetProject16/CSHShydRology')
@@ -24,24 +23,24 @@ To install the R-package `floodnetProject16`, it is necessary that the packages 
 
 Afterwards, the R-package itself can be installed.
 
-    install_github('floodnetProject16/floodnetProject16')
+    install_github('floodnetProject16/floodnetRfa')
 
-Each package has its own dependencies that are automatically
-downloaded. This may take some time...
+Each package has dependencies that are automatically
+downloaded, which may take some time...
 
 Also, it is recommended to download the SQLite version of the HYDAT database from the
 [National Water Data Archive](http://collaboration.cmc.ec.gc.ca/cmc/hydrometrics/www/).
-The version used for testing this package is dated August 11, 2019.
+The version used for developing and testing the package is dated August 11, 2019.
 
 ## Development
 
-For building the vignette and testing the R-package locally, the path of the database must be saved in the file `inst/config`, which defines the variable `DB_HYDAT`. 
+For building the vignette and testing the R-package locally, the path of the HYDAT database must be saved in the file `inst/config` that defines the variable `DB_HYDAT`. 
 See the example `inst/config-example`.
-Afterwards, the variable `DB_HYDAT` point to the desired database and can be loaded using 
+Afterwards the package is built, the variable `DB_HYDAT` can be loaded using the command.
 
-    source(system.file('config','floodnetProject16'))
+    source(system.file('config','floodnetRfa'))
     
-Finally, the vignette can be rebuild using
+and will point to the desired database file and the vignette can be rebuild using the command.
 
     devtools::build_vignettes()
 

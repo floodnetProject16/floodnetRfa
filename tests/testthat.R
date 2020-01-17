@@ -1,6 +1,6 @@
 #Sys.setenv('R_TEST' = '')
 
 library(testthat)
-library(floodnetProject16)
+library(floodnetRfa)
 
-test_check("floodnetProject16")
+test_check("floodnetRfa")
