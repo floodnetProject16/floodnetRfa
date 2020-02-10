@@ -30,3 +30,5 @@ vignettes/*.pdf
 inst/config
 doc
 Meta
+
+inst/shinyApp/HYDAT/Hydat.sqlite3
