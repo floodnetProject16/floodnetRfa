@@ -4,9 +4,19 @@
 \alias{FloodnetPot}
 \title{Estimating flood quantiles using using peaks over threshold}
 \usage{
-FloodnetPot(site = NULL, db = NULL, x = NULL, period = c(2, 5, 10,
-  20, 50, 100), u = NULL, area = NULL, nsim = 2000, level = 0.95,
-  tol.year = 346, out.model = FALSE, verbose = TRUE)
+FloodnetPot(
+  site = NULL,
+  db = NULL,
+  x = NULL,
+  period = c(2, 5, 10, 20, 50, 100),
+  u = NULL,
+  area = NULL,
+  nsim = 2000,
+  level = 0.95,
+  tol.year = 346,
+  out.model = FALSE,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{site}{Station ID for HYDAT or a station name for identification.}
