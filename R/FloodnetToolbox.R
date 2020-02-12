@@ -13,5 +13,5 @@ FloodnetToolbox <- function() {
 	## Start the shinyApp
 	###################################
 
-	shiny::runApp('inst/shinyApp')
+	shiny::runApp(appDir = 'inst/shinyApp')
 }
