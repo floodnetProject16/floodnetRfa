@@ -5,11 +5,17 @@
 \alias{DailyData}
 \title{Extract Annual, daily data from HYDAT}
 \usage{
-AmaxData(sites, db, year = TRUE, target = NULL, size = 25,
-  distance = NULL)
+AmaxData(sites, db, year = TRUE, target = NULL, size = 25, distance = NULL)
 
-DailyData(sites, db, pad = FALSE, tol = 346, target = NULL,
-  size = 25, distance = NULL)
+DailyData(
+  sites,
+  db,
+  pad = FALSE,
+  tol = 346,
+  target = NULL,
+  size = 25,
+  distance = NULL
+)
 }
 \arguments{
 \item{sites}{List of stations.}
