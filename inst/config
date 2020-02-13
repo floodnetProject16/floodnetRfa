@@ -1,0 +1,6 @@
+##======================================================================
+## Example of file "inst/config" for building and testing the package
+##======================================================================
+
+## Location of the HYDAT database
+DB_HYDAT <- './shinyApp/HYDAT/Hydat.sqlite3'
