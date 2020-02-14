@@ -27,6 +27,8 @@ vignettes/*.pdf
 *.knit.md
 
 # Configuration file
-inst/config
+# inst/config un-commenting so that config is tracked for now
 doc
 Meta
+
+inst/shinyApp/HYDAT/Hydat.sqlite3
