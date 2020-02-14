@@ -228,14 +228,14 @@ In this case, the super region includes 107 stations, among which 100 are statio
 ```{r}
 ## Filter nonstationary sites from the super region of the target
 target.supreg <- with(gaugedSites, supreg_km12[station == mystation])
-cond_supreg <- with(gaugedSites, supreg_km12 == target.supreg)
+cond.supreg <- with(gaugedSites, supreg_km12 == target.supreg)
 
 pval.mk <- gaugedSites$trend_mk ## Mann-Kendall
 pval.pt <- gaugedSites$trend_pt ## Pettitt
 cond.trend <- pval.mk >= .05 & pval.pt >= .05
-mysites <- gaugedSites[cond_supreg & cond.trend,'station']
+mysites <- gaugedSites[cond.supreg & cond.trend,'station']
 
-addmargins(table(cond_supreg, cond.trend))
+addmargins(table(cond.supreg, cond.trend))
 ```
 
 
@@ -257,8 +257,8 @@ It can be noted that RFA appears to have improved the estimation as the standard
 
 ```{r}
 set.seed(1)
-out <- FloodnetPool(x = xd, target = mystation, 
-                                 period = 100, distr = 'gev', out.model = TRUE, verbose = FALSE)
+out <- FloodnetPool(x = xd, target = mystation, period = 100, 
+										distr = 'gev', out.model = TRUE, verbose = FALSE)
 print(out$fit)
 
 ```
@@ -318,7 +318,7 @@ If the peaks were obtained from another source, the right input can be obtained 
 
 ```{r}
 xd <- DailyPeaksData(info, db, target = '01AF009', 
-                                         size = 25, distance = season.dist)
+                     size = 25, distance = season.dist)
 
 ```
 
@@ -327,8 +327,8 @@ In this case, regionalization has reduced the variability of the 100-year flood 
 
 ```{r}
 set.seed(1)
-out <- FloodnetPool(xd, target = mystation, period = 100, verbose = TRUE,
-                         out.model = TRUE)
+out <- FloodnetPool(xd, target = mystation, period = 100, 
+										verbose = TRUE, out.model = TRUE)
 
 out$qua
 ```
@@ -345,7 +345,7 @@ xp <- xd$peaks
 
 set.seed(1)
 out <- FloodnetPool(xp, target = mystation, distr = 'gpa', tol.H = Inf,
-                                        period = 100 * ppy, verbose = FALSE, corr = .5)
+                    period = 100 * ppy, verbose = FALSE, corr = .5)
 ```
 
 ## Prediction at ungauged basins
@@ -361,8 +361,7 @@ In the example below, we create a dataset including 6 descriptors: Drainage area
 
 
 ```{r}
-xd <- with(descriptors,
-  data.frame(
+xd <- with(descriptors, data.frame(
   	site = station,
     area = log(area),
     map  = log(map_ws),
@@ -400,7 +399,6 @@ The results of the cross-validation scheme can be obtained by passing the argume
 The figure below shows that sizes between 60 and 90 stations are optimal.
 
 ```{r}
-
 set.seed(1)
 out <- FloodnetRoi(target = target, sites = xd,
                         db = db, period = 100, size = seq(25, 200, 10), 
@@ -461,7 +459,7 @@ Finally, it was shown how evaluation of flood quantiles at ungauged sites can be
 Two datasets : `gaugedSites`, `descriptors` were presented
 that contain useful information derived from HYDAT. In particular, they suggest candidate thresholds for POT analysis, super regions, trend tests and site descriptors. 
 Some of this information will become outdated, but represent a good starting point.
-Please see the [extra materials]() that contain more codes examples.
+Please see the supplementary material `floodnetRfa_extra` that contain more code examples.
 
 
 ## References
