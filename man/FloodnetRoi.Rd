@@ -4,21 +4,9 @@
 \alias{FloodnetRoi}
 \title{Prediction of flood quantiles at ungauged sites using Region of Influence}
 \usage{
-FloodnetRoi(
-  target,
-  target.coord = NULL,
-  sites,
-  sites.coord = NULL,
-  db = NULL,
-  x = NULL,
-  size = 20,
-  period = 100,
-  distr = "gev",
-  corr = NULL,
-  nsim = 0,
-  out.model = FALSE,
-  verbose = TRUE
-)
+FloodnetRoi(target, target.coord = NULL, sites, sites.coord = NULL,
+  db = NULL, x = NULL, size = 20, period = 100, distr = "gev",
+  corr = NULL, nsim = 0, out.model = FALSE, verbose = TRUE)
 }
 \arguments{
 \item{target}{Descriptors of the target sites. A data.frame where the first

@@ -4,18 +4,9 @@
 \alias{FloodnetAmax}
 \title{Estimate flood quantiles using using annual maxima}
 \usage{
-FloodnetAmax(
-  site = NULL,
-  db = NULL,
-  x = NULL,
-  period = c(2, 5, 10, 20, 50, 100),
-  distr = NULL,
-  instant = FALSE,
-  nsim = 2000,
-  level = 0.95,
-  out.model = FALSE,
-  verbose = TRUE
-)
+FloodnetAmax(site = NULL, db = NULL, x = NULL, period = c(2, 5, 10,
+  20, 50, 100), distr = NULL, instant = FALSE, nsim = 2000,
+  level = 0.95, out.model = FALSE, verbose = TRUE)
 }
 \arguments{
 \item{site}{Station ID for HYDAT or a station name for identification.}

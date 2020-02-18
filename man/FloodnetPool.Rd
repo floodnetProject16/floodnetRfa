@@ -4,18 +4,9 @@
 \alias{FloodnetPool}
 \title{Pool frequency analysis using annual maximum floods}
 \usage{
-FloodnetPool(
-  x,
-  target,
-  period = c(2, 5, 10, 20, 50, 100),
-  distr = NULL,
-  tol.H = 2,
-  nsim = 2000,
-  level = 0.95,
-  corr = NULL,
-  out.model = FALSE,
-  verbose = TRUE
-)
+FloodnetPool(x, target, period = c(2, 5, 10, 20, 50, 100),
+  distr = NULL, tol.H = 2, nsim = 2000, level = 0.95,
+  corr = NULL, out.model = FALSE, verbose = TRUE)
 }
 \arguments{
 \item{x}{Hydrometric data of the form: site, year, value.}

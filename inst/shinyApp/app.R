@@ -8,22 +8,21 @@
 #
 
 library(shiny)
-library(CSHShydRology)
+library(floodnetRfa)
 
-source('./Functions/inplaceAmax.R')
-source('./Functions/inplacePot.R')
-source('./Functions/rfaAmax.R')
-source('./Functions/rfaPot.R')
+# Load global variable from the config file
+# Temporary solution to load the db, Will need a menu
+source(system.file('config', package = 'floodnetRfa'))
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(theme = "mystyle.css",
-                
+
     # Application title
-    titlePanel("Floodnet 1-6 Toolbox"),
-    
+    titlePanel("FloodnetApp"),
+
     sidebarLayout(
         sidebarPanel(
-            tags$head(tags$style(type="text/css", 
+            tags$head(tags$style(type="text/css",
                "#loadmessage {
                position: fixed;
                top: 0px;
@@ -38,7 +37,7 @@ ui <- fluidPage(theme = "mystyle.css",
                z-index: 105;
              }
             ")),
-            selectInput("station", label = h3("Target Site"), 
+            selectInput("station", label = h3("Target Site"),
                           choices = list("01AF009" = "01AF009",
                                          "01AD003" = '01AD003',
                                           "01AF007" = '01AF007',
@@ -53,11 +52,11 @@ ui <- fluidPage(theme = "mystyle.css",
                                        "RFA AMAX" = "rfaAmax",
                                        "RFA POT" = "rfaPot"
                         ), selected = "amax"),
-            
+
             ## The option to select the distribution method is only available for AMAX
             ## Therefore this selectInput is hidden for POT
             conditionalPanel(condition = "input.method == 'amax' || input.method == 'rfaAmax'",
-                selectInput("distr", label = h3("Distribution"), 
+                selectInput("distr", label = h3("Distribution"),
                         choices = list("Default" =  "Default",
                                        "gev" = "gev",
                                        "glo" = "glo",
@@ -65,19 +64,19 @@ ui <- fluidPage(theme = "mystyle.css",
                                        "pe3" = "pe3"
                         ), selected = "Default"),
             ),
-            
+
             actionButton(inputId = 'update', label = 'Update'),
             # textOutput("loading", inline = TRUE)
-            
-            # loading message and css taken from user1603038's post at https://stackoverflow.com/questions/17325521/r-shiny-display-loading-message-while-function-is-running 
+
+            # loading message and css taken from user1603038's post at https://stackoverflow.com/questions/17325521/r-shiny-display-loading-message-while-function-is-running
             # will be customized in the future - a placeholder for now
             conditionalPanel(condition="$('html').hasClass('shiny-busy')",
                              tags$div("Loading...",id="loadmessage"))
         ),
-        
-           
+
+
         mainPanel(
-            
+
             tags$h3("Plot"),
             fluidRow(
                 # imageOutput("loading"),
@@ -89,21 +88,21 @@ ui <- fluidPage(theme = "mystyle.css",
                tableOutput("table")
             )
         )
-        
-        
-    ) 
+
+
+    )
     # sidebarLayout(
     #     sidebarPanel(tags$p("test")),
     #     mainPanel()
     # )
-    
-    
+
+
     ## Custom-css method, if we want sidebar split up, designed for landscape, etc.
     # fluidRow(
     #     column(4,HTML("<div class='inputBox'>
     #          "),
     #            column(6,
-    #                   selectInput("station", label = h3("Select Station"), 
+    #                   selectInput("station", label = h3("Select Station"),
     #                               choices = list("01AF009" = "01AF009",
     #                                              "01AD003" = '01AD003',
     #                                              "01AF007" = '01AF007',
@@ -117,24 +116,24 @@ ui <- fluidPage(theme = "mystyle.css",
     #                  ),
     #           fluidRow(
     #               actionButton(inputId = 'update', label = 'Update'),
-    #               HTML("</div>")  
+    #               HTML("</div>")
     #           )
-    #            
-    #           
-    #           
+    #
+    #
+    #
     #     )
-    #            
+    #
     # ),
-    #     
-    # 
-    #         
-    #         
-    #     # column(6, 
+    #
+    #
+    #
+    #
+    #     # column(6,
     #            #inputPanel(# Input station selector
     #               # fluidRow(
     # #               column(6,
-    # #                     selectInput("station", label = h3("Select Station"), 
-    # #                                   choices = list("Iroquois River at Moulin Morneault" = "01AF009", 
+    # #                     selectInput("station", label = h3("Select Station"),
+    # #                                   choices = list("Iroquois River at Moulin Morneault" = "01AF009",
     # #                                                  "ST. FRANCIS RIVER AT OUTLET OF GLASIER LAKE" = '01AD003',
     # #                                                  "GRANDE RIVIERE AT VIOLETTE BRIDGE" = '01AF007',
     # #                                                  "MEDUXNEKEAG RIVER NEAR BELLEVILLE" = '01AJ003',
@@ -145,11 +144,11 @@ ui <- fluidPage(theme = "mystyle.css",
     # #                 column(6,
     # #                     textInput("periodString", label = h3("Return Period"), value = "Enter period. Eg 10,100...")
     # #                 ),
-    # #             
-    # #                
+    # #
+    # #
     # #                 actionButton(inputId = 'update', label = 'Update')
     # #            )
-    # #            
+    # #
     # #            )
     # # ),
     # #fluidRow(tags$h3("In-place Amax")),
@@ -173,15 +172,15 @@ ui <- fluidPage(theme = "mystyle.css",
     #     column(width = 6, tableOutput("rfaPotTable")),
     #     column(width = 6, plotOutput("rfaPotPlot"))
     # )
-    
-    
+
+
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
     # You can access the value of the widget with input$select, e.g.
-    
+
     # observeEvent(input$update, {
     #     output$loading <- list(
     #         src = "www/loadingSpinnger.svg",
@@ -189,39 +188,21 @@ server <- function(input, output) {
     #         alt = "Spinner"
     #     )
     # })
-    
+
     # observeEvent(input$update, {
     #     output$loading <- renderText("Loading...")
     # })
-   
-    
+
+
     # Making eventReactive so table/plot updates with button instead of automatically
     # Storing values in result so each function is only run once
-    result <- eventReactive(input$update, {
-        if(input$method == "amax"){
-            inplaceAmax(input$station, as.integer(unlist(strsplit(input$periodString,','))), input$distr)
-            # output$loading <- NULL
-        } else if(input$method == "pot"){
-            inplacePot(input$station, as.integer(unlist(strsplit(input$periodString,','))))
-            # output$loading <- NULL
-        } else if(input$method == "rfaAmax"){
-            rfaAmax(input$station, as.integer(unlist(strsplit(input$periodString,','))), input$distr)
-            # output$loading <- NULL
-        } else {
-            rfaPot(input$station, as.integer(unlist(strsplit(input$periodString,','))))
-            # output$loading <- NULL
-        }
-        
-    })
-    
-    
+    result <- eventReactive(input$update, .ClickUpdate(input, db = DB_HYDAT))
+
     # output functions to table/plot
-    output$table <- renderTable({ result()$qua })
-    output$plot <- renderPlot( plot(result()$fit) )
-    
-    
-                               
+    output$table <- renderTable(result()$qua)
+    output$plot <- renderPlot(plot(result()$fit) )
+
 }
 
-# Run the application 
+# Run the application
 shinyApp(ui = ui, server = server)
