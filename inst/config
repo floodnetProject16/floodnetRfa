@@ -3,4 +3,4 @@
 ##======================================================================
 
 ## Location of the HYDAT database
-DB_HYDAT <- 'C:/Users/durochma/Documents/Data/HYDAT_11AUG19/Hydat.sqlite3'
+DB_HYDAT <- 'D:/CSHShydrology/Hydat.sqlite3'
