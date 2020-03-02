@@ -4,32 +4,37 @@
 \alias{FloodnetPot}
 \title{Estimating flood quantiles using using peaks over threshold}
 \usage{
-FloodnetPot(site = NULL, db = NULL, x = NULL, period = c(2, 5, 10,
-  20, 50, 100), u = NULL, area = NULL, nsim = 2000, level = 0.95,
-  tol.year = 346, out.model = FALSE, verbose = TRUE)
+FloodnetPot(
+  x,
+  u = NULL,
+  area = 59874,
+  period = c(2, 5, 10, 20, 50, 100),
+  nsim = 2000,
+  level = 0.95,
+  tol.year = 346,
+  out.model = FALSE,
+  verbose = TRUE,
+  site = "site"
+)
 }
 \arguments{
-\item{site}{Station ID for HYDAT or a station name for identification.}
-
-\item{db}{File name of the HYDAT database.}
-
-\item{x}{Hydrometric data. Dataset having two columns: Date and value.}
-
-\item{period}{Return period for which the flood quantiles are estimated.}
+\item{x}{Hydrometric data. Dataset having three columns: site, date, value.}
 
 \item{u}{Threshold value provided by the user.}
 
-\item{area}{Drainage area.}
+\item{area}{Drainage area. Use to determine the minimal separating time
+between flood events. The default value corresponds to 15 days.}
+
+\item{period}{Return period for which the flood quantiles are estimated.}
 
 \item{nsim}{Number of bootstrap samples used for inference.}
 
 \item{level}{Confidence level.}
 
-\item{tol.year}{Number of days necessary to consider a year complete.}
+\item{tol.year}{Number of days necessary to consider a year complete. Otherwise the data is removed.}
 
 \item{out.model}{Logical. Should the model be output. This correspond to the
-output of \link{FitPot}. Otherwise only the estimated flood quantiles are
-returned.}
+output of \link{FitPot}.}
 
 \item{verbose}{Logical. Should message and warnings be output.}
 }
@@ -45,20 +50,12 @@ threshold where the goodness-of-fit test of Anderson-Darling has
 a p-value greater that 0.25.
 In addition, the selected threshold is forced to have (in
 average) less than 2.5 peaks per year and at least 30 peaks. If
-no threshold is found, the threshold with the maximimum p-value is used instead.
+no such threshold is found, the threshold with the maximimum p-value is used instead.
 The declustering technique for extracting the flood peaks
 follows the recommendations of the Water Ressources council of United States.
-In particular, peaks must be separated by at least 4 + log(A) days, where
-A is the drainage area of the basin in square kilometers.
+In particular, flood peaks must be separated by at least 4 + log(A) days, where
+A is the drainage area of the basin in kilometer squared.
 Inference on the estimated flood quantiles is performed by parametric bootstrap.
-
-If the HYDAT database is used as input, the the drainage area
-is extracted from the database. If no drainage area is provided,
-its value is approximated by an empirical relationship with the river mean flow.
-This relationship was estimated using the 1114 sites found in the
-dataset `gaugedSites`.
-It has the form $log(A) <- 4.0934 + 0.9944 * log(M)$, where M is the river mean
-flow.
 
 If \code{verbose == TRUE}, a Mann-Kendall test and logistic regression are used
 to verify the presence of trends in the mean excess and the number of peaks per years.
@@ -78,7 +75,7 @@ a warning is issued.
  x <- DailyData('01AD002', db)
 
  ## Performing the analysis
- FloodnetPot('01AD002', db = db, period = c(20,50), u = 1000,
+ FloodnetPot(x, period = c(20,50), u = 1000,
  						 area = 14400, nsim = 30, verbose = FALSE)
 }
 

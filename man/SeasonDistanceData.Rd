@@ -4,12 +4,15 @@
 \alias{SeasonDistanceData}
 \title{Seasonal distance between stations}
 \usage{
-SeasonDistanceData(sites, db, ...)
+SeasonDistanceData(sites, db, x = NULL, target = NULL, ...)
 }
 \arguments{
 \item{sites}{Stations}
 
 \item{db}{HYDAT database}
+
+\item{x}{Alternative input. Must be a data.frame of annual maximums
+with 3 columns: site, time, value. The time variable must be of the class 'Date'.}
 
 \item{...}{Other parameter passed to \link[CSHShydRology]{DistSeason}.}
 }

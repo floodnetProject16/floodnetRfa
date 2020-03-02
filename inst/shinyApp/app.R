@@ -199,8 +199,8 @@ server <- function(input, output) {
     result <- eventReactive(input$update, .ClickUpdate(input, db = DB_HYDAT))
 
     # output functions to table/plot
-    output$table <- renderTable(result()$qua)
-    output$plot <- renderPlot(plot(result()$fit) )
+    output$table <- renderTable(as.data.frame(result()))
+    output$plot <- renderPlot(plot(result()) )
 
 }
 

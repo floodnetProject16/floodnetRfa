@@ -1,9 +1,8 @@
-#' @import stats
 #' @export
 #' @rdname AmaxData
 DailyData <- function(sites, db,
                       pad = FALSE, tol = 346,
-                      target = NULL, size = 25, distance = NULL){
+                      target = NULL, distance = NULL, size = 25){
 
   ###################################
   ## Find the pooling groups
@@ -14,16 +13,18 @@ DailyData <- function(sites, db,
     if(!(target %in% sites))
       stop('Target must be in the selected sites.')
 
-    if(is.null(distance)){
-      distance <- SeasonDistanceData(sites, db)[target, ]
-
-    } else if(!is.vector(distance)){
-      distance <- as.matrix(distance)[target, ]
-    }
+    distance <- SeasonDistanceData(sites, db = db, target = target)
 
     size <- pmin(length(distance), size)
     sites <- sites[sort(order(distance)[1:size])]
 
+  } else if(!is.null(distance)){
+
+    if(sum(distance <= 0) > 1)
+      stop('There must be a unique target with distance zero')
+
+    size <- pmin(length(distance), size)
+    sites <- sites[sort(order(distance)[1:size])]
   }
 
   ###################################
@@ -35,7 +36,7 @@ DailyData <- function(sites, db,
   RSQLite::dbDisconnect(con)
 
   xd <- xd[,1:3]
-  colnames(xd) <- c('station','date','value')
+  colnames(xd) <- c('site','date','value')
 
   xd <- stats::na.omit(xd)
 

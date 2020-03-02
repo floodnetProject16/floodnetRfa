@@ -27,12 +27,13 @@ ExtractPeaksData <- function(x, info, pad = FALSE, tol = 346, sorted = FALSE){
 	rsep <- ceiling(4 + log(info[,3]))
 
 	## allocate memory
-	nyear <- npeak <- vector('numeric', length(xd))
+	ppy <- vector('numeric', length(xd))
 
 	for(ii in 1:length(xd)){
 
   	## Extract peaks
 		uii <- info[ii,2]
+		nobs <- nrow(xd[[ii]])
     pid <- which.floodPeaks(value ~ date, xd[[ii]],	u = uii, r = rsep[ii])
     xd[[ii]] <- xd[[ii]][pid,]
 
@@ -40,24 +41,17 @@ ExtractPeaksData <- function(x, info, pad = FALSE, tol = 346, sorted = FALSE){
     xd[[ii]][,3] <- xd[[ii]][,3] - uii
 
     ## Save properties
-    yy <- format(xd[[ii]]$date,'%Y')
-  	nyear[ii] <- length(unique(yy))
-    npeak[ii] <- length(pid)
+    ppy[ii] <- nrow(xd[[ii]]) / nobs * 365.25
   }
 
-  peaks <- do.call(rbind, xd)
-  rownames(peaks) <- NULL
+  ans <- do.call(rbind, xd)
+  rownames(ans) <- NULL
 
-  ans <- list(peaks = peaks,
-  						sites = names(xd),
-  						npeak = npeak,
-  						nyear = nyear,
-  						thresh = info[,2])
+  meta <- data.frame(thresh = info[,2], ppy = ppy)
+	rownames(meta) <- as.character(info[,1])
 
-  class(ans) <- 'peaksdata'
+	attr(ans, 'meta') <- meta
 
 	return(ans)
 }
-
-
 

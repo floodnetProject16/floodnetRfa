@@ -5,7 +5,7 @@
 #'
 #' @param x Hydrometric data of the form: site, year, value.
 #'
-#' @param target Station ID of the target.
+#' @param target site ID of the target.
 #'
 #' @param period Return periods for which the flood quantiles are estimated.
 #'
@@ -54,8 +54,8 @@
 #'  rownames(coord) <- gaugedSites$station
 #'
 #'  ## Read Amax data
-#'  x <- AmaxData(rownames(coord), db, target = '01AF009',
-#'  							size = 15, distance = dist(coord))
+#'  atl <- with(gaugedSites, station[substr(station,1,2) == '01'])
+#'  x <- AmaxData(atl, db, target = '01AF009', size = 15)
 #'
 #'  ## Performing AMAX analysis using L-moments
 #'  FloodnetPool(x, '01AF009', distr = 'gev', period = c(20,50), nsim = 30)
@@ -82,38 +82,45 @@ FloodnetPool <-
 
 	alpha <- 1 - level
 
-	if(class(x) == 'peaksdata'){
-	  nyear <- x$nyear
-		npeak <- x$npeak
-		thresh <- x$thresh
-		sites <- x$sites
-    x <- x$peaks
+	dtype <- attr(x,'dtype')
+	dtype <- ifelse(is.null(dtype), '', dtype)
+
+	#############################################################
+	## Verify the type of input and transform the data in a matrix
+	###############################################################
+
+	if(dtype == 'peaksdata'){
+		thresh <- attr(x,'meta')$thresh
+		ppy <- attr(x,'meta')$ppy
+		sites <- rownames(attr(x,'meta'))
     type <- 'pot'
     distr <- 'gpa'
-    metho <- 'pool_pot'
 
   } else {
     type <- 'amax'
-    metho <- 'pool_amax'
     x <- as.data.frame(x)
+    thresh <- 0
+    ppy <- 1
   }
 
-	if(!(target %in% x[,1]))
+	if(!(target %in% as.character(x[,1])))
 		stop('The target must be in the hydrmetric data')
 
   ## Transform data to a wide format
-	if(type == 'pot'){
-    colnames(x) <- c('station','date','value')
-    xw <- DataWide(value ~ station, x, row.names = FALSE)
-
-	} else {
-		colnames(x) <- c('station','year','value')
-    xw <- DataWide(value ~ station + year, x)
+ if(type == 'amax') {
+		x$date <- as.integer(format(x$date, '%Y'))
+    xw <- DataWide(value ~ site + date, x)
+ } else {
+    xw <- DataWide(value ~ site, x, row.names = FALSE)
 	}
 
   ## make sure the target is the first columns in xw
   cname <- unique(c(target,colnames(xw)))
   xw <- xw[,cname]
+
+  ###############################################
+  ## Fit the regional model
+  ################################################
 
  	## Fit a regional model and verified homogeneity
   fit <- FitRegLmom(xw, distr = distr, type = type)
@@ -163,63 +170,86 @@ FloodnetPool <-
 
   ## Compute the exceeding probability
   if(type == 'amax'){
-    p <- 1-1/period
+    period.p <- 1-1/period
   } else if(type == 'pot'){
   	tid <- which(sites == target)
-    ppy <- npeak[tid]/nyear[tid]
+    ppy <- ppy[tid]
     u <- thresh[tid]
-    p <- 1-1/(ppy*period)
+    period.p <- 1 - 1 / (ppy * period)
   }
 
+  #########################################################
+  ## Predict flood quantiles
+  #########################################################
 
-  if(nsim > 1){
-    hat <- try(predict(fit, p,  corr = corr, ci = TRUE,
-    									 nsim = nsim, alpha = alpha), silent = TRUE)
+	## Include more return period for the return level plots
+  obs <- sort(as.numeric(stats::na.omit(xw[,1])))
+	nobs <- length(obs)
 
-    if(class(hat) == 'try-error')
-    	stop('Model fail to predict flood quantiles.')
+	if(type == 'pot')
+		obs <- obs + u
 
-    if(type == 'pot')
-    	hat[,c(1,3,4)] <- hat[,c(1,3,4)] + u
+	Fz <- function(z) -log(-log(z))
+	zmin <- 1/(nobs+1)
+	zmax <- max(nobs/(nobs+1), max(period.p))
 
+	rlevel.p <- seq(Fz(zmin),Fz(zmax), len = 50)
+	rlevel.p <- exp(-exp(-rlevel.p))
 
-    ans <- replicate(4,
-	    data.frame(site = target,
-			  			   method = metho,
-				  		   distribution = fit$distr,
-					  	   period = period,
-						     variable = 'quantile',
-						     value = hat[,1]),
-	    simplify = FALSE)
+	prob <- unique(c(period.p, rlevel.p))
 
-	  ans[[2]]$variable <- 'rmse'
-	  ans[[3]]$variable <- 'lower'
-	  ans[[4]]$variable <- 'upper'
+	## Predict all flood quantile
+	boot <- suppressWarnings(try(
+  	predict(fit, prob,  corr = corr, ci = TRUE, nsim = nsim,
+  					alpha = alpha, out.matrix = TRUE),
+  	silent = TRUE ))
 
-	  ans[[2]]$value <- hat[,2]
-	  ans[[3]]$value <- hat[,3]
-	  ans[[4]]$value <- hat[,4]
+	 if(is(hat,'try-error'))
+  	 stop('Model fail to predict flood quantiles.')
 
-	  ans <- do.call(rbind,ans)
-	  rownames(ans) <- NULL
+	hat <- boot$pred
 
-  } else{
-    hat <- predict(fit, p)
+	## Compute the standard error of the model parameters.
+	para.se <- apply(boot$para, 2, sd)
 
-    if(type == 'pot')
-    	hat <- hat + u
+	# split selected return period from return level plot
+	op <- order(prob)
+	rlevel<- cbind(prob = prob[op], hat[op, -2])
+	hat <- hat[seq_along(period.p),]
 
-    ans <- data.frame(site = target,
-			  	            method = metho,
-				  		        distribution = fit$distr,
-					  	        period = period,
-						          variable = 'quantile',
-						          value = hat)
+	## Smooth the boundary of the return level that are obtained by simulation
+	rlevel$lower <- fitted(lm(lower ~ poly(Fz(prob), 10), rlevel))
+	rlevel$upper <- fitted(lm(upper ~ poly(Fz(prob), 10), rlevel))
+
+	## Add back the threshold to the POT data
+  if(type == 'pot'){
+   	hat[,c(1,3,4)] <- hat[,c(1,3,4)] + u
+		rlevel[,2:4] <- rlevel[,2:4] + u
   }
 
+	############################################
+	## Build the final output
+	############################################
+
+	para0 <- c(fit$lmom[1,1],fit$para)
+	names(para0) <- c('IF', names(fit$para))
+
+	ans <- list(site = target,
+							quantile = hat,
+							param = data.frame(param = para0, se = para.se),
+							method = paste0('pool_',type),
+							distr  = fit$distr,
+							thresh = thresh[1],
+							ppy = ppy[1],
+							period = period,
+							lmom = data.frame(nrec = fit$nrec, fit$lmom),
+							rlevels = rlevel,
+							obs = obs)
+
+	class(ans) <- 'floodnetMdl'
 
 	if(out.model)
-		ans <- list(fit = fit, qua = ans)
+		ans$fit <- fit
 
 	return(ans)
 

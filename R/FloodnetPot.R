@@ -3,27 +3,23 @@
 #' Return the flood quantiles, standard deviation, lower and upper bounds
 #' of the confidence interval based on a Peaks Over Threshold (POT) model.
 #'
-#' @param site Station ID for HYDAT or a station name for identification.
-#'
-#' @param db File name of the HYDAT database.
-#'
-#' @param x Hydrometric data. Dataset having two columns: Date and value.
+#' @param x Hydrometric data. Dataset having three columns: site, date, value.
 #'
 #' @param period Return period for which the flood quantiles are estimated.
 #'
 #' @param u Threshold value provided by the user.
 #'
-#' @param area Drainage area.
+#' @param area Drainage area. Use to determine the minimal separating time
+#'   between flood events. The default value corresponds to 15 days.
 #'
 #' @param nsim Number of bootstrap samples used for inference.
 #'
 #' @param level Confidence level.
 #'
-#' @param tol.year Number of days necessary to consider a year complete.
+#' @param tol.year Number of days necessary to consider a year complete. Otherwise the data is removed.
 #'
 #' @param out.model Logical. Should the model be output. This correspond to the
-#'   output of \link{FitPot}. Otherwise only the estimated flood quantiles are
-#'   returned.
+#'   output of \link{FitPot}.
 #'
 #' @param verbose Logical. Should message and warnings be output.
 #'
@@ -36,20 +32,12 @@
 #' a p-value greater that 0.25.
 #' In addition, the selected threshold is forced to have (in
 #' average) less than 2.5 peaks per year and at least 30 peaks. If
-#' no threshold is found, the threshold with the maximimum p-value is used instead.
+#' no such threshold is found, the threshold with the maximimum p-value is used instead.
 #' The declustering technique for extracting the flood peaks
 #' follows the recommendations of the Water Ressources council of United States.
-#' In particular, peaks must be separated by at least 4 + log(A) days, where
-#' A is the drainage area of the basin in square kilometers.
+#' In particular, flood peaks must be separated by at least 4 + log(A) days, where
+#' A is the drainage area of the basin in kilometer squared.
 #' Inference on the estimated flood quantiles is performed by parametric bootstrap.
-#'
-#' If the HYDAT database is used as input, the the drainage area
-#' is extracted from the database. If no drainage area is provided,
-#' its value is approximated by an empirical relationship with the river mean flow.
-#' This relationship was estimated using the 1114 sites found in the
-#' dataset `gaugedSites`.
-#' It has the form $log(A) <- 4.0934 + 0.9944 * log(M)$, where M is the river mean
-#' flow.
 #'
 #' If \code{verbose == TRUE}, a Mann-Kendall test and logistic regression are used
 #' to verify the presence of trends in the mean excess and the number of peaks per years.
@@ -87,65 +75,39 @@
 #'  x <- DailyData('01AD002', db)
 #'
 #'  ## Performing the analysis
-#'  FloodnetPot('01AD002', db = db, period = c(20,50), u = 1000,
+#'  FloodnetPot(x, period = c(20,50), u = 1000,
 #'  						 area = 14400, nsim = 30, verbose = FALSE)
 #' }
 #'
 FloodnetPot <-
-	function(site = NULL,
-					 db = NULL,
-					 x = NULL,
+	function(x, u = NULL, area = 59874,
 					 period = c(2,5,10,20,50,100),
-					 u = NULL,
-					 area = NULL,
 					 nsim = 2000,
 					 level = 0.95,
 					 tol.year = 346,
 					 out.model = FALSE,
-					 verbose = TRUE){
+					 verbose = TRUE,
+					 site = 'site'){
 
-
-	alpha <- 1- level
+	MINSIM <- 200
+	alpha <- 1 - level
 
 	############################################
 	## Reading of the data
 	############################################
 
-	if(is.null(x) & is.null(db))
-		stop('Must provide an input data.')
+	xd <- as.data.frame(x)
 
-  if(!is.null(db)){
-
-		## open a connection to the database
-	  con <- RSQLite::dbConnect(RSQLite::SQLite(), db)
-
-	  ## Extract the daily data
-	  xd <- HYDAT::DailyHydrometricData(con, get_flow = TRUE, site)[,2:3]
-
-	  if(is.null(area)){
-	  	area <- HYDAT::StationMetadata(con, site)$drainage_area_gross
-
-	  	if(!is.finite(area))
-	  		area <- NULL
-	  }
-
-    RSQLite::dbDisconnect(con)
-
-	## USING data.frame
-	} else {
-
-		xd <- as.data.frame(x)
-    colnames(xd) <- c('date','value')
-
-    ## If the user have not specify a site id
-    if(is.null(site))
-      site <- 'site'
-
-    ## Verify the date format
-    if(class(xd[,1]) != 'Date' )
-    	stop('Must be a valid date format.')
-
+  if(ncol(xd) == 3){
+  	site = as.character(xd[1,1])
+  	xd <- xd[,2:3]
   }
+
+	colnames(xd) <- c('date','value')
+
+  ## Verify the date format
+  if(class(xd$date) != 'Date' )
+   	stop('Must be a valid date format.')
 
 	## remove missing
 	xd <- na.omit(xd)
@@ -154,16 +116,6 @@ FloodnetPot <-
 	yy <- format(xd$date,'%Y')
 	yy.full <- names(which(tapply(yy,yy, length) > tol.year))
 	xd <- xd[yy %in% yy.full,]
-
-	## If needed, affect a default drainage area based on log-log relationship
-	## with average river discharge
-	if(is.null(area)){
-	  area <- exp(4.0934 + 0.9944 * log(mean(xd$value, na.rm = TRUE)) )
-
-	  if(verbose)
-		 	warning('The drainage area was approximated using the',
-		 					'river mean flow')
-	}
 
   ## Compute the minimum separating time between peaks
 	rarea <- 4 + log(area)
@@ -270,43 +222,67 @@ FloodnetPot <-
 	## Evaluate flood quantiles
 	############################################
 
-	if(nsim > 1){
+	if(nsim >= MINSIM){
     hat <- predict(fit,	period, ci = 'boot', alpha = alpha, nsim = nsim,
 								 out.matrix = TRUE)
 
-	  ans <- replicate(4,
-	    data.frame(site = site,
-			  			   method = 'pot',
-				  		   distribution = 'gpa',
-					  	   period = period,
-						     variable = 'quantile',
-						     value= hat$pred[,1]),
-	    simplify = FALSE)
+		para.se <- apply(hat$para, 2, sd)
 
-	  ans[[2]]$variable <- 'se'
-	  ans[[3]]$variable <- 'lower'
-	  ans[[4]]$variable <- 'upper'
+  	qua <- data.frame(pred = hat$pred[,1],
+  											se = apply(hat$qua, 2, sd),
+  											hat$pred[,2:3])
 
-  	ans[[2]]$value <- apply(hat$qua, 2, sd)
-	  ans[[3]]$value <- hat$pred[,2]
-	  ans[[4]]$value <- hat$pred[,3]
 
-	  ans <- do.call(rbind,ans)
+	} else {
+	  qua <- predict(fit,	period, se = TRUE, ci = 'delta', alpha = alpha)
 
-	} else{
-	  hat <- predict(fit,	period)
-
-	  ans <- data.frame(site = site,
-			  			        method = 'pot',
-				  		        distribution = 'gpa',
-					  	        period = period,
-						          variable = 'quantile',
-						          value= hat)
+	  para.se <- sqrt(diag(fit$varcov))
 
 	}
 
+	#
+	para <- data.frame(param = fit$estimate, se = para.se)
+	rownames(para) <- names(fit$para)
+
+	##############################################
+	## Pre-compute data for the return level plots
+	##############################################
+	Fz <- function(z) -log(-log(z))
+
+	## Determine range of values for the plot
+	ppy <- fit$nexcess/fit$nyear
+	period.p <- 1 - 1 /(ppy * period)
+	zmin <- 1/(fit$nexcess+1)
+	zmax <- max(fit$nexcess/(fit$nexcess+1), max(period.p))
+	rlevel.p <- seq(Fz(zmin),Fz(zmax), len = 100)
+
+	## Convert probabilities to return period
+	rlevel.p <- exp(-exp(-rlevel.p))
+	rlevel.t <- 1/((1-rlevel.p) * ppy)
+
+	## Evaluate the associated return levels
+	rlevel <- cbind(prob = rlevel.p,
+									predict(fit, rlevel.t, ci = 'delta', alpha = alpha))
+
+	############################################
+	## Build the final output
+	############################################
+
+	ans <- list(site = site,
+							quantile = qua,
+							param = para,
+							method = 'pot',
+							distr  = 'gpa',
+							period = period,
+							ppy = fit$nexcess/fit$nyear,
+							thresh = fit$u,
+							rlevels = rlevel,
+							obs = sort(fit$excess + fit$u))
+
+	class(ans) <- 'floodnetMdl'
+
 	if(out.model){
-		ans <- list(fit = fit, qua = ans)
+		ans$fit <- fit
 
 		if(u.auto)
 			ans$u <- as.data.frame(umat)
@@ -315,7 +291,7 @@ FloodnetPot <-
 
 	return(ans)
 
-	}
+}
 
 
 ## Verify using a F-test that trend model in exceedance probability

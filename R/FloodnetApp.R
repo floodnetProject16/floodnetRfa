@@ -14,3 +14,4 @@ FloodnetApp <- function(){
   ## Start the shinyApp
 	runApp(appDir = system.file('shinyApp/app.R', package = 'floodnetRfa'))
 }
+

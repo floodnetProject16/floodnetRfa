@@ -4,14 +4,23 @@
 \alias{FloodnetPool}
 \title{Pool frequency analysis using annual maximum floods}
 \usage{
-FloodnetPool(x, target, period = c(2, 5, 10, 20, 50, 100),
-  distr = NULL, tol.H = 2, nsim = 2000, level = 0.95,
-  corr = NULL, out.model = FALSE, verbose = TRUE)
+FloodnetPool(
+  x,
+  target,
+  period = c(2, 5, 10, 20, 50, 100),
+  distr = NULL,
+  tol.H = 2,
+  nsim = 2000,
+  level = 0.95,
+  corr = NULL,
+  out.model = FALSE,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{x}{Hydrometric data of the form: site, year, value.}
 
-\item{target}{Station ID of the target.}
+\item{target}{site ID of the target.}
 
 \item{period}{Return periods for which the flood quantiles are estimated.}
 
@@ -58,8 +67,8 @@ from a multivariate normal distribution.
  rownames(coord) <- gaugedSites$station
 
  ## Read Amax data
- x <- AmaxData(rownames(coord), db, target = '01AF009',
- 							size = 15, distance = dist(coord))
+ atl <- with(gaugedSites, station[substr(station,1,2) == '01'])
+ x <- AmaxData(atl, db, target = '01AF009', size = 15)
 
  ## Performing AMAX analysis using L-moments
  FloodnetPool(x, '01AF009', distr = 'gev', period = c(20,50), nsim = 30)

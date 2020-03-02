@@ -77,64 +77,47 @@ DailyPeaksData <- function(info, db, pad = FALSE, tol = 346,
   ## Find the pooling groups
   ###################################
 
-  if(!is.null(target)){
+	if(!is.null(target)){
 
-  	sites <- as.character(info[,1])
+		sites <- as.character(info[,1])
 
     if(!(target %in% sites))
       stop('Target must be in the selected sites.')
 
-    if(is.null(distance)){
-      distance <- SeasonDistanceData(sites, db)[target, ]
+    distance <- SeasonDistanceData(sites, db = db, target = target)
 
-    } else if(!is.vector(distance)){
-      distance <- as.matrix(distance)[target, ]
-    }
+    size <- pmin(length(distance), size)
+    pool <- sites[sort(order(distance)[1:size])]
 
-  	size <- pmin(length(distance), size)
-    info <- info[sort(order(distance)[1:size]), ]
+  } else if(!is.null(distance)){
 
+    if(sum(distance <= 0) > 1)
+      stop('There must be a unique target with distance zero')
+
+    size <- pmin(length(distance), size)
+    pool <- sites[sort(order(distance)[1:size])]
   }
+
+	info <- info[info[,1] %in% pool,]
+
+	## Make sure that info is sorted by site.
+	info <- info[order(as.character(info[,1])), ]
 
 	###################################
   ## Find the pooling groups
   ###################################
-
-	if(ncol(info) == 2){
-
-		## Case drainage area is not provided
-	  con <- RSQLite::dbConnect(RSQLite::SQLite(), db)
-	  area <- HYDAT::StationMetadata(con, as.character(info[,1]))
-	  area <- area$drainage_area_gross
-	  RSQLite::dbDisconnect(con)
-
-	  info <- cbind(info, area = area)
-
-	} else{
-		info <- info[,1:3]
-  }
 
   ## Read HYDAT. Note xd is sorted
   con <- RSQLite::dbConnect(RSQLite::SQLite(), db)
 	xd <- HYDAT::DailyHydrometricData(con, get_flow = TRUE, info[,1])[,1:3]
 	RSQLite::dbDisconnect(con)
 
-	colnames(xd) <- c('station','date','value')
-
-	# If there are some missing drainage areas
-	sid <- which(!is.finite(info[,3]))
-	for(ii in sid){
-    isite <- as.character(info[ii,1])
-    xbar <- mean(xd[xd[,1] == isite,3], na.rm = TRUE)
-    info[ii, 3] <- exp(4.0934 + 0.9944 * log(xbar))
-	}
-
-	## Make sure that info is sorted by site.
-	info <- info[order(as.character(info[,1])), ]
+	colnames(xd) <- c('site','date','value')
 
 	## Extract the peaks
 	ans <- ExtractPeaksData(xd, info, pad, tol, sorted = TRUE)
 
+	attr(ans, 'dtype') <- 'peaksdata'
+
 	return(ans)
 }
-

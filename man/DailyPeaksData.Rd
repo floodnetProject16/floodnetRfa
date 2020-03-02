@@ -10,12 +10,19 @@
 \usage{
 BindPeaksdata(...)
 
-DailyPeaksData(info, db, pad = FALSE, tol = 346, target = NULL,
-  size = 25, distance = NULL)
+DailyPeaksData(
+  info,
+  db,
+  pad = FALSE,
+  tol = 346,
+  target = NULL,
+  size = 25,
+  distance = NULL
+)
 
 ExtractPeaksData(x, info, pad = FALSE, tol = 346, sorted = FALSE)
 
-PeaksData(x, info)
+PeaksData(x, meta)
 }
 \arguments{
 \item{...}{Other parameters}
