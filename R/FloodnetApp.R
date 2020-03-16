@@ -12,5 +12,5 @@
 FloodnetApp <- function(){
 
   ## Start the shinyApp
-	shiny::runApp(appDir = system.file('shinyApp/app.R', package = 'floodnetRfa'))
+	shiny::runApp(appDir = system.file('shinyApp/app.R', package = 'floodnetRfa'), launch.browser = TRUE)
 }

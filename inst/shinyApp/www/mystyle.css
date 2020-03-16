@@ -1,6 +1,136 @@
-.inputBox {
-  background-color: #a9b7ae;
-  border-radius: 15px;
-  border: 1px red solid;
-  padding: 20px;
+.skin-blue {
+		background-color: #70A8CA;
 }
+
+.container-fluid {
+	padding-left: 0px;
+	padding-right: 0px;
+}
+/*navbar styling*/
+.navbar-default {
+    background-color: #7BAC8F;
+	border-color: #000;
+}
+
+/*navbar styling - fix bottom gap*/
+.navbar {
+	margin-bottom: 0px;
+	/* need some sort of left padding or centering */
+}
+
+.navbar-header {
+	width: 230px;
+	text-align: center;
+	background-color: #fff
+}
+
+.navbar-brand {
+	float: none;
+	display: inline-block;
+}
+
+
+/* logo */
+.skin-blue .main-header .logo  {
+	font-family: Roboto;
+	font-style: normal;
+	font-weight: normal;
+	font-size: 24px;
+	line-height: 28px;
+	display: flex;
+	align-items: center;
+	text-align: center;
+	
+	background-color: #fff;
+}
+
+/* logo when hovered */
+
+.skin-blue .main-header .logo:hover {
+	background-color: rgba(75, 146, 104, 0.3);	 
+}
+
+
+/* navbar (rest of the header) */
+.skin-blue .main-header .navbar {
+	background-color: #7BAC8F;
+}        
+
+/* main sidebar */
+.skin-blue .main-sidebar {
+	background-color: #7BAC8F;
+}
+
+/* active selected tab in the sidebarmenu */
+/*
+.skin-blue .main-sidebar .sidebar .sidebar-menu .active a{
+	background-color: #ff0000;
+}
+*/
+
+/* other links in the sidebarmenu */
+/*
+.skin-blue .main-sidebar .sidebar .sidebar-menu a{
+    background-color: #00ff00;
+    color: #000000;
+}
+*/
+
+/* other links in the sidebarmenu when hovered */
+/*
+ .skin-blue .main-sidebar .sidebar .sidebar-menu a:hover{
+    background-color: #ff69b4;
+}
+*/
+
+/* toggle button when hovered  */                    
+.skin-blue .main-header .navbar .sidebar-toggle:hover{
+	background-color: rgba(75, 146, 104, 0.3);
+}
+
+
+.skin-blue .content-wrapper {
+	background-color: #70A8CA
+}
+
+
+#floodnetText {
+	color: #000000;
+}
+
+#rfaText {
+	font-weight: bold;
+	color: #DD2D1F;
+}
+
+.bodyText{
+	font-size: 24px;
+	color: #DD2D1F;
+}
+
+.background-box{
+	height: 320px;
+	padding: 10px ;
+	background-color: #CDE1D5;
+	 border: 1px black;
+	box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+	
+}
+
+.left-item{
+	float: left;
+	width: 35%;
+}
+
+.right-item{
+	float: right;
+	width: 35%;
+	margin-right: 15%;
+}
+
+/*Change margin-bottom for input boxes */
+.form-group{
+	margin-bottom: 0px;
+}
+
+
