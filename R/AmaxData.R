@@ -1,7 +1,8 @@
 #' Extract Annual, daily data from HYDAT
 #'
 #' Return a dataset of hydrometric data from HYDAT.
-#' Optionally, a target site can be passed and so only its pooling groups is returned.
+#' Optionally, a vector distance can be passed and so only a pooling groups is returned.
+#' the target is the site with distance zero.
 #'
 #' @param sites List of stations.
 #'
@@ -9,11 +10,9 @@
 #'
 #' @param year Logical. Should the full date be return or only the year.
 #'
-#' @param target A target site of the pooling group.
+#' @param distance A vector of distance between all sites.
 #'
 #' @param size Size of the pooling group.
-#'
-#' @param distance A vector of distance between all sites.
 #'
 #' @param pad,tol Logical and number of days. Should the daily data be padded.
 #'   See \link[CSHShydRology]{PadPot}.
@@ -25,7 +24,7 @@
 #' @examples
 #'
 #' \dontrun{
-#' ## This create a variable DB_HYDAT that point to database
+#' ## This create a variable DB_HYDAT that point to the database
 #' db <- DB_HYDAT
 #'
 #' ## Reading AMAX data for one station
@@ -38,7 +37,7 @@
 #'
 #' ## Reading Daily data
 #' x <- DailyData(c('01AD002','01AF009'), db)
-#' head(x)
+#' head(x, 3)
 #'
 #' ## Filter the stations to keep only a pooling group of size 5
 #' sid <- gaugedSites$supreg_km12 == 11
@@ -54,16 +53,13 @@
 #' round(sort(h['01AF009',])[1:10],2)
 #' }
 #'
-AmaxData <- function(sites, db, year = TRUE,
-                     target = NULL, size = 25, distance = NULL){
+AmaxData <- function(sites, db, target = NULL, distance = NULL, size = 25){
+
+  ## Verify that there is an unique target if distances are passed
 
   ###################################
   ## Extract annual data
   ###################################
-
-  if(!is.null(target))
-    if(!(target %in% sites))
-      stop('Target must be in the selected sites.')
 
   con <- RSQLite::dbConnect(RSQLite::SQLite(), db)
   an <- HYDAT::AnnualPeakData(con, get_flow = TRUE, as.character(sites))
@@ -71,34 +67,42 @@ AmaxData <- function(sites, db, year = TRUE,
 
   an <- an[an$peak == 'MAXIMUM',]
   an$date <- as.Date(with(an, paste(year,month,day, sep = '/')), optional = TRUE)
-  an <- an[, c('station_number','year','value','date')]
-  colnames(an) <- c('station','year','value','date')
+  an <- an[, c('station_number','date','value')]
   rownames(an) <- NULL
+  colnames(an) <- c('site','date','value')
 
-  if(year){
-    ans <- an[,-4]
-  } else {
-    ans <- an[,c(1,4,3)]
-  }
-
-  ans <- stats::na.omit(ans)
-
-  if(is.null(target)){
-    return(ans)
-  }
+  an <- stats::na.omit(an)
 
   ###################################
   ## Find the pooling groups
   ###################################
 
-  if(is.null(distance)){
-    stop('A matrix or vector of distance must be provided.')
-  } else if(!is.vector(distance)){
-    distance <- as.matrix(distance)[target, ]
+  if(!is.null(distance)){
+
+    ## Verify that there is a unique target
+    if(sum(distance <= 0) > 1)
+      stop('There must be a unique target with distance zero')
+
+    size <- pmin(length(distance), size)
+    pool <- sites[sort(order(distance)[1:size])]
+
+  } else if(!is.null(target) ){
+
+    if(!(target %in% sites))
+      stop('The target must be in selected sites.')
+
+    season <- CSHShydRology::SeasonStat(date ~ site, an)
+    season.dist <- CSHShydRology::DistSeason(radius~angle,season)
+    distance <- season.dist[which(target == sites), ]
+
+    size <- pmin(length(distance), size)
+    pool <- sites[sort(order(distance)[1:size])]
+
+  } else {
+    pool <- unique(an$site)
   }
 
-  size <- pmin(length(distance), size)
-  pool <- sites[sort(order(distance)[1:size])]
+  an <- an[an$site %in% pool,]
 
-  return(ans[ans$station %in% pool,])
+  return(an)
 }

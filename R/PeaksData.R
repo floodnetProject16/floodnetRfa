@@ -1,41 +1,31 @@
 #' @export
 #' @rdname DailyPeaksData
-PeaksData <- function(x, info){
-
-	## allocate memory
-	ans <- vector('list',5)
-	names(ans) <- c('peaks', 'sites', 'npeak', 'nyear', 'thresh')
+PeaksData <- function(x, meta){
 
 	## Sort data by site
-	info <- as.data.frame(info)
+	meta <- as.data.frame(meta)
 	x <- as.data.frame(x)
 
 	colnames(x) <- c('site', 'date', 'value')
-	colnames(info) <- c('site', 'thresh', 'nyear')
+	colnames(meta) <- c('site', 'thresh', 'ppy')
 
 	x <- x[order(x[,1], x[,2]), ]
-	info <- info[order(info[,1]), ]
+	meta <- meta[order(meta[,1]), ]
 
 	## verify the corresponding ID
-
 	sites <- as.character(x[,1])
-	ans$sites <- as.character(info[,1])
+	asites <- as.character(meta[,1])
 
-	if(!all(ans$sites %in% unique(sites)))
+	if(!all(asites %in% unique(sites)))
 		stop('There is missing sites in the hydrometric data.')
 
 	## Format the output
-	ans$peaks <- x[sites %in% ans$sites,]
-	rownames(ans$peaks) <- NULL
+	ans <- x[sites %in% asites,]
+	rownames(ans) <- NULL
 
-	ans$npeak <- tapply(sites, sites, length)
-	names(ans$npeak) <- NULL
-
-	ans$thresh <- info[,2]
-	names(ans$thresh) <- NULL
-
-	ans$nyear <- info[,3]
-	names(ans$nyear) <- NULL
+	rownames(meta) <- meta$site
+	attr(ans, 'meta') <- meta[,-1]
+	attr(ans, 'dtype') <- 'peaksdata'
 
   return(ans)
 }

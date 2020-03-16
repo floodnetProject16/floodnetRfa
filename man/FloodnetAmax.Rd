@@ -4,15 +4,9 @@
 \alias{FloodnetAmax}
 \title{Estimate flood quantiles using using annual maxima}
 \usage{
-FloodnetAmax(site = NULL, db = NULL, x = NULL, period = c(2, 5, 10,
-  20, 50, 100), distr = NULL, instant = FALSE, nsim = 2000,
-  level = 0.95, out.model = FALSE, verbose = TRUE)
+FloodnetAmax(x, ...)
 }
 \arguments{
-\item{site}{Station ID for HYDAT or a station name for identification.}
-
-\item{db}{Path of the HYDAT database.}
-
 \item{x}{Hydrometric data. Vector of annual maxima.}
 
 \item{period}{Return period for which the flood quantiles are estimated.}
@@ -58,11 +52,10 @@ a warning is issued.
  db <- DB_HYDAT
 
  ## Read Amax data
- x <- AmaxData(c('01AD002'), db)
+ x <- AmaxData('01AD002', db)
 
  ## Performing the analysis
- FloodnetAmax(site = '01AD002', db = db, period = c(20,50),
- 						 nsim = 30, verbose = FALSE)
+ FloodnetAmax(x, period = c(20,50), nsim = 200, verbose = FALSE)
 }
 
 }
@@ -76,5 +69,5 @@ Hosking, J. R. M., & Wallis, J. R. (1997). Regional frequency analysis:
   an approach based on L-moments. Cambridge Univ Pr.
 }
 \seealso{
-\link{AmaxData}, \link{FloodnetPot} and \link{FloodnetPool}.
+\link{AmaxData}, \link{floodnetMdl}.
 }

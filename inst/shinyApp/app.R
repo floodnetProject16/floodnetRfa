@@ -174,6 +174,9 @@ server <- function(input, output) {
 	# Making eventReactive so table/plot updates with button instead of automatically
 	# Storing values in result so each function is only run once
 	result <- shiny::eventReactive(input$update, .ClickUpdate(input, db = DB_HYDAT))
+    # output functions to table/plot
+    output$table <- renderTable(as.data.frame(result()))
+    output$plot <- renderPlot(plot(result()) )
 
 	# output functions to table/plot
 	output$table <- shiny::renderTable(result()$qua)

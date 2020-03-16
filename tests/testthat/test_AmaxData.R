@@ -9,16 +9,13 @@ sites <- c('01AD002','01AF009')
 
 out <- AmaxData(sites, DB_HYDAT)
 
-expect_equal(colnames(out), c('station','year','value'))
-expect_equal(unique(out$station), sites)
+expect_equal(colnames(out), c('site','date','value'))
+expect_equal(unique(out$site), sites)
 expect_equal(rownames(out), as.character(1:nrow(out)))
 
-expect_true(class(out$station) == 'character' )
-expect_true(class(out$year) == 'integer' )
-expect_true(class(out$value) == 'numeric' )
-
-out <- AmaxData(sites, DB_HYDAT, year = FALSE)
-expect_true(class(out$date) == 'Date')
+expect_true(is(out$site, 'character'))
+expect_true(is(out$date, 'Date'))
+expect_true(is(out$value, 'numeric'))
 
 ###################################
 ## Pooling groups
@@ -39,17 +36,21 @@ sname <- sort(order(hm[,3])[1:3])
 sname <- colnames(hm)[sname]
 
 ## Extract info for pooling group
-out <- AmaxData(sites,DB_HYDAT, target = sites[3], size = 3, distance = hm)
-out.sites <- sort(unique(out$station))
+out <- AmaxData(sites,DB_HYDAT, size = 3, distance = hm[3,])
+out.sites <- sort(unique(out$site))
 
 expect_equal(sname, out.sites)
 
-## A "dist object" is passed
-out1 <- AmaxData(sites,DB_HYDAT, target = sites[3], size = 3, distance = h)
+## A distance is passed
+out1 <- AmaxData(sites,DB_HYDAT, target = sites[3], size = 3)
 expect_equal(out1,out)
 
-## only vector is passed
-out1 <- AmaxData(sites,DB_HYDAT, target = sites[3], size = 3, distance = hm[sites[3],])
-expect_equal(out1,out)
+## only target is passed
+out1 <- AmaxData(sites,DB_HYDAT, target = sites[3], size = 3)
+
+sdis <- SeasonDistanceData(sites, db =  DB_HYDAT, target = 3)
+out2 <- AmaxData(sites,DB_HYDAT, distance = sdis, size = 3)
+
+expect_equal(out1,out2)
 
 })

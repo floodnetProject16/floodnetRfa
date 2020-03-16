@@ -4,10 +4,6 @@
 #' of an at-site frequency analysis of floods based on annual
 #' maxima.
 #'
-#' @param site Station ID for HYDAT or a station name for identification.
-#'
-#' @param db Path of the HYDAT database.
-#'
 #' @param x Hydrometric data. Vector of annual maxima.
 #'
 #' @param period Return period for which the flood quantiles are estimated.
@@ -42,7 +38,7 @@
 #' If the data fails one of the them at significance level 0.05,
 #' a warning is issued.
 #'
-#' @seealso \link{AmaxData}, \link{FloodnetPot} and \link{FloodnetPool}.
+#' @seealso \link{AmaxData}, \link{floodnetMdl}.
 #'
 #' @references
 #'
@@ -64,66 +60,70 @@
 #'  db <- DB_HYDAT
 #'
 #'  ## Read Amax data
-#'  x <- AmaxData(c('01AD002'), db)
+#'  x <- AmaxData('01AD002', db)
 #'
 #'  ## Performing the analysis
-#'  FloodnetAmax(site = '01AD002', db = db, period = c(20,50),
-#'  						 nsim = 30, verbose = FALSE)
+#'  FloodnetAmax(x, period = c(20,50), nsim = 200, verbose = FALSE)
 #' }
 #'
-FloodnetAmax <-
-	function(site = NULL,
-					 db = NULL,
-					 x = NULL,
+FloodnetAmax <- function(x, ...){
+
+	msg <- 'Must provide the input x in a proper format.'
+
+	if(class(x) == 'numeric'){
+		return(.FloodnetAmaxOne(x, ...))
+
+	} else if(class(x) %in% c('matrix','data.frame')){
+
+		## Verify the structure of the input
+  	if(all(colnames(x) != c('site','year','value')))
+  		stop(msg)
+
+		nsite <- length(unique(x[,1]))
+
+		if(nsite == 1){
+			return(.FloodnetAmaxOne(x[,3], ..., site = as.character(x[1,1])))
+		}
+
+		## Perform the FFA to every sites
+		xlst <- split(x[,3], as.character(x[,1]))
+		flst <- lapply(xlst, .FloodnetAmaxOne, ...)
+
+		## Set the site ID
+		for(ii in seq(nsite))
+			flst[[ii]]$site <- names(xlst)[ii]
+
+		## Return the result in the form of table
+		flst <- lapply(flst, as.data.frame)
+
+		ans <- do.call(rbind, flst)
+		rownames(ans) <- NULL
+
+		return(ans)
+
+	} else{
+  	stop(msg)
+  }
+
+}
+
+.FloodnetAmaxOne <- function(x,
 					 period = c(2,5,10,20,50,100),
 					 distr = NULL,
 					 instant = FALSE,
 					 nsim = 2000,
 					 level = 0.95,
 					 out.model = FALSE,
-					 verbose = TRUE){
+					 verbose = TRUE,
+					 site = 'site'){
 
-	alpha = 1- level
+	MINSIM <- 200
+	alpha = 1 - level
 
 	## Probabilities associated with the flood quantiles
-  period.p <- 1-1/period
+  period.p <- 1 - 1 / period
 
-	############################################
-	## Reading the data
-	############################################
-
-	## ERROR in input
-  if(is.null(db) & is.null(x))
-		stop('Must provide an input data.')
-
-  ## Using HYDAT
-  if(!is.null(db)){
-
-		## open a connection to the database
-	  con <- RSQLite::dbConnect(RSQLite::SQLite(), db)
-
-	  ## Extract the Annual maxima
-	  if(instant){
-	 	  xd <- HYDAT::AnnualInstantaneousPeakData(con, get_flow = TRUE, site)
-	 	  xd <- xd[xd$peak_code == 'MAXIMUM', 'peak']
-	  } else {
-      xd <- HYDAT::AnnualPeakData(con, get_flow = TRUE, site)
-      xd <- xd[xd$peak == 'MAXIMUM', 'value']
-	  }
-
-    RSQLite::dbDisconnect(con)
-
-	## USING adata.frame
-	} else {
-
-		xd <- as.numeric(x)
-
-    ## If the user have not specify a station id
-    if(is.null(site))
-      site <- 'site'
-  }
-
-	xd <- na.omit(xd)
+	xd <- as.numeric(na.omit(x))
 
 	############################################
 	## Perform verification
@@ -136,63 +136,90 @@ FloodnetAmax <-
 
 	   mk <- Kendall::MannKendall(xd)$sl
 
-	  if(mk < 0.05)
+	  if(mk < 0.05){
+	  	is.trend <- TRUE
 		  warning('\nThere may be a trend in the data.')
+	  }
 
 	   pt <- trend::pettitt.test(xd)$p.value
 
-	  if(pt < 0.05)
-	   warning('\nThere may be a change point in the data.')
+	  if(pt < 0.05){
+	  	is.trend <- TRUE
+  	   warning('\nThere may be a change point in the data.')
+	  }
+
+	  if(nsim < MINSIM)
+	  	warning('\n Bootstrap of the flood quantiles will not be performed for',
+	  				  'less than ', MINSIM ,' simulations.')
+
 	}
 
 	############################################
-	## Fitting and prediction
+	## Fitting
 	############################################
 
 	## Fit the distribution
 	if(is.null(distr))
 	  distr <- c('gev','glo','gno', 'pe3')
 
-	fit <- FitAmax(xd, distr = distr, method = 'lmom',
-								 varcov = out.model, tol.gev = 2)
+	fit <- FitAmax(xd, distr = distr, method = 'lmom', varcov = TRUE,
+								 nsim = MINSIM, tol.gev = 2)
 
-	if(nsim > 1){
+	if(nsim >= MINSIM){
   	hat <- predict(fit, p = period.p, ci = 'boot', alpha = alpha, nsim = nsim,
 	  							 out.matrix = TRUE)
 
-  	ans <- replicate(4,
-	    data.frame(site = site,
-			  			   method = 'amax',
-				  		   distribution = fit$distr,
-					  	   period = period,
-						     variable = 'quantile',
-						     value= hat$pred[,1]),
-	    simplify = FALSE)
+  	para.se <- apply(hat$para, 2, sd)
 
-	  ans[[2]]$variable <- 'se'
-	  ans[[3]]$variable <- 'lower'
-	  ans[[4]]$variable <- 'upper'
-
-	  ans[[2]]$value <- apply(hat$qua,2,sd)
-	  ans[[3]]$value <- hat$pred[,2]
-	  ans[[4]]$value <- hat$pred[,3]
-
-	  ans <- do.call(rbind,ans)
+  	qua <- data.frame(pred = hat$pred[,1],
+  											se = apply(hat$qua, 2, sd),
+  											hat$pred[,2:3])
 
   } else{
-	  hat <- predict(fit, p = period.p)
+	  qua <- predict(fit, p = period.p, se = TRUE, ci = 'delta', alpha = alpha)
 
-	  ans <- data.frame(site = site,
-			  			   method = 'amax',
-				  		   distribution = fit$distr,
-					  	   period = period,
-						     variable = 'quantile',
-						     value= hat)
-	}
+	  para.se <- diag(fit$varcov)
+  }
 
+	para <- data.frame(param = fit$para, se = para.se)
+	rownames(para) <- names(fit$para)
+
+	##############################################
+	## Pre-compute data for the return level plots
+	##############################################
+
+	nobs <- length(xd)
+
+	Fz <- function(z) -log(-log(z))
+	zmin <- 1/(nobs+1)
+	zmax <- max(nobs/(nobs+1), max(period.p))
+
+	rlevel.p <- seq(Fz(zmin),Fz(zmax), len = 30)
+	rlevel.p <- exp(-exp(-rlevel.p))
+
+	rlevel <- cbind(prob = rlevel.p,
+									predict(fit, p = rlevel.p, ci = 'delta', alpha = alpha))
+
+	############################################
+	## Build the final output
+	############################################
+
+	ans <- list(site = site,
+							quantile = qua,
+							param = para,
+							method = 'amax',
+							distr  = fit$distr,
+							thresh = 0,
+							ppy = 1,
+							period = period,
+							rlevels = rlevel,
+							obs = sort(xd))
+
+	class(ans) <- 'floodnetMdl'
 
 	if(out.model)
-		ans <- list(fit = fit, qua = ans)
+		ans$fit <- fit
 
 	return(ans)
 }
+
