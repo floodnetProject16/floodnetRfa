@@ -178,10 +178,6 @@ server <- function(input, output) {
     output$table <- renderTable(as.data.frame(result()))
     output$plot <- renderPlot(plot(result()) )
 
-	# output functions to table/plot
-	output$table <- shiny::renderTable(result()$qua)
-	output$plot <- shiny::renderPlot(plot(result()$fit) )
-
 }
 
 # Run the application
