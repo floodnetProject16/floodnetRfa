@@ -3,49 +3,55 @@
 \docType{data}
 \name{gaugedSites}
 \alias{gaugedSites}
-\title{Information about 1114 gauged stations in Canada}
-\format{An object of class \code{data.frame} with 1114 rows and 29 columns.}
+\title{Meta-information about HYDAT gauged stations.}
+\format{An object of class \code{data.frame} with 1114 rows and 27 columns.}
 \usage{
 gaugedSites
 }
 \description{
-List of stations in HYDAT that has have at least 20 years of observations.
-The datasets include descriptors, candidates thresholds for POT, p-values
-of trend tests, super regions of hydrologically similar stations.
+The dataset contains meta-information about 1114 stations in HYDAT that have
+at least 20 years of observations and a natural flood regime.
+It includes catchment descriptors, candidates thresholds for peaks over
+threshold (POT) analysis, p-values of trend tests and super regions.
+All that information was collected during the first phase of the Floodnet
+project.
 }
 \details{
-Apart the station idenfication number (\code{station})
-provinces (\code{prov}) and geographical coordinates (\code{lon},\code{lat}),
-the dataset includes two other site characteristics : drainage area (\code{area}),
-mean annual precipitation (\code{map}).
+The dataset contains basic information about the stations are available.
+It includes the  idenfication number (\code{station}), province (\code{prov})
+and geographical coordinates (\code{lon},\code{lat}), drainage area
+(\code{area}) and mean annual precipitation (\code{map}).
 
-The super regions are created using clustering techniques: Ward's Method
-(\code{hc}) and k-means (\code{km}).
-The methods are applied on a subset of 4 standardized variables: \code{lon}, \code{lat},
-\code{area} and \code{map}.
-Euclidean distance is used to to create groups of 6 and 12 super regions.
-For example, the column \code{supreg_km12} have classified the stations in
-12 super regions using the k-means method.
+The dataset classifies the stations into super regions based on catchment
+descriptors.
+The Ward's Method (\code{hc}) and the k-means (\code{km}) are combined with
+the Euclidean distance to create super regions of size 6 and 12.
+For example, the results of the classification into 12 super regions using
+the k-means method is found in column \code{supreg_km12}.
 
-Seasonality measures based on the annual maximum events are included in the
-dataset.
-The regularity (\code{season_radius}) and timing  (\code{season_angle}) of
-the annual floods in radian are provided directly and in cartesian coordinates
-(\code{season_x, season_y}).
+The dataset provides seasonality measures based on the annual maximum events.
+It includes, the regularity (\code{season_radius}) [0,1] and timing (in rad)
+(\code{season_angle}) of the annual floods.
+These values represent polar coordinates inside the unitary circle and are
+converted into a cartesian system of coordinates (\code{season_x, season_y}).
 
-The datasets includes candidates thresholds to help performing POT.
-The candidates \code{auto} is the first observations that has a p-value
-greater or equal to 0.25 and more than 2.5 peaks per year.
-The other suggested threshold are associated with a number of peaks per year (PPY).
+The dataset includes candidates thresholds for POT analysis.
+The candidates in column \code{auto} are the first thresholds that have a
+p-value greater or equal to 0.25 and an exceedance rate lower than 2.5 peaks
+per year (PPY).
+The other suggested thresholds are associated with given PPY.
 For example, \code{ppy175} is associated with 1.75 PPY.
 
-The p-values of trend tests are includes to help identify stationary stations.
-For AMAX, the Mann-Kendall (\code{trend_mk}) and the Pettitt's test
-(\code{trend_pt}) are provided.
-For the mean excess of the POT, the Mann-Kendall test is included and for the
-frequency of the peaks the significance of the slope of a logistic regression
-model is reported (\code{trend_lg}).
-
+The dataset contains p-values of trend tests to identify the stations with
+time-dependent flood risk.
+For AMAX, the p-value of the Mann-Kendall (\code{trend_mk}) and the Pettitt's
+ test (\code{trend_pt}) are provided.
+For POT, the Mann-Kendall's test is applied to the exceedances
+(\code{trend_mx}). Logistic regression is used to test for trends in the
+exceedance rate. The F-test is evaluated for polynomial trends of order 1 to
+3 and the minimum p-value is returned (\code{trend_lg}).
+}
+\references{
 Mostofi Zadeh, S., & Burn, D. H. (2019). A Super Region Approach to
 Improve Pooled Flood Frequency Analysis. Canadian Water Resources Journal
 / Revue Canadienne Des Ressources Hydriques, 0(0), 1–14.

@@ -14,6 +14,7 @@ A simple function used to run the Shiny GUI from the floodnetRfa package
 }
 \examples{
 
-FloodnetToolbox()
-
+\dontrun{
+  FloodnetToolbox()
+}
 }

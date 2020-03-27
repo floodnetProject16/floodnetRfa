@@ -1,7 +1,6 @@
-#' Pool frequency analysis using annual maximum floods
+#' Pooled flood frequency analysis
 #'
-#' Return the results of a regional flood frequency analysis based on annual
-#' maxima and pooling groups.
+#' Return the results of a regional frequency analysis based on pooling groups.
 #'
 #' @param x Hydrometric data of the form: site, year, value.
 #'
@@ -11,7 +10,7 @@
 #'
 #' @param distr Regional distribution.
 #'
-#' @param tol.H Heterogeneity measure. Stopping criterion representing the
+#' @param tol.H Heterogeneity measure. A stopping criterion representing the
 #'    minimal heterogeneity level accepted for a pooling group.
 #'
 #' @param nsim Number of bootstrap samples used for inference.
@@ -21,7 +20,7 @@
 #' @param corr Coefficient of correlation used for simulation.
 #'   The same value is assumed between each pair of sites.
 #'
-#' @param out.model Logical. Should the model be output. This correspond to the
+#' @param out.model Logical. Should the model be output. This corresponds to the
 #'   output of \link{FitRegLmom}. Otherwise only the estimated flood quantiles are
 #'   returned.
 #'
@@ -40,33 +39,17 @@
 #'
 #' @seealso \link{FitRegLmom}, \link{PoolRemove}.
 #'
-#' @import CSHShydRology stats
+#' @import CSHShydRology
 #' @export
 #'
 #' @examples
 #'
 #' \dontrun{
-#'	## Path the HYDAT database
-#'  db <- DB_HYDAT
-#'
-#'  ## Compute distance
-#'  coord <- gaugedSites[,c('lon','lat')]
-#'  rownames(coord) <- gaugedSites$station
-#'
-#'  ## Read Amax data
-#'  atl <- with(gaugedSites, station[substr(station,1,2) == '01'])
-#'  x <- AmaxData(atl, db, target = '01AF009', size = 15)
 #'
 #'  ## Performing AMAX analysis using L-moments
-#'  FloodnetPool(x, '01AF009', distr = 'gev', period = c(20,50), nsim = 30)
+#'  x <- DemoData('region')
+#'  fit <- FloodnetPool(x, '01AF009')
 #'
-#'  ## Read Pot data
-#'  info <- gaugedSites[, c('station','auto','area')]
-#'  xd <- DailyPeaksData(info, db, target = '01AF009',
-#'  							size = 15, distance = dist(coord))
-#'
-#'  ## Performing POT analysis using L-moments
-#'  FloodnetPool(xd, '01AF009', period = c(20,50), nsim = 30)
 #' }
 #'
 FloodnetPool <-
@@ -179,15 +162,62 @@ FloodnetPool <-
   }
 
   #########################################################
-  ## Predict flood quantiles
+  ## Extract raw observations and time
   #########################################################
 
-	## Include more return period for the return level plots
-  obs <- sort(as.numeric(stats::na.omit(xw[,1])))
+  tid <- which(x[,1] == target)
+  obs <- x[tid,3]
+  dd <- x[tid,2]
+
+  obs <- stats::na.omit(obs)
+  nac <- stats::na.action(obs)
+
+	if(!is.null(nac)){
+		dd <- dd[-nac]
+	}
+
+  obs <- as.numeric(obs)
 	nobs <- length(obs)
 
+	##############################################################
+	## Trend and GOF tests
+	##############################################################
+
+	## Trend test
+	mk <- Kendall::MannKendall(obs)$sl
+
+	if(type == 'amax'){
+
+		## Change point
+		pt <- trend::pettitt.test(obs)$p.value
+		pval <- c(mk = mk, pt = pt)
+
+		ad <- goftest::ad.test(obs/fit$lmom[1,1], CSHShydRology::pAmax, fit$para,
+												 fit$distr, estimated = TRUE)$p.value
+
+	} else if(type == 'pot'){
+
+		## Trend test for exceedance
+		all.dates <- seq(min(dd), max(dd), 'days')
+		xbin <- data.frame(y = all.dates %in% dd, x = all.dates)
+		lg <- .TrendLogis(xbin)
+		pval <- c(mk, lg)
+
+		ad <- goftest::ad.test(obs/fit$lmom[1,1],
+													 CSHShydRology::pgpa, fit$para[2], fit$para[3],
+												   estimated = TRUE)$p.value
+
+	}
+
+	## Add the threshold value
 	if(type == 'pot')
 		obs <- obs + u
+
+	#####################################################
+	## Predict flood quantiles
+	#####################################################
+
+	## Include more return period for the return level plots
 
 	Fz <- function(z) -log(-log(z))
 	zmin <- 1/(nobs+1)
@@ -204,7 +234,7 @@ FloodnetPool <-
   					alpha = alpha, out.matrix = TRUE),
   	silent = TRUE ))
 
-	 if(is(hat,'try-error'))
+	 if(methods::is(hat,'try-error'))
   	 stop('Model fail to predict flood quantiles.')
 
 	hat <- boot$pred
@@ -235,16 +265,19 @@ FloodnetPool <-
 	names(para0) <- c('IF', names(fit$para))
 
 	ans <- list(site = target,
-							quantile = hat,
-							param = data.frame(param = para0, se = para.se),
 							method = paste0('pool_',type),
 							distr  = fit$distr,
+							period = period,
+							quantile = hat,
+							param = data.frame(param = para0, se = para.se),
+							obs = obs,
+							time = dd,
+							rlevels = rlevel,
 							thresh = thresh[1],
 							ppy = ppy[1],
-							period = period,
-							lmom = data.frame(nrec = fit$nrec, fit$lmom),
-							rlevels = rlevel,
-							obs = obs)
+							trend = pval,
+							gof = ad,
+	  					lmom = data.frame(nrec = fit$nrec, fit$lmom))
 
 	class(ans) <- 'floodnetMdl'
 

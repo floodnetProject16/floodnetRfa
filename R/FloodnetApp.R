@@ -7,8 +7,9 @@
 #'
 #' @examples
 #'
-#' FloodnetToolbox()
-#'
+#' \dontrun{
+#'   FloodnetToolbox()
+#' }
 FloodnetApp <- function(){
 
   ## Start the shinyApp

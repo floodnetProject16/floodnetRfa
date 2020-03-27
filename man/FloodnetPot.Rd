@@ -13,8 +13,7 @@ FloodnetPot(
   level = 0.95,
   tol.year = 346,
   out.model = FALSE,
-  verbose = TRUE,
-  site = "site"
+  verbose = TRUE
 )
 }
 \arguments{
@@ -67,17 +66,10 @@ a warning is issued.
 }
 \examples{
 
-\dontrun{
-## Path the HYDAT database
- db <- DB_HYDAT
-
- ## Read Amax data
- x <- DailyData('01AD002', db)
-
  ## Performing the analysis
- FloodnetPot(x, period = c(20,50), u = 1000,
- 						 area = 14400, nsim = 30, verbose = FALSE)
-}
+ x <- DemoData('daily')
+ fit <- FloodnetPot(x, u = 1000, area = 14700)
+ summary(fit)
 
 }
 \references{

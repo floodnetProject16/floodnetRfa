@@ -59,27 +59,11 @@ from a multivariate normal distribution.
 \examples{
 
 \dontrun{
-## Path the HYDAT database
- db <- DB_HYDAT
-
- ## Compute distance
- coord <- gaugedSites[,c('lon','lat')]
- rownames(coord) <- gaugedSites$station
-
- ## Read Amax data
- atl <- with(gaugedSites, station[substr(station,1,2) == '01'])
- x <- AmaxData(atl, db, target = '01AF009', size = 15)
 
  ## Performing AMAX analysis using L-moments
- FloodnetPool(x, '01AF009', distr = 'gev', period = c(20,50), nsim = 30)
+ x <- DemoData('region')
+ fit <- FloodnetPool(x, '01AF009')
 
- ## Read Pot data
- info <- gaugedSites[, c('station','auto','area')]
- xd <- DailyPeaksData(info, db, target = '01AF009',
- 							size = 15, distance = dist(coord))
-
- ## Performing POT analysis using L-moments
- FloodnetPool(xd, '01AF009', period = c(20,50), nsim = 30)
 }
 
 }

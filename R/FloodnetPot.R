@@ -1,4 +1,4 @@
-#' Estimating flood quantiles using using peaks over threshold
+#' Estimating flood quantiles using peaks over threshold
 #'
 #' Return the flood quantiles, standard deviation, lower and upper bounds
 #' of the confidence interval based on a Peaks Over Threshold (POT) model.
@@ -18,7 +18,7 @@
 #'
 #' @param tol.year Number of days necessary to consider a year complete. Otherwise the data is removed.
 #'
-#' @param out.model Logical. Should the model be output. This correspond to the
+#' @param out.model Logical. Should the model be output. This corresponds to the
 #'   output of \link{FitPot}.
 #'
 #' @param verbose Logical. Should message and warnings be output.
@@ -26,23 +26,23 @@
 #' @details
 #'
 #' Estimation is carried out by maximum likelihood using the Generalized
-#' Pareto distribution. If not provided, a best candiate threshold is searched.
+#' Pareto distribution. If not provided, a best candidate threshold is searched.
 #' It corresponds to the lowest
 #' threshold where the goodness-of-fit test of Anderson-Darling has
-#' a p-value greater that 0.25.
+#' a p-value greater than 0.25.
 #' In addition, the selected threshold is forced to have (in
-#' average) less than 2.5 peaks per year and at least 30 peaks. If
-#' no such threshold is found, the threshold with the maximimum p-value is used instead.
+#' average) fewer than 2.5 peaks per year and at least 30 peaks. If
+#' no such threshold is found, the threshold with the maximum p-value is used instead.
 #' The declustering technique for extracting the flood peaks
-#' follows the recommendations of the Water Ressources council of United States.
+#' follows the recommendations of the Water Ressources council of the United States.
 #' In particular, flood peaks must be separated by at least 4 + log(A) days, where
-#' A is the drainage area of the basin in kilometer squared.
-#' Inference on the estimated flood quantiles is performed by parametric bootstrap.
+#' A is the drainage area of the basin in kilometers squared.
+#' Inference on the estimated flood quantiles is performed by parametric bootstraps.
 #'
 #' If \code{verbose == TRUE}, a Mann-Kendall test and logistic regression are used
 #' to verify the presence of trends in the mean excess and the number of peaks per years.
 #' If the data fails one of the tests, a warning is issued.
-#' For the logistic regression, an analyse of deviance (F-test) is used to compare the
+#' For the logistic regression, an analysis of deviance (F-test) is used to compare the
 #' constant model with polynomial trends.
 #' #' If the data fails one of the tests at significance level 0.05,
 #' a warning is issued.
@@ -67,17 +67,10 @@
 #'
 #' @examples
 #'
-#' \dontrun{
-#'	## Path the HYDAT database
-#'  db <- DB_HYDAT
-#'
-#'  ## Read Amax data
-#'  x <- DailyData('01AD002', db)
-#'
 #'  ## Performing the analysis
-#'  FloodnetPot(x, period = c(20,50), u = 1000,
-#'  						 area = 14400, nsim = 30, verbose = FALSE)
-#' }
+#'  x <- DemoData('daily')
+#'  fit <- FloodnetPot(x, u = 1000, area = 14700)
+#'  summary(fit)
 #'
 FloodnetPot <-
 	function(x, u = NULL, area = 59874,
@@ -86,8 +79,7 @@ FloodnetPot <-
 					 level = 0.95,
 					 tol.year = 346,
 					 out.model = FALSE,
-					 verbose = TRUE,
-					 site = 'site'){
+					 verbose = TRUE){
 
 	MINSIM <- 200
 	alpha <- 1 - level
@@ -196,22 +188,22 @@ FloodnetPot <-
 
 	fit <- FitPot(value~date, xd, u = u, declust = 'wrc', r = rarea)
 
-	if(verbose){
+	## verify the GOF of the GPA
+	ad <- GofTest(fit)$pvalue
 
-		## verify the GOF of the GPA
-	  ad <- GofTest(fit)$pvalue
+	mk <- Kendall::MannKendall(fit$excess)$sl
+
+	## Test for trends in the probability of exceedance
+	xbin <- data.frame(y = xd$date %in% fit$time, x = xd$date)
+  lg <- .TrendLogis(xbin)
+
+	if(verbose){
 
 	  if(ad < 0.05)
 	    warning('The GPA may not be a prober distribution.')
 
-	  mk <- Kendall::MannKendall(fit$excess)$sl
-
 	  if(mk < 0.05)
 	    warning('There may be a trend in the mean excess.')
-
-	  ## Test for trends in the probability of exceedance
-	  xbin <- data.frame(y = xd$date %in% fit$time, x = xd$date)
-    lg <- .TrendLogis(xbin)
 
     if(lg < 0.05)
 	    warning('There may be a trend in the probability of exceedance.')
@@ -242,7 +234,7 @@ FloodnetPot <-
 
 	#
 	para <- data.frame(param = fit$estimate, se = para.se)
-	rownames(para) <- names(fit$para)
+	rownames(para) <- names(fit$estimate)
 
 	##############################################
 	## Pre-compute data for the return level plots
@@ -269,15 +261,18 @@ FloodnetPot <-
 	############################################
 
 	ans <- list(site = site,
-							quantile = qua,
-							param = para,
 							method = 'pot',
 							distr  = 'gpa',
 							period = period,
-							ppy = fit$nexcess/fit$nyear,
-							thresh = fit$u,
+							quantile = qua,
+							param = para,
+							obs = fit$excess + fit$u,
+							time = fit$time,
 							rlevels = rlevel,
-							obs = sort(fit$excess + fit$u))
+							thresh = fit$u,
+							ppy = fit$nexcess/fit$nyear,
+							trend = c(mk, lg),
+							gof = ad)
 
 	class(ans) <- 'floodnetMdl'
 
@@ -302,16 +297,15 @@ FloodnetPot <-
   fit0 <- glm(y~1, xbin, family = quasibinomial())
 
   ## alternative models
-  fit <- vector('list', 4)
+  fit <- vector('list', 3)
   fit[[1]] <- glm(y~x, xbin, family = quasibinomial())
   fit[[2]] <- glm(y~poly(x,2), xbin, family = quasibinomial())
   fit[[3]] <- glm(y~poly(x,3), xbin, family = quasibinomial())
-
-  fit[[4]] <- glm(y~splines::ns(x,4), xbin, family = quasibinomial())
 
   ## Evaluate p-values of the F-test
   fun <- function(z) anova(fit0, z, test = 'F')[2,6]
 
   ## Return minimal p-value
-  return(min(sapply(fit,fun)))
+  return(min(vapply(fit,fun, numeric(1)), na.rm = TRUE))
 }
+

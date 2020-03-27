@@ -5,35 +5,32 @@
 \title{Prediction of flood quantiles at ungauged sites using Region of Influence}
 \usage{
 FloodnetRoi(
-  target,
-  target.coord = NULL,
+  x,
   sites,
+  target,
   sites.coord = NULL,
-  db = NULL,
-  x = NULL,
+  target.coord = NULL,
   size = 20,
   period = 100,
   distr = "gev",
-  corr = NULL,
+  corr = 0,
   nsim = 0,
   out.model = FALSE,
   verbose = TRUE
 )
 }
 \arguments{
-\item{target}{Descriptors of the target sites. A data.frame where the first
-column is the name of the basin.}
-
-\item{target.coord}{Coordinates of the target sites.}
+\item{x}{Dataset containing the hydrometric data.}
 
 \item{sites}{Descriptors of gauged sites. A data.frame where the first
 column is the name of the basin.}
 
+\item{target}{Descriptors of the target sites. A data.frame where the first
+column is the name of the basin.}
+
 \item{sites.coord}{Coordinates of the gauged sites.}
 
-\item{db}{The HYDAT database.}
-
-\item{x}{Dataset containing the hydrometric data.}
+\item{target.coord}{Coordinates of the target sites.}
 
 \item{size}{Size of the region of influence.}
 

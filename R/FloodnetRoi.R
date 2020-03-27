@@ -5,6 +5,8 @@
 #' bound of the 95% confidence interval estimated provided with a combination of
 #' local regression and kriging technique.
 #'
+#' @param x Dataset containing the hydrometric data.
+#'
 #' @param target Descriptors of the target sites. A data.frame where the first
 #'   column is the name of the basin.
 #'
@@ -14,10 +16,6 @@
 #'   column is the name of the basin.
 #'
 #' @param sites.coord Coordinates of the gauged sites.
-#'
-#' @param db The HYDAT database.
-#'
-#' @param x Dataset containing the hydrometric data.
 #'
 #' @param size Size of the region of influence.
 #'
@@ -109,16 +107,15 @@
 #' }
 #'
 FloodnetRoi <- function(
-	target,
-	target.coord = NULL,
+	x,
 	sites,
+	target,
 	sites.coord = NULL,
-	db = NULL,
-	x = NULL,
+	target.coord = NULL,
 	size = 20,
 	period = 100,
 	distr = 'gev',
-	corr = NULL,
+	corr = 0,
 	nsim = 0,
 	out.model = FALSE,
 	verbose = TRUE){
@@ -132,8 +129,8 @@ FloodnetRoi <- function(
    	bar <- txtProgressBar()
 
 	## Reorganize target an sites information
-	target <- toDataFrame(target)
-  sites <- toDataFrame(sites)
+	target <- .ToDF(target)
+  sites <- .ToDF(sites)
 
 	## Extract stations names
 	sname <- as.character(sites[,1])
@@ -143,6 +140,9 @@ FloodnetRoi <- function(
 
 	if(any(colnames(sites) != colnames(target)))
     stop('Sites and target should have the same columns names')
+
+  if(any(tname %in% sname))
+  	stop('The target cannot not be in the gauged sites')
 
 	## Scale the descriptors
 	sites <- scale(sites)
@@ -158,8 +158,8 @@ FloodnetRoi <- function(
 
 		msg <- 'The sites ID in the input data and the coord data do not match.'
 
-		target.coord <- toDataFrame(target.coord)
-    sites.coord <- toDataFrame(sites.coord)
+		target.coord <- .ToDF(target.coord)
+    sites.coord <- .ToDF(sites.coord)
 
 		if(nrow(sites) != nrow(sites.coord))
       stop(msg)
@@ -172,72 +172,46 @@ FloodnetRoi <- function(
 		distr <- rep(distr, nrow(sites))
 
 	if(length(as.numeric(period)) != 1)
-		stop("The only one return period must be passed")
+		stop("Only one return period must be passed")
 
 	period.p <- 1-1/period
 
 	##################################################
-	## Read the hydrometric data
+	## Verify the hydrometric data
 	##################################################
 
-  ## ERROR in input
-  if(is.null(db) & is.null(x))
-		stop('Must provide an input data.')
+	## Remove missing from hydrometric data
+  an <- na.omit(as.data.frame(x))
 
-  ## Using HYDAT
-  if(!is.null(db)){
+	## Order and Filter
+  an <- an[order(an[,1], an[,2]), ]
+  an <- an[an[,1] %in% sname, ]
 
-  	## open a connection to the database
-	  con <- RSQLite::dbConnect(RSQLite::SQLite(), db)
+  if(ncol(an) != 3)
+   	stop('Wrong number of columns in the input')
 
-	  ## Extract the Annual maxima
-    an <- HYDAT::AnnualPeakData(con, get_flow = TRUE, sname)
-    an <- an[an$peak == 'MAXIMUM', ]
-    an$date <- with(an, as.Date(paste(year,month,day,sep = '/')))
+  ## Reformat column names
+  colnames(an) <- c('site','date','value')
 
-    ## Standardize the dataset format
-    an <- an[,c(1, 8, 6, 3)]
-    colnames(an) <- c('site','date', 'value', 'year')
-
-    RSQLite::dbDisconnect(con)
-
-  } else {
-
-    an <- na.omit(as.data.frame(x))
-
-    if(ncol(an) != 3)
-    	stop('Wrong number of columns in the input')
-
-    colnames(an) <- c('site','date','value')
-
-    if(class(an$date) != 'Date')
+  if(!methods::is(an$date,'Date'))
     	stop('The second column of x must be a Date')
 
-    an$year <- as.integer(format(an$date, '%Y'))
-
-    ## Order
-    an <- an[order(an[,1], an[,2]), ]
-
-    ## Verify that the target is in the data
-    sites <- unique(an$site)
-    if(!(target %in% sites))
-    	stop('The target must be in the provided sites')
-
-  }
+  an$year <- as.integer(format(an$date, '%Y'))
 
 	###########################################
 	## Estimate at-site flood quantiles
 	##########################################
 
-  an <- na.omit(an)
-
-  ## evaluate the at-site flood quantile
+  ## Evaluate the at-site flood quantile
   an.lst <- split(an$value, an$site)
   an.para <- mapply(fAmax, an.lst, distr, SIMPLIFY = FALSE)
   an.qua <- mapply(qAmax, an.para, distr,
   								 MoreArgs = list(p = period.p))
 
+  #####################################
   ## Organize the input to use formulas
+  #####################################
+
   xsite <- data.frame(y = log(an.qua), phy = sites)
   xtarget <- data.frame(y = 0, phy = target)
 
@@ -254,7 +228,10 @@ FloodnetRoi <- function(
     krig.form <- as.formula(paste0('~', paste(krig.name, collapse = '+')))
   }
 
+  #################################################################
   ## Automatically select the number of sites in the pooling groups
+  #################################################################
+
   do.cv <- length(size) > 1
   if(do.cv){
 
@@ -277,8 +254,10 @@ FloodnetRoi <- function(
 
   }
 
+  ####################
+  ## Fitting the model
+  ####################
 
-  ## Fit the model
   if(do.krig){
   	fit <- suppressWarnings(FitRoi(x = xsite, xnew = xtarget, nk = size,
   							phy = phy.form, similarity = sim.form, kriging = krig.form))
@@ -292,27 +271,14 @@ FloodnetRoi <- function(
   # Bootstrapping
   ###############################################
 
-
   if(nsim > 1){
 
   	if(verbose)
 		  cat('\n[Bootstrapping]\n')
 
-    ## Compute the intersite correlation matrix
-    if(!is.null(corr)){
-
-  	  if(any(corr > 1 | corr < 0))
+    ## Verify the input intersite correlation
+    if(any(corr > 1 | corr < 0))
   		  stop('The correlation coefficient must be between 0 and 1.')
-
-    } else {
-   	  xw <- DataWide(value ~ site + year, an)
-   	  nn <- crossprod(!is.na(xw))
-  	  nn <- nn[lower.tri(nn)]
-  	  cc <- cor(xw, use = 'pairwise.complete.obs')
-  	  cc <- cc[lower.tri(cc)]
-      corr <- weighted.mean(cc, w = nn, na.rm = TRUE)
-
-    }
 
   	if(all(corr == 0)){
   	  nocorr <- TRUE
@@ -337,12 +303,11 @@ FloodnetRoi <- function(
     xsite0 <- xsite
     qboot <- matrix(0,nsim, nrow(target))
 
-    ## Extrat prediction residuals
-    res <- residuals(fit, xsite, fold = 10)
-
     ## Make sure that nsim is even
     if(nsim %% 2 != 0)
     	nsim <- nsim + 1
+
+    res <- residuals(fit, xsite, fold = 10)
 
     ## Use a balance bootstrap to sample the residuals
     ## It also assumed a symmetric distribution.
@@ -385,51 +350,39 @@ FloodnetRoi <- function(
 
     qboot <- exp(qboot)
 
-    hat <- cbind(pred = exp(fit$pred),
+    qua <- data.frame(quantile = exp(fit$pred),
     						 se = apply(qboot, 2, sd),
-    						 lb = apply(qboot, 2, quantile, 0.025),
-    						 ub = apply(qboot, 2, quantile, 0.975))
-
-
-    ans <- replicate(4,
-	    data.frame(site = tname,
-			  			   method = 'QRT',
-					  	   period = period,
-						     variable = 'quantile',
-						     value = hat[,1]),
-	    simplify = FALSE)
-
-	  ans[[2]]$variable <- 'se'
-	  ans[[3]]$variable <- 'lower'
-	  ans[[4]]$variable <- 'upper'
-
-	  ans[[2]]$value <- hat[,2]
-	  ans[[3]]$value <- hat[,3]
-	  ans[[4]]$value <- hat[,4]
-
-	  ans <- na.omit(do.call(rbind,ans))
-	  rownames(ans) <- NULL
+    						 lower = apply(qboot, 2, quantile, 0.025),
+    						 upper = apply(qboot, 2, quantile, 0.975))
 
   } else {
-  	ans <- data.frame(site = tname,
-			  			   method = 'QRT',
-					  	   period = period,
-						     variable = 'quantile',
-						     value = exp(fit$pred))
+    qua <- data.frame(quantile = 	exp(fit$pred))
   }
 
-	if(out.model){
-		ans <- list(fit = fit, qua = ans)
+  rownames(qua) <- tname
 
-		if(do.cv)
-		  ans$cv <- cv
+	xdata <- data.frame(atsite = an.qua, pred = exp(predict(fit, xsite, 10)))
+	rownames(xdata) <- sname
 
+	ans <- list(site = tname, method = 'qrt', period = period,
+							quantile = qua, size = size, data = xdata)
+
+	class(ans) <- 'floodnetRoi'
+
+	if(do.cv){
+		cv <- cv[ ,c(1,4,7)]
+		colnames(cv) <- c('size','nsh','skill')
+		ans$cv <- cv
 	}
+
+	if(out.model)
+		ans$fit <- fit
 
 	return(ans)
 }
 
-toDataFrame <- function(x){
+## Function that transform different format into a data.frame
+.ToDF <- function(x){
 
 	if(is.data.frame(x))
 		ans <- x

@@ -1,5 +1,25 @@
+#' Seasonality plot
+#'
+#' Create a canvas to represent the timing and the regularity of seasonal measures
+#' in a polar coordinate system.
+#'
+#' @param xlab,ylab Axis labels.
+#'
+#' @param ... Other parameters passed to \link{ggplot}.
+#'
+#' @import ggplot2
 #' @export
-#' @rdname floodnetGraphics
+#'
+#' @examples
+#'
+#' library(ggplot2)
+#'
+#' SeasonPlot() +
+#'   geom_point(data = gaugedSites,
+#'     aes(x = season_angle, y = season_radius),
+#'     colour = 'orange')
+#'
+#'
 SeasonPlot <- function(... , xlab = 'Timing', ylab = 'Regularity'){
 
 	## Starting of the month in radian

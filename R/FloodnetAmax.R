@@ -1,4 +1,4 @@
-#' Estimate flood quantiles using using annual maxima
+#' Estimate flood quantiles using annual maxima
 #'
 #' Return the flood quantile, standard deviation,
 #' of an at-site frequency analysis of floods based on annual
@@ -11,13 +11,11 @@
 #' @param distr Distribution. One of \code{'gev'},\code{'gno'},\code{'glo'}
 #'   or \code{'pe3'}
 #'
-#' @param instant Logical, should the instantaneous peaks be used.
-#'
 #' @param nsim Number of bootstrap samples used for inference.
 #'
 #' @param level Confidence level.
 #'
-#' @param out.model Logical. Should the model be output. This correspond to the
+#' @param out.model Logical. Should the model be output. This corresponds to the
 #'   output of \link{FitAmax}. Otherwise only the estimated flood quantiles are
 #'   returned.
 #'
@@ -30,8 +28,8 @@
 #' Generalized Extreme Value (GEV), Generalized logistic (GLO), the
 #' Generalized Normal (GNO) and the Pearson type 3 distributions.
 #' A preference is given to the GEV when the AIC of the other distributions is not
-#' greater than at least two.
-#' Inference on the estimated flood quantiles is performed by parametric bootstrap.
+#' greater than at least two AIC.
+#' Inference on the estimated flood quantiles is performed by parametric bootstraps.
 #'
 #' If \code{verbose == TRUE}, a Mann-Kendall and a Pettitt's test are used
 #' to verify the presence of trend and change points in the data.
@@ -50,83 +48,73 @@
 #' Hosking, J. R. M., & Wallis, J. R. (1997). Regional frequency analysis:
 #'   an approach based on L-moments. Cambridge Univ Pr.
 #'
-#' @import CSHShydRology stats
+#' @import CSHShydRology
 #' @export
 #'
 #' @examples
 #'
-#' \dontrun{
-#' 	## Path the HYDAT database
-#'  db <- DB_HYDAT
+#'  an <- DemoData('amax')
+#'  fit <- FloodnetAmax(an, period = c(20,50))
+#'  summary(fit)
 #'
-#'  ## Read Amax data
-#'  x <- AmaxData('01AD002', db)
 #'
-#'  ## Performing the analysis
-#'  FloodnetAmax(x, period = c(20,50), nsim = 200, verbose = FALSE)
-#' }
-#'
-FloodnetAmax <- function(x, ...){
+FloodnetAmax <- function(
+	  x,
+	  period = c(2,5,10,20,50,100),
+	  distr = NULL,
+	  nsim = 2000,
+	  level = 0.95,
+	  out.model = FALSE,
+	  verbose = TRUE){
 
-	msg <- 'Must provide the input x in a proper format.'
+	MINSIM <- 500
+	x <- as.data.frame(x)
+	alpha <- 1 - level
+	period.p <- 1 - 1 / period
 
-	if(class(x) == 'numeric'){
-		return(.FloodnetAmaxOne(x, ...))
+	####################################
+	## Verify the structure of the input
+	####################################
+	msg <- 'The input must be in a proper format.'
 
-	} else if(class(x) %in% c('matrix','data.frame')){
+ 	if(ncol(x) != 3)
+ 		stop(msg)
 
-		## Verify the structure of the input
-  	if(all(colnames(x) != c('site','year','value')))
-  		stop(msg)
+	if(!methods::is(x[,2],'Date'))
+		stop(msg)
 
-		nsite <- length(unique(x[,1]))
+	if(length(unique(x[,1])) != 1 )
+		stop(msg)
 
-		if(nsite == 1){
-			return(.FloodnetAmaxOne(x[,3], ..., site = as.character(x[1,1])))
-		}
+	colnames(x) <- c('site','date','value')
+	site <- as.character(x[1,1])
 
-		## Perform the FFA to every sites
-		xlst <- split(x[,3], as.character(x[,1]))
-		flst <- lapply(xlst, .FloodnetAmaxOne, ...)
+  ## remove missing
+	xd <- stats::na.omit(x[,3])
+	nac <- stats::na.action(xd)
 
-		## Set the site ID
-		for(ii in seq(nsite))
-			flst[[ii]]$site <- names(xlst)[ii]
+	if(!is.null(nac)){
+		dd <- x[-nac,2]
+	} else {
+		dd <- x[,2]
+	}
 
-		## Return the result in the form of table
-		flst <- lapply(flst, as.data.frame)
+	xd <- as.numeric(xd)
 
-		ans <- do.call(rbind, flst)
-		rownames(ans) <- NULL
+	###########################
+	## Trend test
+	###########################
 
-		return(ans)
+	mk <- Kendall::MannKendall(xd)$sl
+	pt <- trend::pettitt.test(xd)$p.value
 
-	} else{
-  	stop(msg)
-  }
-
-}
-
-.FloodnetAmaxOne <- function(x,
-					 period = c(2,5,10,20,50,100),
-					 distr = NULL,
-					 instant = FALSE,
-					 nsim = 2000,
-					 level = 0.95,
-					 out.model = FALSE,
-					 verbose = TRUE,
-					 site = 'site'){
-
-	MINSIM <- 200
-	alpha = 1 - level
-
-	## Probabilities associated with the flood quantiles
-  period.p <- 1 - 1 / period
-
-	xd <- as.numeric(na.omit(x))
+	##Sort the observation
+	oid <- order(xd)
+	xd <- xd[oid]
+	dd <- dd[oid]
 
 	############################################
-	## Perform verification
+	## Print warnings
 	############################################
 
 	if(verbose){
@@ -134,28 +122,22 @@ FloodnetAmax <- function(x, ...){
 		if(length(xd) < 20)
 		  warning('\nThere is less than 20 observations.')
 
-	   mk <- Kendall::MannKendall(xd)$sl
-
 	  if(mk < 0.05){
-	  	is.trend <- TRUE
 		  warning('\nThere may be a trend in the data.')
 	  }
 
-	   pt <- trend::pettitt.test(xd)$p.value
-
 	  if(pt < 0.05){
-	  	is.trend <- TRUE
   	   warning('\nThere may be a change point in the data.')
 	  }
 
 	  if(nsim < MINSIM)
-	  	warning('\n Bootstrap of the flood quantiles will not be performed for',
+	  	warning('\nBootstrap of the flood quantiles will not be performed with ',
 	  				  'less than ', MINSIM ,' simulations.')
 
 	}
 
 	############################################
-	## Fitting
+	## Fitting model
 	############################################
 
 	## Fit the distribution
@@ -164,6 +146,10 @@ FloodnetAmax <- function(x, ...){
 
 	fit <- FitAmax(xd, distr = distr, method = 'lmom', varcov = TRUE,
 								 nsim = MINSIM, tol.gev = 2)
+
+	## GOF test
+	ad <- goftest::ad.test(xd, CSHShydRology::pAmax, fit$para,
+												 fit$distr, estimated = TRUE)$p.value
 
 	if(nsim >= MINSIM){
   	hat <- predict(fit, p = period.p, ci = 'boot', alpha = alpha, nsim = nsim,
@@ -205,15 +191,18 @@ FloodnetAmax <- function(x, ...){
 	############################################
 
 	ans <- list(site = site,
-							quantile = qua,
-							param = para,
 							method = 'amax',
 							distr  = fit$distr,
+							period = period,
+							quantile = qua,
+							param = para,
+							obs = xd,
+							time = dd,
+							rlevels = rlevel,
 							thresh = 0,
 							ppy = 1,
-							period = period,
-							rlevels = rlevel,
-							obs = sort(xd))
+							trend = c(mk,pt),
+							gof = ad)
 
 	class(ans) <- 'floodnetMdl'
 

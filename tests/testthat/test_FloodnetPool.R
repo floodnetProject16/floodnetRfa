@@ -8,17 +8,19 @@ ref <- '01AF009'
 test_that('Verifying FloodnetPool- output', {
 
 	sreg <- with(gaugedSites,gaugedSites[supreg_km12 == 11,1])
-	sdist <- SeasonDistanceData(sreg, DB_HYDAT)
+	sdist <- SeasonDistanceData(DB_HYDAT, sreg)
 
-	an <- AmaxData(sreg, db = DB_HYDAT, target = ref, size = 5, distance = sdist)
+	an <- AmaxData(DB_HYDAT, sreg, target = ref, size = 5)
 
-  out <- FloodnetPool(an, ref, distr = 'gev', verbose = FALSE)
+  out <- FloodnetPool(an, target = ref, distr = 'gev',
+  										verbose = FALSE, tol.H = Inf)
 
   ## output format
-  expect_equal(class(out),'data.frame' )
+  expect_equal(class(out),'floodnetMdl')
 
-  sname <- c('site','method', 'distribution', 'period', 'variable', 'value')
-  expect_equal(colnames(out), sname)
+  sname <- c('site', 'method', 'distr', 'period', 'quantile', 'param',
+  					 'obs', 'time', 'rlevels', 'thresh', 'ppy', 'trend', 'gof','lmom')
+  expect_equal(names(out), sname)
 
   period <- c(2, 5, 10, 20, 50, 100)
   expect_equal(unique(out$period), period)
@@ -27,27 +29,29 @@ test_that('Verifying FloodnetPool- output', {
 
   expect_equal(as.character(unique(out$method)), 'pool_amax')
 
-  sname <- c('quantile','rmse','lower','upper')
-  expect_equal(as.character(unique(out$variable)), sname)
+  sname <- c('pred','rmse','lower','upper')
+  expect_equal(colnames(out$quantile), sname)
+  expect_equal(nrow(out$quantile), length(out$period))
 
-  qua <- with(out, value[variable == 'quantile'])
-  se <- with(out, value[variable == 'rmse'])
-  lb <- with(out, value[variable == 'lower'])
-  ub <- with(out, value[variable == 'upper'])
+  sname <- c('param','se')
+  expect_equal(colnames(out$param), sname)
+  sname <- c('IF', 'xi', 'alpha', 'kappa')
+  expect_equal(rownames(out$param), sname)
 
-  expect_true(all(qua >= lb))
-  expect_true(all(qua <= ub))
-  expect_true(all(se > 0))
+  qua <- out$quantile
+  expect_true(all(qua[,1] >= qua[,3]))
+  expect_true(all(qua[,1] <= qua[,4]))
+  expect_true(all(qua[,2] > 0))
+
 
   ## test output model
-  out <- FloodnetPool(an, ref, verbose = FALSE, out.model = TRUE)
+  out <- FloodnetPool(an, ref, verbose = FALSE, tol.H = Inf, out.model = TRUE)
 
-  expect_equal(names(out), c('fit','qua'))
+  expect_true('fit' %in% names(out))
   expect_equal(class(out$fit), 'reglmom')
 
   hat <- predict(out$fit)
-  qq <- with(out$qua, value[ variable == 'quantile'])
-  expect_equal(hat, qq)
+  expect_equal(hat, out$quantile[,1])
 
 
 	## only one period
@@ -55,66 +59,42 @@ test_that('Verifying FloodnetPool- output', {
 
 	expect_equal(unique(out$period), 100)
 
-	## No bootstrap
-	out <- FloodnetPool(an, ref, period = c(20,50),
-											nsim = 0, verbose = FALSE)
-
-	expect_equal(as.character(unique(out$variable)), 'quantile')
-
-
 	## Test confidence interval
 	set.seed(13)
 	out1 <- FloodnetPool(an, ref, period = 100, distr = 'gev',
 											nsim = 500, verbose = FALSE, level = .99)
-	rg1 <- diff(out1[3:4,6])
+
+	rg1 <- diff(as.numeric(out1$quantile[1,3:4]))
 
 	out2 <- FloodnetPool(an, ref, period = 100, distr = 'gev',
 											nsim = 500, verbose = FALSE, level = .8)
-  rg2 <- diff(out2[3:4,6])
+
+  rg2 <- diff(as.numeric(out2$quantile[1,3:4]))
 
   expect_true(rg2<rg1)
 
 
 
 	## test all distribution
-  out <-FloodnetPool(an, ref, verbose = FALSE, distr = 'gev', nsim = 0)
-  expect_equal(as.character(unique(out$distribution)), 'gev')
+  distr.list <- c('gev','gno','glo','pe3')
+  for(d in distr.list){
+	  out <- FloodnetPool(an, ref, verbose = FALSE, distr = d)
+  	expect_equal(as.character(unique(out$distr)), d)
+  }
 
-  out <- FloodnetPool(an, ref, verbose = FALSE, distr = 'gno', nsim = 0)
-  expect_equal(as.character(unique(out$distribution)), 'gno')
-
-  out <- FloodnetPool(an, ref, verbose = FALSE, distr = 'pe3', nsim = 0)
-  expect_equal(as.character(unique(out$distribution)), 'pe3')
-
-  out <- FloodnetPool(an, ref, verbose = FALSE, distr = 'glo', nsim = 0)
-  expect_equal(as.character(unique(out$distribution)), 'glo')
 
 })
 
 
 test_that('FloodnetPool- POT', {
 
-	info <- with(gaugedSites,gaugedSites[supreg_km12 == 11,
-																			 c('station','auto','area')])
-	sreg <- info$station
-	sdist <- SeasonDistanceData(sreg, DB_HYDAT)
+	sreg <- GetSuperRegion(ref, 'pot')
 
-	xd <- DailyPeaksData(info, db = DB_HYDAT, target = ref, size=5, distance = sdist)
+	out <- DB_HYDAT %>%
+		DailyPeaksData(sreg, target = ref, size=5) %>%
+    FloodnetPool(ref, verbose = FALSE)
 
-  out <- FloodnetPool(xd, ref, verbose = FALSE, out.model = TRUE)
-
-  fit <- out$fit
-  qua <- out$qua
-  expect_equal(as.character(unique(qua$method)), 'pool_pot')
-  expect_equal(as.character(unique(qua$distribution)), 'gpa')
-
-  ppy <- (xd$npeak/xd$nyear)[1]
-  u <- xd$thresh[1]
-  p <- 1-1/(ppy*c(2,5, 10, 20, 50, 100))
-
-  qq <- with(qua, value[variable == 'quantile'])
-  hat <- predict(fit, p)+xd$thresh[1]
-  expect_equal(hat,qq)
-
+  expect_equal(out$method, 'pool_pot')
+  expect_equal(out$distr, 'gpa')
 
 })

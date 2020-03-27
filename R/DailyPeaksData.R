@@ -1,24 +1,26 @@
-#' Extract Peaks from HYDAT database
+#' Extract independent Peaks
 #'
-#' The function `DailyPeaksData` return an object containing exccedances above
-#' given thresholds extracted from HYDAT.
-#' The function `ExtractPeaksData` extract the same object from a data.frame.
-#' The function `PeaksData` serves to create the same output object from known
-#' exceedances and `BindPeaksData` can merged together 2 of these objectes.
-#'
-#' @param info Site information. Must be a data frame with 3
-#'   columns: site, threshold and area, except for function \code{PeaksData} where
-#'   area must be the total number of years.
+#' The function `ExtractPeaksData` returned independent peaks for one or more
+#' sites and the function `DailyPeaksData` applies it directly on daily data
+#' extracted from HYDAT.
+#' The function `PeaksMeta` serves to link meta-information about the threshold
+#' and exceedance rate to the extracted peaks.
 #'
 #' @param db Path to the HYDAT database.
 #'
-#' @param x Hydrometric Data. Must have 3 columns:
-#'   station, threshold and drainage area.
+#' @param x Hydrometric Data. Must have 3 columns: site, date and value.
+#'
+#' @param info Site information. Must have 3 columns:
+#'   site, threshold and drainage area.
+#'
+#' @param meta,value Meta information about thresholds.
+#'   Must be a data frame with 3
+#'   columns: site, threshold and exceedance rates (peaks per year).
 #'
 #' @param pad Logical. Should the time series be padded.
 #'   See \link[CSHShydRology]{PadPot}.
 #'
-#' @param tol Number of days considered as a complete year.
+#' @param tol Number of days to consider a year as complete.
 #'
 #' @param target Target station of the pooling group.
 #'
@@ -31,55 +33,51 @@
 #'
 #' @param ... Other parameters
 #'
-#' @details
 #'
-#' For \code{DailyPeaksData}, if \code{info} has two columns, they are assumed
-#' to be the station and threshold.
-#' The drainage area is then extracted from the HYDAT database.
-#'
-#' The utility function \code{PeaksData} can be used to construct the same output
-#' from already extracted peaks.
-#'
-#' @seealso \link{DailyData}.
+#' @seealso \link{DailyData}, link{FloodnetPool}.
 #'
 #' @export
 #'
 #' @examples
 #'
 #' \dontrun{
-#'  ## Path the HYDAT database
-#'  db <- DB_HYDAT
-#'
-#'  ## Data.frame containing the threshold and drainage area
+#'  ## Data.frame containing thresholds and drainage area
 #'  info <- gaugedSites[1:2, c('station','ppy200','area')]
 #'
-#'  ## Reading AMAX data for one station
-#'  x <- DailyPeaksData(info, db, pad = TRUE)
-#'  head(x$peaks, 3)
+#'  ## Reading for one station
+#'  x <- DailyPeaksData(DB_HYDAT, info)
+#'  head(x)
 #'
 #'  ## Manually extracting the data
-#'  xd <- DailyData(info$station,db)
-#'  x2 <- ExtractPeaksData(xd, info, pad = TRUE)
-#'  head(x2$peaks, 3)
+#'  DB_HYDAT %>%
+#'   DailyData(info$station) %>%
+#'    ExtractPeaksData(info) %>%
+#'    head()
 #'
-#'  ## Create and merged Peaks
-#'  p1 <- PeaksData(x2$peaks, info)
-#'  p2 <- BindPeaksdata(p1, p1)
+#'  ## Create a dataset of exceedances manually
+#'  xd <- SequenceData(3, site = unique(info$station))
+#'  PeaksMeta(xd) <- info
 #'
 #' }
 #'
-DailyPeaksData <- function(info, db, pad = FALSE, tol = 346,
-													 target = NULL, size = 25, distance = NULL){
+
+DailyPeaksData <- function(db, info, target = NULL, size = 25, distance = NULL,
+													 pad = FALSE, tol = 346){
 
 	info <- as.data.frame(info)
+
+	if(ncol(info) != 3)
+		stop('Input info must have 3 columns: site, thresh, area')
+
+	colnames(info) <- c('site', 'thresh', 'area')
+
+	sites <- info[,1]
 
   ###################################
   ## Find the pooling groups
   ###################################
 
-	if(!is.null(target)){
-
-		sites <- as.character(info[,1])
+  if(!is.null(target)){
 
     if(!(target %in% sites))
       stop('Target must be in the selected sites.')
@@ -87,7 +85,7 @@ DailyPeaksData <- function(info, db, pad = FALSE, tol = 346,
     distance <- SeasonDistanceData(sites, db = db, target = target)
 
     size <- pmin(length(distance), size)
-    pool <- sites[sort(order(distance)[1:size])]
+    sites <- sites[sort(order(distance)[1:size])]
 
   } else if(!is.null(distance)){
 
@@ -95,13 +93,12 @@ DailyPeaksData <- function(info, db, pad = FALSE, tol = 346,
       stop('There must be a unique target with distance zero')
 
     size <- pmin(length(distance), size)
-    pool <- sites[sort(order(distance)[1:size])]
+    sites <- sites[sort(order(distance)[1:size])]
   }
 
-	info <- info[info[,1] %in% pool,]
-
-	## Make sure that info is sorted by site.
-	info <- info[order(as.character(info[,1])), ]
+	## filter and sort
+	info <- info[info$site %in% sites, ]
+	info <- info[order(as.character(sites)), ]
 
 	###################################
   ## Find the pooling groups
@@ -116,8 +113,6 @@ DailyPeaksData <- function(info, db, pad = FALSE, tol = 346,
 
 	## Extract the peaks
 	ans <- ExtractPeaksData(xd, info, pad, tol, sorted = TRUE)
-
-	attr(ans, 'dtype') <- 'peaksdata'
 
 	return(ans)
 }

@@ -1,7 +1,12 @@
 #' @import CSHShydRology
 #' @export
 #' @rdname DailyPeaksData
-ExtractPeaksData <- function(x, info, pad = FALSE, tol = 346, sorted = FALSE){
+ExtractPeaksData <-
+	function(x,
+					 info,
+					 pad = FALSE,
+					 tol = 346,
+					 sorted = FALSE){
 
   ## Order by site
 	if(!sorted){
@@ -13,6 +18,10 @@ ExtractPeaksData <- function(x, info, pad = FALSE, tol = 346, sorted = FALSE){
 	all.site <- as.character(unique(x[,1]))
 	if(!all(all.site %in% info[,1]))
      stop('Sites are missing from the info dataset.')
+
+	## Verify that site in info are unique
+	if(anyDuplicated(info[,1]) > 0)
+		stop('Sites in info are not unique')
 
 	## remove missing
 	x <- stats::na.omit(x)
@@ -47,10 +56,9 @@ ExtractPeaksData <- function(x, info, pad = FALSE, tol = 346, sorted = FALSE){
   ans <- do.call(rbind, xd)
   rownames(ans) <- NULL
 
-  meta <- data.frame(thresh = info[,2], ppy = ppy)
-	rownames(meta) <- as.character(info[,1])
-
-	attr(ans, 'meta') <- meta
+	PeaksMeta(ans) <- data.frame(site = info[,1],
+															 thresh = info[,2],
+															 ppy = ppy)
 
 	return(ans)
 }

@@ -1,46 +1,47 @@
-# FloodnetRfa (Under construction)
+# floodnetRfa
+
+**_Please note that the package is in active development and will change frequently._**
 
 ## Introduction
 
-As part of its objectives of theme 1.6, the [NSERC FloodNet project](http://www.nsercfloodnet.ca/) contributes to the R-package `CSHShydRology` by introducing various tools for Canadian hydrologists related to flood frequency analysis.
-The R-package `floodnetRfa` is built on top of `CSHShydRology` and has for objective to further automatize flood estimation according to FloodNet guidelines.
-The package allows interacting with the 
-[HYDAT database](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey/data-products-services/national-archive-hydat.html)
-trough the [centre for hydrology](https://github.com/CentreForHydrology/HYDAT).
+One objective [FloodNet](http://www.nsercfloodnet.ca/) is to provide Canadian engineers and hydrologists with a set of tools that allows them to perform flood frequency analysis (FFA) easily and accurately.
+To this end, common methods in FFA were investigated and implemented in the R-package [CSHShydRology](https://github.com/floodnetProject16/CSHShydRology).
+Another tool available to the Canadian water science community is the R-package [HYDAT](https://github.com/CentreForHydrology/HYDAT) that simplifies the communication between R and a local version of the [National Water Data Archive](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey/data-products-services/national-archive-hydat.html).
+The R-package `floodnetRfa` is built on the top of these two R-packages and 
+aims to create en coherent environment for applying Floodnet recommendations.
+The package includes instructions that can be invoked directly from the R terminal or via a graphical interface.
 
-Further descriptions of the package capabilities are presented [here](http://htmlpreview.github.io/?https://github.com/floodnetProject16/floodnetRfa/blob/master/inst/floodnetRfa.html), which are also found in the install folder.
+Further descriptions of the package capabilities are presented [here](https://drive.google.com/file/d/1I6JM9Gmkbnrn6p42gQYWDjJtpGazsUD6/view?usp=sharing) or in the package documentation.
 
-**_Please note that the package is in active development and may frequently change._**
 
 ## Installation
 
-Before installing `floodnetRfa`, the packages `CSHShydRology` and `HYDAT` must be present on the machine. 
-The installation can be done manually or using the R terminal.
+Before installing `floodnetRfa`, the packages `CSHShydRology` and `HYDAT` must be installed, which can be done manually by downloading them from their Github repository or by using the R terminal.
 
     library(devtools)
+    
+    ## Install the dependencies
     install_github('floodnetProject16/CSHShydRology')
     install_github('CentreForHydrology/HYDAT')
 
-Afterward, the R-package itself can be installed.
-
+    ## Install the package
     install_github('floodnetProject16/floodnetRfa')
 
-Each package has dependencies that are automatically
-downloaded, which may take some time...
+Each package has several dependencies that are automatically
+downloaded.
+The installation process may take some time...
+It is also recommended to download the most recent version of the HYDAT database (sqlite3) from the
+[National Water Data Archive](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey/data-products-services/national-archive-hydat.html).
 
-Also, it is recommended to download the SQLite version of the HYDAT database from the
-[National Water Data Archive](http://collaboration.cmc.ec.gc.ca/cmc/hydrometrics/www/).
-The version used for developing and testing the package is dated August 11, 2019.
+## Contributing to the package development
 
-## Development
-
-For building the vignette and testing the R-package locally, the path of the HYDAT database must be saved in the file `inst/config` that defines the variable `DB_HYDAT`. 
+The development of the package was done using an HYDAT database dating of August 11th, 2019, which can be found [here](https://drive.google.com/file/d/1YI8pmB0U2Tp9FVVPpu2So8SmWIid9PsP/view?usp=sharing).
+For building the vignette and run the tests, the path of the database must be saved in the file `inst/config` that defines the variable `DB_HYDAT`.
 See the example `inst/config-example`.
-Afterward, the package is built, the variable `DB_HYDAT` can be loaded using the command.
+After the package is built, the variable `DB_HYDAT` can be loaded using the command.
 
     source(system.file('config', package = 'floodnetRfa'))
     
-and will point to the desired database file and the vignette can be rebuilt using the command.
+and the vignette rebuilt using the command.
 
     devtools::build_vignettes()
-

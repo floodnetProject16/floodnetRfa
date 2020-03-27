@@ -7,7 +7,7 @@ test_that('Verifying DailyData', {
 
   sites <- c('01AD002','01AF009')
 
-  out <- DailyData(sites,DB_HYDAT)
+  out <- DailyData(DB_HYDAT, sites)
 
   expect_equal(colnames(out), c('site','date','value'))
   expect_equal(unique(out$site), sites)
@@ -19,8 +19,8 @@ test_that('Verifying DailyData', {
 
   ## padding
 
-  out1 <- DailyData(sites,DB_HYDAT, pad = TRUE, tol = 1)
-  out2 <- DailyData(sites,DB_HYDAT, pad = TRUE, tol = 365)
+  out1 <- DailyData(DB_HYDAT, sites,pad = TRUE, tol = 1)
+  out2 <- DailyData(DB_HYDAT, sites,pad = TRUE, tol = 365)
   expect_true(any(out1[1,] != out2[1,]))
 
 
@@ -43,16 +43,16 @@ test_that('Verifying DailyData', {
   sname <- colnames(hm)[sname]
 
   ## Extract info for pooling group
-  out <- DailyData(sites,DB_HYDAT, size = 3, distance = hm[3,])
+  out <- DailyData(DB_HYDAT, sites, size = 3, distance = hm[3,])
   out.sites <- sort(unique(out$site))
 
   expect_equal(sname, out.sites)
 
   ## Only a target is passed
-  out1 <- DailyData(sites, DB_HYDAT, target = sites[3])
+  out1 <- DailyData(DB_HYDAT, sites, target = sites[3])
 
-  sdis <- SeasonDistanceData(sites, DB_HYDAT, target = 3)
-  out2 <- DailyData(sites, DB_HYDAT, distance = sdis)
+  sdis <- SeasonDistanceData(DB_HYDAT, sites, target = 3)
+  out2 <- DailyData(DB_HYDAT, sites, distance = sdis)
 
   expect_equal(out1, out2)
 

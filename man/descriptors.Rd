@@ -3,29 +3,47 @@
 \docType{data}
 \name{descriptors}
 \alias{descriptors}
-\title{Station characteristics}
+\title{Catchment descriptors}
 \format{An object of class \code{data.frame} with 770 rows and 17 columns.}
 \usage{
 descriptors
 }
-\description{
-List of meteorological and physical characteristics for 770  gauged stations.
-}
-\details{
+\value{
 The dataset includes the following variables:
-Station number (\code{station}),
-Station geographical coordinates (\code{lon,lat}),
-Coordinates of the center of the watershed (\code{lon_ws,lat_ws}),
-Drainage area (\code{area}) and perimeter(\code{peri}) of the watershed,
-Station elevation (\code{elev}) and average elevation of the watershed
-(\code{elev_ws}),
-Mean watershed aspect in Degree (\code{aspect}),
-Mean slope in percent (\code{slope}),
-Stream density (\code{stream}),
-Percentage of water bodies (\code{wb}),
-Mean annual precipitation for the station and watershed (\code{map,map_ws}) and
-Average annual air temperature for the station and watershed (\code{temp,temp_ws}).
+\itemize{
 
+  \item Station identification number: \code{station}.
+
+  \item Station geographical coordinates: \code{lon, lat}.
+
+  \item Watershed centers: \code{lon_ws, lat_ws}.
+
+  \item Drainage area (m3/s): \code{area}.
+
+  \item Perimeter (km): \code{peri}.
+
+  \item Station elevation (m): \code{elev}.
+
+  \item Watershed average elevation (m): \code{elev_ws}.
+
+  \item Mean aspect (Degree): \code{aspect}.
+
+  \item Mean slope (\%): (\code{slope}).
+
+  \item Stream density (\eqn{km[-1]}): \code{stream}.
+
+  \item Percentage of water bodies(\%): \code{wb}.
+
+  \item Station and watershed mean annual precipitation (mm): \code{map, map_ws}.
+
+  \item Station and watershed annual average air temperature: \code{temp,temp_ws}.
+
+}
+}
+\description{
+List of meteorological and physical characteristics of 770  gauged stations.
+}
+\references{
 Durocher, M., Burn, D. H., & Mostofi Zadeh, S. (2018). A nationwide regional
 flood frequency analysis at ungauged sites using ROI/GLS with copulas and
 super regions. Journal of Hydrology, 567, 191-202.
