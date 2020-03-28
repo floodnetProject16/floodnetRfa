@@ -9,8 +9,7 @@
 map_ca
 }
 \description{
-Simple map of Canada that covers the stations found in the
-dataset gaugedSites.
+To produce a quick and simple map of Canada.
 Original data were from https://www.naturalearthdata.com/.
 }
 \keyword{datasets}

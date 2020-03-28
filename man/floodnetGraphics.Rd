@@ -98,12 +98,11 @@ Should additional information be displayed in the caption.}
 Generate diagnostic plots based on the output of a modeling function
 \link{floodnetMdl}). Includes the following graphics: Return level plot,
 comparison of the flood quantiles, comparison of the coefficient of
-variation, L-moment ratio diagram and histogram, seasonal plot and
-a basic map of Canada.
+variation, L-moment ratio diagram and histogram.#'
 }
 \details{
 All functions use \code{ggplot2} to create a basic plot that can be further
-customized. The default arguments of the used geometry can be overide by
+customized. The default arguments of the used geometry can be overridden by
 passing a list of new arguments. For example,
 \code{point.args = list(colour = 'red')}
 change the color of a set of points that was created by \code{geom_point}.

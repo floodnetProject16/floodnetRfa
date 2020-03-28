@@ -25,7 +25,7 @@ DailyData(
 \item{target}{Target site.}
 
 \item{distance}{A vector of distance between all sites. The target has distance
-equalto zero.}
+equal to zero.}
 
 \item{size}{Size of the pooling group.}
 

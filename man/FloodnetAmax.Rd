@@ -2,7 +2,7 @@
 % Please edit documentation in R/FloodnetAmax.R
 \name{FloodnetAmax}
 \alias{FloodnetAmax}
-\title{Estimate flood quantiles using using annual maxima}
+\title{Estimate flood quantiles using annual maxima}
 \usage{
 FloodnetAmax(
   x,
@@ -26,7 +26,7 @@ or \code{'pe3'}}
 
 \item{level}{Confidence level.}
 
-\item{out.model}{Logical. Should the model be output. This correspond to the
+\item{out.model}{Logical. Should the model be output. This corresponds to the
 output of \link{FitAmax}. Otherwise only the estimated flood quantiles are
 returned.}
 
@@ -44,7 +44,7 @@ Generalized Extreme Value (GEV), Generalized logistic (GLO), the
 Generalized Normal (GNO) and the Pearson type 3 distributions.
 A preference is given to the GEV when the AIC of the other distributions is not
 greater than at least two AIC.
-Inference on the estimated flood quantiles is performed by parametric bootstrap.
+Inference on the estimated flood quantiles is performed by parametric bootstraps.
 
 If \code{verbose == TRUE}, a Mann-Kendall and a Pettitt's test are used
 to verify the presence of trend and change points in the data.

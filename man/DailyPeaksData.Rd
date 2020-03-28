@@ -7,7 +7,7 @@
 \alias{PeaksData}
 \alias{PeaksMeta<-}
 \alias{PeaksMeta}
-\title{Extract intedependent Peaks}
+\title{Extract independent Peaks}
 \usage{
 DailyPeaksData(
   db,
@@ -56,10 +56,10 @@ columns: site, threshold and exceedance rates (peaks per year).}
 \item{...}{Other parameters}
 }
 \description{
-The function `ExtractPeaksData` returned independent peaks for one or more sites and
-The function `DailyPeaksData` applies directly `ExtractPeaksData` on daily data
+The function `ExtractPeaksData` returned independent peaks for one or more
+sites and the function `DailyPeaksData` applies it directly on daily data
 extracted from HYDAT.
-The function `PeaksMeta` serves to link meta-information about the treshold
+The function `PeaksMeta` serves to link meta-information about the threshold
 and exceedance rate to the extracted peaks.
 }
 \examples{
@@ -74,7 +74,7 @@ and exceedance rate to the extracted peaks.
 
  ## Manually extracting the data
  DB_HYDAT \%>\%
- 	DailyData(info$station) \%>\%
+  DailyData(info$station) \%>\%
    ExtractPeaksData(info) \%>\%
    head()
 

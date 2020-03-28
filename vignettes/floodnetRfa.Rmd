@@ -7,8 +7,6 @@ vignette: >
   %\VignetteIndexEntry{FloodNetRfa}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
-editor_options: 
-  chunk_output_type: console
 ---
 
 ```{r setup, include = FALSE}
@@ -19,15 +17,15 @@ source(system.file("config", package = 'floodnetRfa'))
 
 ## Introduction
 
-One objective of theme 1.6 from the project [FloodNet](http://www.nsercfloodnet.ca/) is to provide Canadian engineers and hydrologists with a set of tools that allows them to perform flood frequency analysis (FFA) easily and accurately.
+One objective of [FloodNet](http://www.nsercfloodnet.ca/) is to provide Canadian engineers and hydrologists with a set of tools that allows them to perform flood frequency analysis (FFA) easily and accurately.
 To this end, common methods in FFA were investigated and implemented in the R-package [CSHShydRology](https://github.com/floodnetProject16/CSHShydRology).
 Another tool available to the Canadian water science community is the R-package [HYDAT](https://github.com/CentreForHydrology/HYDAT) that simplifies the communication between R and a local version of the [National Water Data Archive](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey/data-products-services/national-archive-hydat.html) maintained by the [Water Survey of Canada](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey.html).
 The R-package `floodnetRfa` is built on the top of these two R-packages and 
 aims to create en coherent environment for applying Floodnet recommendations.
 The package includes instructions that can be invoked directly in the R terminal or via a graphical interface.
 
-In this document, we assume that the reader is familiar with the basic concepts of FFA  and will focus on the general capabilities of `floodnetRfa` within the terminal interface.
-To illustrate common situations, the station 01AF009 located on the Iroquois River in New-Brunswick, serve as a case study.
+In this document, we assume that the reader is familiar with the basic concepts of FFA  and we show the general capabilities of `floodnetRfa` within the terminal interface.
+To illustrate common situations the station 01AF009, located on the Iroquois River in New-Brunswick, serves as a case study.
 The code below is used to initiate the working environment.
 
 ```{r echo = FALSE}
@@ -57,7 +55,7 @@ DB_HYDAT <- ".../Hydat.sqlite3"
 There are three main types of function that works together in `floodnetRfa` to performs FFA.
 The core functions are the modeling functions that fit the desired statistical models.
 Those functions are normally preceded by data extracting functions that prepare the hydrometric data.
-Finally, the last type of function is interpreting functions that assess the component of the fitted models.
+Finally, the last type of functions are interpreting functions that assess the component of the fitted models.
 
 All modeling functions require that the hydrometric data be organized in a dataset (`data.frame`) with three columns: `site`, `date` and `value`.
 In particular, the column `date` must be in a standard `Date` format.
@@ -72,11 +70,11 @@ mydata <- rnorm(3)
 SequenceData(mydata, site = 'mysite')
 
 
-## Example of daily sequence starting in 2000-01-01.
+## Example of a daily sequence starting in 2000-01-01.
 SequenceData(mydata, freq = 'days', sdate = '2000-01-01')
 
 
-## Example of an unregular sequence.
+## Example of an irregular sequence.
 mydate <- as.Date(c('2000-01-01','2005-05-05','2010-10-10'))
 SequenceData(mydata, mydate)
 
@@ -113,7 +111,7 @@ PeaksMeta(xd)
 The two main steps to carry out FFA are to fit a statistical distribution of extreme events and to evaluate flood levels associated with given probabilities.
 For a classical AMAX analysis, the extreme events are annual maxima, while in the peaks over threshold (POT) approach the extreme events are exceedances. 
 Flood risk is commonly quantified in terms of a return period $T$ defined as the expected waiting time between two extreme events. 
-When assuming that the exceeding probability is constant over time, the evaluation of a return period is equivalent to estimate the flood quantiles of probability $1-1/T$ for AMAX and $1-(\lambda T)^{-1}$ for POT.
+When assuming that the exceeding probability is constant over time, the evaluation of a return period is equivalent to estimate the flood quantiles of probability $1-1/T$ for AMAX and $1-(\lambda T)^{-1}$ for POT where $\lambda$ is the exceedance rate.
 The example below extracts annual maxima from HYDAT using the function `AmaxData` and performs FFA using the function `FloodnetAmax`.
 The argument `period` specifies the return period that are estimated.
 
@@ -127,11 +125,11 @@ In the end, a parametric bootstrap method is used to measure the uncertainty of 
 If no list of distributions is passed, the distribution with the lowest AIC is identify among the Generalized Extreme Value (GEV), Generalized Logistic (GLO), Generalized Normal (GNO) and Pearson type III (PE3).
 The identified distribution is then compared to the GEV and prefered only if the difference of AIC greater than 2.
 The idea behind that procedure is that for a difference less than 2, the two distributions can be seen as having similar fits.
-Therefore GEV is prefered as it represent the asymptotic distribution of sample maxima.
+Therefore GEV is prefered as it represent the asymptotic distribution of sample maxima (Coles, 2001).
 
 The pipe operator `%>%` can be employed to obtain a syntax familiar to the [tidyverse](https://style.tidyverse.org/pipes.html).
-The example below produce the same results as the earlier codes.
-The rest of the document will adopt this syntax, because it is easier to read and avoid the creation of an intermediate variable.
+The rest of the document adopts this syntax, because it is easier to read and avoid the creation of an intermediate variable.
+The example below produce the same results as the earlier code.
  
 ```{r}
 set.seed(1)
@@ -140,10 +138,10 @@ fit <-  DB_HYDAT %>%
 	FloodnetAmax(period = c(10, 100))
 ```
 
-The output of the modeling functions is a S3 object of the class `floodnetMdl` for which 
+The output of a modeling function is a S3 object of the class `floodnetMdl` for which 
 interpreting functions are available to access the various component of the fitted model.
 The function `print` display only a brief description of the fitted model, while `summary` add information about the flood quantiles and model parameters.
-For for the 100-year flood quantile (Q100), the AMAX method estimates a streamflow of 98.1 $m^3/s$ with a standard deviation of 27.0. 
+For the 100-year flood quantile (Q100), the AMAX method estimates a streamflow of 98 $m^3/s$ with a standard deviation of 27. 
 
 ```{r}
 summary(fit)
@@ -170,18 +168,19 @@ The function `FloodnetAmax` is built on top of the function `FitAmax` of the R-p
 If the argument `out.model = TRUE` is used, the output of `FitAmax` is also returned.
 
 ```{r}
-DB_HYDAT %>%
+fit0 <- DB_HYDAT %>%
 	AmaxData(STN) %>%
-	FloodnetAmax(out.model = TRUE) %>%
-	getElement('fit')
+	FloodnetAmax(out.model = TRUE)
+
+fit0$fit	
 
 ```
 
 ## Trend tests
 
 The methods developed in the `floodnetRfa` package are not adapted to the estimation of time-varying flood quantiles.
-Therefore, it is important to verify that trends are not present in the initial data.
-The function `floodnetAmax` automatically performs the Mann-Kendall's and Pettitt's test to examine the likelihood of trends or change points in the data (Helsel and Hirsch, 2002) and issues warnings it fails. 
+Therefore, it is important to verify that trends are not present in the data.
+The function `floodnetAmax` automatically performs the Mann-Kendall's and Pettitt's test to examine the likelihood of trends or change points in the data (Helsel and Hirsch, 2002) and issues warnings when it fails. 
 Such warnings indicate that the model assumptions must be further verified. 
 
 ```{r}
@@ -201,7 +200,7 @@ However, if the user is confident in the validity of the chosen procedure, these
 
 Various graphics can be obtained from the `floodnetMdl` object using the function `plot`.
 The generated plots are created using the grammar of graphics `ggplot2`.
-By default, the return level plot is returned to compare the fitted flood quantiles (red line) with the ordered observations. 
+By default, the return level plot is returned to compare the fitted flood quantiles (red line) with the observations. 
 
 ```{r}
 plot(fit)
@@ -222,8 +221,8 @@ plot(fit, line.args = list(colour = 'red', size = 1),
 	
 ```
 
-Another plot for assessing the fitting of a distribution is the QQ-plot that displays the theoretical versus the sample quantiles of the distribution.
-The QQ-plot differs from the return level plot by using a different x-axis, which should results in a linear relationship when a proper model is used.
+Another plot useful for assessing the fitting of a distribution is the QQ-plot that displays the theoretical versus the sample quantiles of a distribution.
+The QQ-plot differs from the return level plot by using a different x-axis that results in a linear relationship when a proper model is used.
 
 ```{r}
 plot(fit, 'qq')
@@ -267,7 +266,7 @@ For station 01AF009, the drainage area is 184 $km^2$ and a threshold $u = 20$ wa
 In the end, a parametric bootstrap strategy evaluates the uncertainty of the flood estimates.
 
 Identically to `floonetAmax`, the output of `floodnetPot` is a `floodnetMdl` object.
-Therefore, the same interpreting functions serve to extract information and create graphics.
+Therefore, the same interpreting functions are used to extract modeling information and create graphics.
 
 ```{r}
 summary(fit)
@@ -275,7 +274,7 @@ plot(fit)
 ```
 
 In complement to POT analysis, the Mann-Kendall's test is considered to examine trends in the exceedances and potential changes in the exceedance rate are examined using logistic regression models with time as a covariate.
-More precisely, F-tests are applied to polynomials order 1 to 3 to detect significant trends from the logistic model and the lowest p-value is returned.
+More precisely, F-tests are applied logistic model with polynomial trend of order 1 to 3 and the lowest p-value is returned.
 
 ```{r}
 plot(fit, 't')
@@ -297,7 +296,7 @@ gaugedSites[5, c('station','description', 'area','auto','ppy250')]
 
 ## Comparison plots
 
-It is often interesting to try more than one model before making any final decision. In particular, by comparing the uncertainty of the estimated flood quantiles associated with each model.
+It is often interesting to try more than one model before making a final decision.
 The examples below show how the function 'CompareModel' allows to easily creates plots that compare the confidence intervals
 and coefficient of variation of the AMAX and POT results.
 In this case, we are seeing that for return periods longer than 10 years POT is more accurate than AMAX and the opposite is true for equal or shorter return periods.
@@ -329,7 +328,7 @@ To reduce it, Regional Frequency Analysis (RFA) is recommended to transfer addit
 
 The strategy recommended by FloodNet is to use pooling groups delineated by a similarity measure that accounts for the regularity and timing of the annual flood peaks (Mostofi Zadeh and Burn, 2019).
 The sites forming the pooling groups are selected from an initial set of stations, or super region, that are relevant to the scope of the analysis.
-Although it is common to consider administrative boundaries(_e.g._ provinces) in this situation, more hydrologically relevant super regions can be built by regrouping stations with similar characteristics. 
+Although it is common to consider administrative boundaries(_e.g._ provinces), more hydrologically relevant super regions can be built by regrouping stations with similar hydrological properties. 
 
 The dataset `gaugedSites` contains pre-delineated super regions based on 4 widely available catchment descriptors:
     
@@ -391,11 +390,9 @@ FormatPlot(plt, 'Descriptor space')
 
 ```
 
-Another information contained in the dataset`gaugedSites` is the p-values of common trend tests.
-It includes the result of Mann-Kendall's (`trend_mk`) and Pettitt's (`trend_pt`) test that examines the annual maxima for potential trends and change points.
-In the context of POT, the test of Mann-Kendall is applied to the exceedances (`trend_mx`) to verify potential changes in the mean excess. 
-The presence of a trend in the exceedance rate is examined using logistic regression models on the daily data. F-tests are used to evaluate the significance of polynomial trends of order 1 to 3 versus a constant model. 
-Finally, the minimal p-value is returned (`trend_lg`).
+Another information contained in the dataset `gaugedSites` is the p-values of common trend tests.
+It includes the result of Mann-Kendall's (`trend_mk`) and Pettitt's (`trend_pt`) tests.
+In the context of POT, the test of Mann-Kendall applied on the exceedances (`trend_mx`) and logistic regression are considered (`trend_lg`).
 
 Overall, the dataset `gaugedSites` contains sufficient information to select a super region that is hydrologically relevant to the target site and for which the assumption of constant flood risk over time appears reasonable. 
 The function `GetSuperRegion` simplifies the task of extracting the super regions suggested by `gaugedSites` for a given site. 
@@ -433,7 +430,7 @@ fit <- DB_HYDAT %>%
 ```
 
 ```{r, eval=FALSE}
-## Using euclidean distance
+## Using Euclidean distance
 sid <- gaugedSites$station %in% sreg.amax
 euclid <- gaugedSites[sid, c('area','map')] 
 euclid <- dist(scale(log(euclid)))
@@ -447,7 +444,7 @@ DB_HYDAT %>%
 
 The modeling function is built on top of the function `FitRegLmom` of the R-package `CSHShydRology`, which fits an index-flood model (IFM) using the L-moment algorithm (Hosking and Wallis, 1997).
 IFM assumes that inside a homogenous region, all distributions are proportional up to a scaling factor that corresponds to the sample average.
-One consequence of this assumption is that the coefficient of variation all sites must be the same.
+One consequence of this assumption is that the coefficient of variation of all sites must be the same.
 The heterogeneous measure $H$ of a pooling group represents the variability of the L-coefficient of variation (LCV) and serves as a criterion for judging the likelihood of the IFM hypothesis. 
 If $H > 2$ the pooling group is most likely heterogeneous and should be updated.
 To this end, each neighboring site is removed in turn and $H$ is re-evaluated. 
@@ -473,7 +470,7 @@ plot(fit, 'l')
 
 If the input hydrometric data are exceedances, the RFA will be performed using a GPA distribution and account for the threshold when it evaluates the flood quantiles.
 The function `ExtractPeaksData` can be used to extract independent peaks from multiples stations.
-However, if the hydrometric data are coming from HYDAT, it is easier to use the function `DailyPeaksData` that performs as a single instruction the task of importing the hydrometric (`DailyData`) and and extracting the independent peaks (`ExtractPeaksData`).
+However, if the hydrometric data are coming from HYDAT, it is easier to use the function `DailyPeaksData` that performs as a single instruction the task of importing the hydrometric (`DailyData`) and extracting the independent peaks (`ExtractPeaksData`).
 Like the function `AmaxData`, a target can be provided to limit the imported data to the desired pooling group.
 
 ```{r}
@@ -486,8 +483,8 @@ summary(fit)
 
 ## Prediction at ungauged basins
 
-When there is no hydrometric data at the site of interest, frequency analysis cannot be done simply by fitting a distribution. 
-Instead, the quantile regression techniques (QRT) is a method that predicts flood quantiles based on some catchment descriptors.
+When there is no hydrometric data at the site of interest, FFA cannot be done simply by fitting a distribution. 
+Instead, the quantile regression techniques (QRT) is a method that can be adopted to estimate flood quantiles based on available catchment descriptors.
 The package the dataset `descriptors`, included in this package, contains meteorological and physical characteristics of 770 stations found in `gaugedSites`.
 This information can be used to fit a QRT model when the same descriptors are available at the ungauged site.
 
@@ -513,10 +510,9 @@ target <- gauged[target.id,]
 gauged <- gauged[-target.id,]
 ```
 
-The prediction of flood quantiles for one or more ungauged sites is performed using the function `FloodnetRoi`, which is built upon the function `FitRoi` in `CSHShydRology`.
+The prediction of flood quantiles for one or more ungauged sites is performed using the function `FloodnetRoi`, which is built on the top of the function `FitRoi` in `CSHShydRology`.
 In addition to the catchment descriptors, the function requires the annual maxima of all gauged sites. 
-In the example below, This is provided by the function `AmaxData`.
-Remember that we estimated Q100 equal to 98.1 $m^3/s$ using the AMAX method and we predict here 92.7 $m^3/s$ based on its catchment descriptors.
+In the example below, this is provided by the function `AmaxData`.
 
 ```{r}
 set.seed(1)
@@ -532,37 +528,37 @@ $$
 where $\mathbf{X}$ is a design matrix of descriptors, $\beta$ is a vector of parameters and $\mathbf{e}$ is a term of errors.
 For each target site, a regression model is fitted using a weighted least-squares approach that gives more weights to the nearest stations. 
 The Euclidean distance between standardized descriptors serves to evaluate these weights according to the Epanechnikov kernel. 
-The regression model requires the calibration of a bandwidth parameter that controls the weight decay and the distance outside which the weights become null.
-This parameter is expressed in `FloodnetRoi` as the rank of the nearest gauged sites to the target, which can be interpreted as the size of a region of influence (ROI) that contributes to the prediction of the target site.
+The regression model requires the calibration of a bandwidth parameter that controls the weight decay and corresponds to the radius of a region of influence (ROI) outside which the weights become zero.
+This parameter is expressed in `FloodnetRoi` as the rank of the nearest gauged sites to the target, which can be interpreted as the size of pooling group that contributes to the prediction of the target site.
 
 Similarly to the outputs of the gauged analyses, interpreting functions exist to extract information from the output of the ungauged analyses. 
 The estimated flood quantiles can be display using the function `print` or by converting the model to a dataset with the function `as.data.frame`.
+Remember that we estimated Q100 equal to 98 $m^3/s$ using the AMAX method and we predict here 89 $m^3/s$ based on its catchment descriptors.
 
 ```{r}
 print(fit)
 as.data.frame(fit)
 ```
 
-After fitting the model, a 10-fold cross-validation resampling strategy is used to assess the quality of the model.
+After fitting the model, a 10-fold cross-validation resampling strategy is used to assess the quality of the fitting.
 The strategy consists to divide the set of gauged sites into 10 groups of approximately equal sizes. 
-In turn, each group is treated as ungauged sites and flood quantiles are estimated for each site without using the target information.
-Note that the validation groups are divided at random and thus, the outcome of the cross-validation procedure will variate at each function call.
+In turn, each validation group is treated as ungauged and their flood quantiles are estimated.
+Note that the validation groups are divided at random and thus, the outcome of the cross-validation procedure will differ at each function call.
 
-If more than one pooling group sizes are provided, the function determines the selected size by cross-validation.
-The Nash-Sutcliffe criterion or NASH is a prediction skill score that rescales the mean square error into a unitless measure.
-The latter is interpreted as the relative performance of model with respect to the sample average.
-A NASH of 1 indicates a perfect score, while a score close to zero indicates the presence of a model that does not perform better than the benchmark model.
-In the present context, the NASH is applied to the logarithm values to account for the scale of the watersheds. 
+If more than one pooling group size is provided, the function determines the selected size by cross-validation.
+The Nash-Sutcliffe criterion or NASH is a prediction skill score that rescales the mean square error into a unitless measure that quantifies the model performance with respect to the sample average.
+A NASH of 1 indicates a perfect score, while a score close to zero indicates a poor performance.
+To account for the scale of the watersheds, the NASH is applied here to the logarithm values.  
 The same rescalling strategy is applied to derive the following prediction skill score 
 $$
 SKILL = 1- \frac{\sum_{i=1}^n |l_i-\hat l_i|}{\sum_{i=1}^n |l_i-\bar l_i|}
 $$
 where $l_i = \log(q_i)$, $\hat l_i$ is a predicted value and $\bar l_i$ is the sample average. 
-It has the same forms as the NASH, except that the square differences are replaced by absolute deviations.
-At the end of the cross-validation procedure, the selected pooling group size is the one that maximize the SKILL score among the list of candidates.
+This criterion has the same forms as the NASH, except that the square differences are replaced by absolute deviations.
+In the end, the selected pooling group size is the one that maximize the SKILL score among the list of candidates.
 
 The results of the cross-validation procedure can be displayed using the function `summary`.
-Please note in the output below the small discrepancies between the two `nash` criteria that result from the use of different cross-validation samples for the calibration step and the final evaluation of the model performance.  
+Note the small discrepancies between the two `nash` criteria in the output below due to different cross-validation samples used for the calibration and the evaluation of the QRT model.  
 
 ```{r}
 fit <- DB_HYDAT %>%
@@ -574,7 +570,7 @@ as.data.frame(fit)
 summary(fit)
 ```
 
-The two following graphics can also be used to assess the estimated flood quantiles and the calibration of the pooling group size.
+The two following graphics can be used to assess the estimated flood quantiles and the calibration of the pooling group size.
 
 ```{r}
 plot(fit)
@@ -582,28 +578,33 @@ plot(fit, 'cv')
 ```
 
 The first plot shows the at-site estimates of Q100 versus the values predicted for each cross-validation samples.
-Deviation from the unitary line would suggest the presence of systematic errors in the QRT model.
-The second plot shows the evolution of two cross-validation scores with respect to the pooling group size. 
+Deviation from the unitary line suggest systematic errors in the QRT model.
+The second plot shows the evolution of the two cross-validation scores with respect to the pooling group size. 
 
-To estimate the modeling uncertainty, the function `FloodnetRoi` uses a bootstrap resampling technique.
+To estimate uncertainty of the QRT model, the function `FloodnetRoi` uses a bootstrap resampling technique.
 As for RFA, annual maxima are simulated using a multivariate normal distribution that results in a flood quantiles $\mathbf{q}_i^\ast$ at each gauged site $i$. 
 In parallel, prediction errors $\mathbf{e}^\ast_i$ are sampled (balance bootstrap) from the predicted residuals of the QRT model during cross-validation.
 The final bootstrap sample is composed of the flood quantiles values 
 $\mathbf{q}_i^{\ast\ast} = \mathbf{q}_i^\ast+\mathbf{e}^\ast_i$ that account for both the modeling error and the sampling error.
+The function `IntersiteCorData` can be used to evaluate intersite correlation matrix of annual maximum discharge according to an exponential correlation model.
 
 ```{r}
+## Estimation of the intersite correlation matrix
+icor <- IntersiteCorData(DB_HYDAT, gauged$site)
+
+## Ungauged analysis with bootstrap
 set.seed(1)
 fit <- DB_HYDAT %>%
 	AmaxData(gauged$site) %>%
 	FloodnetRoi(target = target, sites = gauged, period = 100, size = 90, 
-							nsim = 30, verbose = FALSE)
+							nsim = 30, corr = icor)
 
 print(fit)
 ```
 
 Available catchment descriptors represent only partial information about the target catchment. 
 In particular, several missing descriptors could be spatially distributed, which may lead to spatially correlated residuals.
-If coordinates are provided to the function `FloodnetRoi`, it will further perform a simple kriging technique on the residual of the QRT to improve the prediction of the flood quantiles. 
+If coordinates are provided to `FloodnetRoi`, the function performs a simple kriging of the residuals to improve the estimation of the flood quantiles. 
 
 The code below use multidimensional scaling to project the geographical coordinates into a Cartesian space that approximately preserve the great-circle distance and feed the coordinates to the modeling functions.
 The example below shows that the criterion SKILL improves from 0.72 to 0.75. 
@@ -638,10 +639,12 @@ Finally, flood quantiles were estimated at ungauged sites using the `FloodnetRoi
 
 To facilitate some steps of the different FFA methods, two datasets were introduced: `gaugedSites`, `descriptors`.
 The provided information included candidate thresholds for POT analysis, super regions and trend tests for creating pooling groups and catchment descriptors for estimating flood quantile at ungauged sites. 
-For more code and examples related to the R-package `floodnetRfa`, please see the supplementary material in `floodnetRfa_extra`.
+For more code and examples related to the R-package `floodnetRfa`, please see the supplementary material in [floodnetRfa_extra](https://github.com/floodnetProject16/floodnetRfa_extra).
 
 
 ## References
+
+* Coles, S. (2001). An introduction to statistical modeling of extreme values. Springer Verlag.
 
 * Durocher, M., Burn, D. H., & Mostofi Zadeh, S. (2018a). A nationwide regional flood frequency analysis at ungauged sites using ROI/GLS with copulas and super regions. Journal of Hydrology, 567, 191–202. https://doi.org/10.1016/j.jhydrol.2018.10.011
 

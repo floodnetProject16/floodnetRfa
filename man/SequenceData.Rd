@@ -41,7 +41,7 @@ SequenceData(mydata, site = 'mysite')
 SequenceData(mydata, freq = 'days', sdate = '2000-01-01')
 
 
-## Example of an unregular sequence.
+## Example of an irregular sequence.
 mydate <- as.Date(c('2000-01-01','2005-05-05','2010-10-10'))
 SequenceData(mydata, mydate)
 

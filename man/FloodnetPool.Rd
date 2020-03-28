@@ -2,7 +2,7 @@
 % Please edit documentation in R/FloodnetPool.R
 \name{FloodnetPool}
 \alias{FloodnetPool}
-\title{Pool frequency analysis using annual maximum floods}
+\title{Pooled flood frequency analysis}
 \usage{
 FloodnetPool(
   x,
@@ -26,7 +26,7 @@ FloodnetPool(
 
 \item{distr}{Regional distribution.}
 
-\item{tol.H}{Heterogeneity measure. Stopping criterion representing the
+\item{tol.H}{Heterogeneity measure. A stopping criterion representing the
 minimal heterogeneity level accepted for a pooling group.}
 
 \item{nsim}{Number of bootstrap samples used for inference.}
@@ -36,15 +36,14 @@ minimal heterogeneity level accepted for a pooling group.}
 \item{corr}{Coefficient of correlation used for simulation.
 The same value is assumed between each pair of sites.}
 
-\item{out.model}{Logical. Should the model be output. This correspond to the
+\item{out.model}{Logical. Should the model be output. This corresponds to the
 output of \link{FitRegLmom}. Otherwise only the estimated flood quantiles are
 returned.}
 
 \item{verbose}{Logical. Should message and warnings be returned.}
 }
 \description{
-Return the results of a regional flood frequency analysis based on annual
-maxima and pooling groups.
+Return the results of a regional frequency analysis based on pooling groups.
 }
 \details{
 Estimation is carried out by the L-moment algorithms.

@@ -4,7 +4,7 @@
 
 ## Introduction
 
-One objective [FloodNet](http://www.nsercfloodnet.ca/) is to provide Canadian engineers and hydrologists with a set of tools that allows them to perform flood frequency analysis (FFA) easily and accurately.
+One objective of [FloodNet](http://www.nsercfloodnet.ca/) is to provide Canadian engineers and hydrologists with a set of tools that allows them to perform flood frequency analysis (FFA) easily and accurately.
 To this end, common methods in FFA were investigated and implemented in the R-package [CSHShydRology](https://github.com/floodnetProject16/CSHShydRology).
 Another tool available to the Canadian water science community is the R-package [HYDAT](https://github.com/CentreForHydrology/HYDAT) that simplifies the communication between R and a local version of the [National Water Data Archive](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey/data-products-services/national-archive-hydat.html).
 The R-package `floodnetRfa` is built on the top of these two R-packages and 
@@ -12,6 +12,12 @@ aims to create en coherent environment for applying Floodnet recommendations.
 The package includes instructions that can be invoked directly from the R terminal or via a graphical interface.
 
 Further descriptions of the package capabilities are presented [here](https://drive.google.com/file/d/1I6JM9Gmkbnrn6p42gQYWDjJtpGazsUD6/view?usp=sharing) or in the package documentation.
+Tutorials on how to use CSHShydrology to carry out FFA is available in the following links:
+
+* [Annual Maxima](https://drive.google.com/file/d/1tmYs7yev8epRYL3b07YDxbdaWBxObt-0/view?usp=sharing)
+* [Peak Over Threshold](https://drive.google.com/file/d/1pkOSuJauiVaXAiHh_CFC1mP2GjR_VqFv/view?usp=sharing)
+* [Regional Frequency Analysis](https://drive.google.com/file/d/1FspvEqg4Mc2kmvg_womhidmE9MkYGPef/view?usp=sharing)
+* [Prediction at Ungauged Sites](https://drive.google.com/file/d/1OI0uMTTPQ9loEgg2RRPWkkATKhNUR0jR/view?usp=sharing)
 
 
 ## Installation

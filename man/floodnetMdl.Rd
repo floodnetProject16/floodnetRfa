@@ -47,7 +47,7 @@ parameter \code{'p'} or quantile \code{'q'}.}
 \item{print.it}{Logical. Should the results be displayed.}
 }
 \description{
-All Floodnet functions create a standardized model output that can be used
+All Floodnet modeling functions create a standardized model output that can be used
 for printing results or generating graphics.
 }
 \seealso{

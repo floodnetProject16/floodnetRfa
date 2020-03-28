@@ -9,7 +9,7 @@ MapCA(..., polygon.args = NULL)
 \arguments{
 \item{...}{Other parameters passed to \link[ggplot2]{ggplot}.}
 
-\item{polygon.args}{Parameters of the display polygon.
+\item{polygon.args}{Parameters of the displayed polygons.
 See \link[ggplot2]{geom_polygon}.}
 }
 \description{

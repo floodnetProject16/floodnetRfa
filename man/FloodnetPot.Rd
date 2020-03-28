@@ -2,7 +2,7 @@
 % Please edit documentation in R/FloodnetPot.R
 \name{FloodnetPot}
 \alias{FloodnetPot}
-\title{Estimating flood quantiles using using peaks over threshold}
+\title{Estimating flood quantiles using peaks over threshold}
 \usage{
 FloodnetPot(
   x,
@@ -32,7 +32,7 @@ between flood events. The default value corresponds to 15 days.}
 
 \item{tol.year}{Number of days necessary to consider a year complete. Otherwise the data is removed.}
 
-\item{out.model}{Logical. Should the model be output. This correspond to the
+\item{out.model}{Logical. Should the model be output. This corresponds to the
 output of \link{FitPot}.}
 
 \item{verbose}{Logical. Should message and warnings be output.}
@@ -43,23 +43,23 @@ of the confidence interval based on a Peaks Over Threshold (POT) model.
 }
 \details{
 Estimation is carried out by maximum likelihood using the Generalized
-Pareto distribution. If not provided, a best candiate threshold is searched.
+Pareto distribution. If not provided, a best candidate threshold is searched.
 It corresponds to the lowest
 threshold where the goodness-of-fit test of Anderson-Darling has
-a p-value greater that 0.25.
+a p-value greater than 0.25.
 In addition, the selected threshold is forced to have (in
-average) less than 2.5 peaks per year and at least 30 peaks. If
-no such threshold is found, the threshold with the maximimum p-value is used instead.
+average) fewer than 2.5 peaks per year and at least 30 peaks. If
+no such threshold is found, the threshold with the maximum p-value is used instead.
 The declustering technique for extracting the flood peaks
-follows the recommendations of the Water Ressources council of United States.
+follows the recommendations of the Water Ressources council of the United States.
 In particular, flood peaks must be separated by at least 4 + log(A) days, where
-A is the drainage area of the basin in kilometer squared.
-Inference on the estimated flood quantiles is performed by parametric bootstrap.
+A is the drainage area of the basin in kilometers squared.
+Inference on the estimated flood quantiles is performed by parametric bootstraps.
 
 If \code{verbose == TRUE}, a Mann-Kendall test and logistic regression are used
 to verify the presence of trends in the mean excess and the number of peaks per years.
 If the data fails one of the tests, a warning is issued.
-For the logistic regression, an analyse of deviance (F-test) is used to compare the
+For the logistic regression, an analysis of deviance (F-test) is used to compare the
 constant model with polynomial trends.
 #' If the data fails one of the tests at significance level 0.05,
 a warning is issued.

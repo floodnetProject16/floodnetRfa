@@ -17,9 +17,9 @@ date and site ID.}
 
 \item{target}{Sites for which distance is returned.}
 
-\item{...}{Other parameter passed to \link[CSHShydRology]{DistSeason}.}
+\item{...}{Other parameters passed to \link[CSHShydRology]{DistSeason}.}
 
-\item{db}{Path of the HYDAT data base,}
+\item{db}{Path of the HYDAT database,}
 
 \item{sites}{List of sites in HYDAT.}
 }
