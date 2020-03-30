@@ -27,7 +27,7 @@ Before installing `floodnetRfa`, the packages `CSHShydRology` and `HYDAT` must b
     library(devtools)
     
     ## Install the dependencies
-    install_github('floodnetProject16/CSHShydRology')
+    install_github('floodnetProject16/CSHShydRology', ref = 'dev')
     install_github('CentreForHydrology/HYDAT')
 
     ## Install the package

@@ -148,8 +148,7 @@ FloodnetAmax <- function(
 								 nsim = MINSIM, tol.gev = 2)
 
 	## GOF test
-	ad <- goftest::ad.test(xd, CSHShydRology::pAmax, fit$para,
-												 fit$distr, estimated = TRUE)$p.value
+	ad <- .adtest(xd, CSHShydRology::pAmax, fit$para, fit$distr, verbose = verbose)
 
 	if(nsim >= MINSIM){
   	hat <- predict(fit, p = period.p, ci = 'boot', alpha = alpha, nsim = nsim,
@@ -212,3 +211,20 @@ FloodnetAmax <- function(
 	return(ans)
 }
 
+################################################################
+## Wrapping of the function ad.test
+## Earlier version were not allowing argument "estimated = TRUE"
+##
+.adtest <- function(x, qfun, ..., verbose = TRUE){
+  ans <- try(goftest::ad.test(x, qfun, ..., estimated = TRUE))
+
+	if(methods::is(ans, 'try-error')){
+
+		if(verbose)
+			warning('Goodness-of-fit test was performed without considering parameter estimation')
+
+		ans <- goftest::ad.test(xd, CSHShydRology::pAmax, ...)
+	}
+
+  return(ans$p.value)
+}

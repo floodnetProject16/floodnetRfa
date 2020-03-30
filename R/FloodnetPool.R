@@ -203,9 +203,8 @@ FloodnetPool <-
 		lg <- .TrendLogis(xbin)
 		pval <- c(mk, lg)
 
-		ad <- goftest::ad.test(obs/fit$lmom[1,1],
-													 CSHShydRology::pgpa, fit$para[2], fit$para[3],
-												   estimated = TRUE)$p.value
+		ad <- .adtest(obs/fit$lmom[1,1], CSHShydRology::pgpa,
+									fit$para[2], fit$para[3])
 
 	}
 
