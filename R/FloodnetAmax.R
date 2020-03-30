@@ -216,14 +216,14 @@ FloodnetAmax <- function(
 ## Earlier version were not allowing argument "estimated = TRUE"
 ##
 .adtest <- function(x, qfun, ..., verbose = TRUE){
-  ans <- try(goftest::ad.test(x, qfun, ..., estimated = TRUE))
+  ans <- try(goftest::ad.test(x, qfun, ..., estimated = TRUE), silent = TRUE)
 
 	if(methods::is(ans, 'try-error')){
 
 		if(verbose)
 			warning('Goodness-of-fit test was performed without considering parameter estimation')
 
-		ans <- goftest::ad.test(xd, CSHShydRology::pAmax, ...)
+		ans <- goftest::ad.test(x, CSHShydRology::pAmax, ...)
 	}
 
   return(ans$p.value)
