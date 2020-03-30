@@ -74,13 +74,13 @@ AmaxData <- function(
   an <- HYDAT::AnnualPeakData(con, get_flow = TRUE, as.character(sites))
   RSQLite::dbDisconnect(con)
 
-  an <- an[an$peak == 'MAXIMUM',]
+  an <- an[an$peak == 'MAXIMUM',1:6]
+  an <- stats::na.omit(an)
+
   an$date <- as.Date(with(an, paste(year,month,day, sep = '/')), optional = TRUE)
   an <- an[, c('station_number','date','value')]
   rownames(an) <- NULL
   colnames(an) <- c('site','date','value')
-
-  an <- stats::na.omit(an)
 
   ###################################
   ## Find the pooling groups

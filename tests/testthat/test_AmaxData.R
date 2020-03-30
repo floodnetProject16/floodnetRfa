@@ -54,3 +54,24 @@ out2 <- AmaxData(DB_HYDAT, sites, distance = sdis, size = 3)
 expect_equal(out1,out2)
 
 })
+
+
+
+test_that('Verifying AmaxData', {
+
+  ## This station is known to have a NA in HYDAT for annual maximum
+  ## Must verify that the code pass
+  sites <- c('01AP004')
+
+  con <- RSQLite::dbConnect(RSQLite::SQLite(), DB_HYDAT)
+  an <- HYDAT::AnnualPeakData(con, get_flow = TRUE, as.character(sites))
+  RSQLite::dbDisconnect(con)
+
+  an <- an[an$peak == 'MAXIMUM',]
+  nyear <- sum(!is.na(an$value))
+
+	out <-  AmaxData(DB_HYDAT, sites)
+
+	expect_equal(nrow(out), nyear)
+
+})
