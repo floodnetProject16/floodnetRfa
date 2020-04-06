@@ -33,6 +33,9 @@ PeaksMeta(x)
 x <- DemoData(type = 'region')
 head(x)
 
+x <- DemoData(type = 'descriptor')
+head(x)
+
 }
 \seealso{
 \link[CSHShydRology]{flowStJohn}, \link[CSHShydRology]{flowAtlantic}.

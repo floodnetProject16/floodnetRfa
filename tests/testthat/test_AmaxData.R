@@ -56,7 +56,6 @@ expect_equal(out1,out2)
 })
 
 
-
 test_that('Verifying AmaxData', {
 
   ## This station is known to have a NA in HYDAT for annual maximum

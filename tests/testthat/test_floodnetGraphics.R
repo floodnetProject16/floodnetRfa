@@ -104,8 +104,8 @@ test_that('Verifying FloodnetGraphics', {
 	##################################
 	## Regional modeling
   ###################################
-	target.supreg <- with(gaugedSites, supreg_km12[station == target0])
-	mysites <- with(gaugedSites, gaugedSites[supreg_km12 == target.supreg, 'station'])
+	target.supreg <- with(GAUGEDSITES, supreg_km12[station == target0])
+	mysites <- with(GAUGEDSITES, GAUGEDSITES[supreg_km12 == target.supreg, 'station'])
 
 	dr <- AmaxData(DB_HYDAT, mysites, target = target0, size = 10)
 
@@ -130,7 +130,7 @@ test_that('Verifying FloodnetGraphics', {
 
 	########################################################
 	## Data.frame containing the threshold and drainage area
-	info <- gaugedSites[gaugedSites$station %in% mysites, c('station','ppy200','area')]
+	info <- GAUGEDSITES[GAUGEDSITES$station %in% mysites, c('station','ppy200','area')]
 
 	## Reading daily peaks
 	ds <- DailyPeaksData(DB_HYDAT, info, target = target0, pad = TRUE, size = 10)
@@ -154,7 +154,7 @@ test_that('Verifying FloodnetGraphics', {
 	#######################################
 	## Seasonal plot
 	#######################################
-	ss <- gaugedSites[,c('season_angle','season_radius', 'supreg_km6')]
+	ss <- GAUGEDSITES[,c('season_angle','season_radius', 'supreg_km6')]
 	colnames(ss) <- c('theta', 'rad', 'Region')
 	ss$Region <- as.factor(ss$Region)
 
@@ -167,7 +167,7 @@ test_that('Verifying FloodnetGraphics', {
 	# Basic map of canada
 	######################################
 
-	coord <- gaugedSites[,c('lon','lat','supreg_km6')]
+	coord <- GAUGEDSITES[,c('lon','lat','supreg_km6')]
 	coord$region <- as.character(coord$supreg_km6)
 
 

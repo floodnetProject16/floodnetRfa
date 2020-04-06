@@ -19,15 +19,15 @@ test_that('Example AmaxData', {
    head(x, 3)
 
    ## A pooling group of size 5 based on seasonality distance.
-   x <- AmaxData(DB_HYDAT, gaugedSites$station, target = '01AF009', size = 5)
+   x <- AmaxData(DB_HYDAT, GAUGEDSITES$station, target = '01AF009', size = 5)
 
    ## Extracted site.
    sort(unique(x$site))
 
    ## Pooling group with different a distance.
-   meta <- log(gaugedSites[, c('area','map')])
+   meta <- log(GAUGEDSITES[, c('area','map')])
    h <- as.matrix(dist(scale(meta)))
-   x <- AmaxData(DB_HYDAT, gaugedSites$station, distance = h[2,], size = 5)
+   x <- AmaxData(DB_HYDAT, GAUGEDSITES$station, distance = h[2,], size = 5)
 
    ## Extracted site.
    sort(unique(x$site))
@@ -39,7 +39,7 @@ test_that('Example AmaxData', {
 test_that('Example DailyPeaksData', {
 
   ## Data.frame containing thresholds and drainage area
-  info <- gaugedSites[1:2, c('station','ppy200','area')]
+  info <- GAUGEDSITES[1:2, c('station','ppy200','area')]
 
   ## Reading for one station
   x <- DailyPeaksData(DB_HYDAT, info)

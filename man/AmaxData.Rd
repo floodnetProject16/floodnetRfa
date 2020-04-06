@@ -45,6 +45,7 @@ annual maxima are used as the distance.
 \dontrun{
 ## The variable DB_HYDAT containing the path to the HYDAT database.
 #DB_HYDAT <- '.../Hydat.sqlite3'
+#gaugedSites <- read.csv('.../gauged_sites.csv')
 
 ## Reading AMAX data for one station.
 x <- AmaxData(DB_HYDAT, c('01AD002'))

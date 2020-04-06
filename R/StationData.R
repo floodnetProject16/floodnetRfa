@@ -13,6 +13,9 @@
 #'
 #' \dontrun{
 #'
+#' # The variable DB_HYDAT containing the path to the HYDAT database.
+#' #DB_HYDAT <- '.../Hydat.sqlite3'
+#'
 #' StationData(DB_HYDAT, c('01AD002','01AF009'))
 #'
 #' }

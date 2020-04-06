@@ -29,6 +29,9 @@
 #' x <- DemoData(type = 'region')
 #' head(x)
 #'
+#' x <- DemoData(type = 'descriptor')
+#' head(x)
+#'
 DemoData <- function(type = 'amax'){
 
 	## AMAX data, single site
@@ -66,10 +69,23 @@ DemoData <- function(type = 'amax'){
 
 	## AMAX, 38 sites
 	} else if(type == 'region'){
+
+		## pre selected station
+		stn <- c("01AF007", "01AF009", "01AJ010", "01AK001", "01AK007", "01AN002",
+	 				 "01AP002", "01AP004", "01AQ001", "01BC001", "01BD008", "01BE001",
+	 				 "01BG005", "01BH005", "01BH010", "01BJ003", "01BJ007", "01BL002",
+	 				 "01BL003", "01BO001", "01BP001", "01BQ001", "01BS001", "01BU002",
+	 				 "01BV006", "01CC005", "01DG003", "01DL001", "01DR001", "01EC001",
+	 				 "01ED005", "01ED007", "01EF001", "01EJ001", "01EO001", "01FA001",
+	 				 "01FB001", "01FB003")
+
 	  ans <- CSHShydRology::flowAtlantic$ams
-	  xd <- get("gaugedSites")
-	  ans <- ans[ans$id %in% xd$station,]
+	  ans <- ans[ans$id %in% stn,]
 	  colnames(ans) <- c('site','date','value')
+
+	} else if (type == 'descriptor'){
+
+	  ans <- CSHShydRology::flowAtlantic$info
 
 	} else {
 	  stop('Wrong input')

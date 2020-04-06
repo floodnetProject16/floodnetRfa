@@ -7,7 +7,7 @@ ref <- '01AF009'
 
 test_that('Verifying FloodnetPool- output', {
 
-	sreg <- with(gaugedSites,gaugedSites[supreg_km12 == 11,1])
+	sreg <- with(GAUGEDSITES,GAUGEDSITES[supreg_km12 == 11,1])
 	sdist <- SeasonDistanceData(DB_HYDAT, sreg)
 
 	an <- AmaxData(DB_HYDAT, sreg, target = ref, size = 5)
@@ -88,7 +88,8 @@ test_that('Verifying FloodnetPool- output', {
 
 test_that('FloodnetPool- POT', {
 
-	sreg <- GetSuperRegion(ref, 'pot')
+	sreg <- as.character(DemoData('region')$site)
+	sreg <- GAUGEDSITES[GAUGEDSITES$station %in% sreg, c('station','auto','area')]
 
 	out <- DB_HYDAT %>%
 		DailyPeaksData(sreg, target = ref, size=5) %>%

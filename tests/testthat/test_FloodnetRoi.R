@@ -6,7 +6,7 @@ source(system.file("config", package = 'floodnetRfa'))
 test_that('Verifying FloodnetRoi', {
 
 	## Extract catchment descriptors
-	xd <- with(descriptors[1:50,],
+	xd <- with(DESCRIPTORS[1:50,],
   data.frame(
   	site = station,
     area = log(area),
@@ -16,7 +16,7 @@ test_that('Verifying FloodnetRoi', {
   	elev = elev_ws,
   	slope = log(.01 + slope)))
 
-	coord <- descriptors[1:100, c('lon','lat')]
+	coord <- DESCRIPTORS[1:100, c('lon','lat')]
 
 	## Put the target site apart
 	ref <- '01AF009'

@@ -1,6 +1,15 @@
 ##======================================================================
-## Example of file "inst/config" for building and testing the package
+## Load global variables for building and testing the package
 ##======================================================================
 
+## The folder containing the supplementary data.
+DATA_DIR <- 'C:/Users/durochma/Documents/Data/HYDAT_11AUG19'
+
 ## Location of the HYDAT database
-DB_HYDAT <- 'C:/Users/durochma/Documents/Data/HYDAT_11AUG19/Hydat.sqlite3'
+DB_HYDAT <- file.path(DATA_DIR, 'Hydat.sqlite3')
+
+## CSV file with meta-data about
+GAUGEDSITES <- read.csv(file.path(DATA_DIR, 'gauged_site.csv'))
+
+## CSV file containing the cathment descriptors
+DESCRIPTORS <- read.csv(file.path(DATA_DIR, 'descriptors.csv'))

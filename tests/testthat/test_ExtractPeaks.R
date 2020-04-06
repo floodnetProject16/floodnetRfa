@@ -4,7 +4,7 @@ context('Testing ExtractPeaksData')
 ## to the location of a downloaded version of HYDAT database
 source(system.file("config", package = 'floodnetRfa'))
 
-info <- gaugedSites[1:3, c('station','auto','area')]
+info <- GAUGEDSITES[1:3, c('station','auto','area')]
 
 test_that('Verifying ExtractPeaksData', {
 
@@ -25,7 +25,7 @@ test_that('Verifying ExtractPeaksData', {
 	out0 <- ExtractPeaksData(xd, info)
 
 	## verify peaks info
-	expect_equal(as.character(unique(out0$site)), info$station)
+	expect_equal(as.character(unique(out0$site)), as.character(info$station))
   expect_equal(class(out0$date), 'Date')
 
   ## verify meta info
@@ -33,7 +33,7 @@ test_that('Verifying ExtractPeaksData', {
 	meta <- PeaksMeta(out0)
 
 	expect_equal(dim(meta), c(3,2))
-	expect_equal(rownames(meta), info$station)
+	expect_equal(rownames(meta), as.character(info$station))
 	expect_equal(colnames(meta), c('thresh','ppy'))
 
 	## verify that sorting

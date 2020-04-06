@@ -4,13 +4,15 @@
 \alias{MapCA}
 \title{Simple map of Canada}
 \usage{
-MapCA(..., polygon.args = NULL)
+MapCA(..., polygon.args = NULL, xlab = "Longitude", ylab = "Latitude")
 }
 \arguments{
 \item{...}{Other parameters passed to \link[ggplot2]{ggplot}.}
 
 \item{polygon.args}{Parameters of the displayed polygons.
 See \link[ggplot2]{geom_polygon}.}
+
+\item{xlab, ylab}{Labels of the axes.}
 }
 \description{
 Return a simple map of Canada using the grammar of graphics \code{ggplot2}.
@@ -19,8 +21,13 @@ Return a simple map of Canada using the grammar of graphics \code{ggplot2}.
 
 library(ggplot2)
 
+MapCA(polygon.args = list(fill = 'white', colour = 'black'))
+
+xd <- DemoData('descriptor')
+
 MapCA() +
-  geom_point(data = gaugedSites, aes(x = lon, y = lat), colour = 'orange')
+  geom_point(data = xd, aes(x = lon, y = lat), colour = 'orange') +
+  coord_cartesian(xlim = c(-90,-50), ylim = c(42,60))
 
 }
 \seealso{

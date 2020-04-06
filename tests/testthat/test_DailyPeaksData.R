@@ -3,7 +3,7 @@ context('Testing DailyPeaksData')
 ## This is a config file that once loaded create a variable DB_HYDAT that point to the location of a downloaded version of HYDAT database
 source(system.file("config", package = 'floodnetRfa'))
 
-info <- gaugedSites[1:3, c('station','auto','area')]
+info <- GAUGEDSITES[1:3, c('station','auto','area')]
 
 test_that('Verifying DailyPeaksData', {
 
@@ -22,7 +22,7 @@ test_that('Verifying DailyPeaksData', {
   sites <- c("01AD002", "01AD003", "01AE001", "01AF007", "01AF009", "01AG002",
 					 "01AJ003", "01AJ004", "01AJ010", "01AJ011")
 
-  info <- gaugedSites[gaugedSites$station %in% sites, c('station','auto','area')]
+  info <- GAUGEDSITES[GAUGEDSITES$station %in% sites, c('station','auto','area')]
 
   ## create a distance matrix
   hm <- SeasonDistanceData(DB_HYDAT, info$station)

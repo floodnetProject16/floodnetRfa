@@ -28,7 +28,6 @@ vignettes/*.pdf
 
 # Configuration file
 inst/config
+config
 doc
 Meta
-
-inst/shinyApp/HYDAT/Hydat.sqlite3

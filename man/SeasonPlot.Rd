@@ -17,12 +17,22 @@ in a polar coordinate system.
 }
 \examples{
 
+library(CSHShydRology)
 library(ggplot2)
 
+## Basic plot
+
+SeasonPlot()
+
+## Plot with points
+
+xd <- DemoData('region')
+stat.season <- as.data.frame(SeasonStat(date~site, xd))
+
 SeasonPlot() +
-  geom_point(data = gaugedSites,
-    aes(x = season_angle, y = season_radius),
-    colour = 'orange')
+  geom_point(data = stat.season, aes(x = angle, y = radius),
+             colour = 'blue') +
+  theme_bw()
 
 
 }
