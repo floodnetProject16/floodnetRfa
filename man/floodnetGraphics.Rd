@@ -37,14 +37,15 @@
   ylab = "Sample quantiles"
 )
 
-.PlotCompareQ(x, xlab = "Return periods", ylab = "Return levels")
+.PlotCompareQ(x, xlab = "Return periods", ylab = "Return levels", fill = "")
 
 .PlotCompareCv(
   x,
   line.args = NULL,
   point.args = NULL,
   xlab = "Return periods",
-  ylab = "Coefficient of variation"
+  ylab = "Coefficient of variation",
+  colour = ""
 )
 
 .PlotLRatio(
@@ -53,7 +54,9 @@
   average.args = NULL,
   line.args = NULL,
   xlab = "L-Skewness",
-  ylab = "L-Kurtosis"
+  ylab = "L-Kurtosis",
+  colour = "",
+  shape = ""
 )
 
 .PlotLinTrend(
@@ -87,7 +90,7 @@
 
 \item{point.args, line.args, histogram.args, ribbon.args, }{Parameters passed to the respective geometry.}
 
-\item{xlab, ylab}{Labels of the XY-axis.}
+\item{xlab, ylab, fill, shape, colour}{Labels of the XY-axis or legend.}
 
 \item{average.args}{Same as point.args for the average point.}
 
@@ -105,23 +108,23 @@ All functions use \code{ggplot2} to create a basic plot that can be further
 customized. The default arguments of the used geometry can be overridden by
 passing a list of new arguments. For example,
 \code{point.args = list(colour = 'red')}
-change the color of a set of points that was created by \code{geom_point}.
+change the colour of a set of points that was created by \code{geom_point}.
 }
 \examples{
 
-\dontrun{
-
-## Return level plot
-fit.an <- an$value \%>\%
-  SequenceData() \%>\%
-  FloodnetAmax()
-
-plot(fit.an)
+library(ggplot2)
 
 ## Create a random data
 set.seed(2)
 xd <- SequenceData(365*30, freq = 'days', sdate = '2000-01-01')
 an <- CSHShydRology::ExtractAmax(value~date,xd)
+
+## Return level Plot
+fit.an <- an$value \%>\%
+  SequenceData() \%>\%
+  FloodnetAmax()
+
+plot(fit.an)
 
 # QQ-plot
 fit.pot <- FloodnetPot(xd, area = 200, u = 200)
@@ -135,15 +138,14 @@ plot(fit.an, 't')
 
 ## Comparing flood quantiles and coefficient of variation
 m2 <- CompareModels(fit.an, fit.pot)
-plot(m2)
+plot(m2) + labs(fill = 'Method')
 plot(m2, type = 'cv')
 
 ## L-moment ratio diagram
 DemoData('region') \%>\%
   FloodnetPool(target = '01AF007', tol.H = Inf, verbose = FALSE) \%>\%
-  plot(type = 'l')
+  plot(type = 'l') + labs(shape = 'Site', colour = 'Distr.')
 
-}
 
 }
 \seealso{

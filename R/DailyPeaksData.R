@@ -41,6 +41,12 @@
 #' @examples
 #'
 #' \dontrun{
+#'  ## The variable DB_HYDAT contains the path to the HYDAT database.
+#'  DB_HYDAT <- '.../Hydat.sqlite3'
+#'
+#'  ## Meta-information about the stations
+#'  gaugedSites <- read.csv('.../gauged_sites.csv')
+#'
 #'  ## Data.frame containing thresholds and drainage area
 #'  info <- gaugedSites[1:2, c('station','ppy200','area')]
 #'
