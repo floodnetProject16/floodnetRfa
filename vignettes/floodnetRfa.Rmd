@@ -12,8 +12,6 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, fig.align = 'center',
 											fig.height = 4, fig.width = 6)
-
-source(system.file("config", package = 'floodnetRfa'))
 ```
 
 ## Introduction
@@ -35,6 +33,8 @@ Their content is described later in the document.
 ```{r echo = FALSE}
 ## True code run but not displayed
 library(floodnetRfa)
+
+source(system.file("config", package = 'floodnetRfa'))
 
 hydat <- DB_HYDAT
 gaugedSites <- GAUGEDSITES
@@ -284,9 +284,9 @@ summary(fit)
 plot(fit)
 ```
 
-Before fitting the POT model, Mann-Kendall's test examines the presence of trend trends in the exceedances. 
-Similarly, logistic regression models with time as a covariate look for changes in the exceedance rate.
-More precisely, F-tests compare polynomial trends of order 1 to 3 to a constant model, which is summarized by the lowest p-value that provides evidence that at least one of the considered trend was significant.
+Before fitting the POT model, Mann-Kendall's test examines the presence of a trend trends in the exceedances.
+Similarly, a logistic regression with time as a covariate look for a linear change in the exceedance rate from
+a t-tests that evaluates the significance of the slope parameter.
 
 ```{r}
 plot(fit, 't')
@@ -606,7 +606,7 @@ To use a correlation matrix in the bootstrap procedure that represents that real
 
 ```{r}
 ## Estimation of the intersite correlation matrix
-icor <- IntersiteCorData(hydat, gauged$site)
+icor <- IntersiteCorData(hydat, gauged$site, smooth = 0.6, distance.max = 300)
 
 ## Ungauged analysis with bootstrap
 set.seed(1)

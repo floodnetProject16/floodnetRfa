@@ -41,10 +41,9 @@
 #'
 #' If \code{verbose == TRUE}, a Mann-Kendall test and logistic regression are used
 #' to verify the presence of trends in the mean excess and the number of peaks per years.
-#' If the data fails one of the tests, a warning is issued.
-#' For the logistic regression, an analysis of deviance (F-test) is used to compare the
-#' constant model with polynomial trends.
-#' #' If the data fails one of the tests at significance level 0.05,
+#' For the logistic regression, a t-test examines the significance of the slope
+#' parameter for a linear trend.
+#' If the data fails one of the tests at significance level 0.05,
 #' a warning is issued.
 #'
 #' @references
@@ -289,23 +288,10 @@ FloodnetPot <-
 }
 
 
-## Verify using a F-test that trend model in exceedance probability
-## is better than the constant model
+## Trend in the exceedance rate
+## Verify if the slope of a linear model is significant
 .TrendLogis <- function(xbin){
-
-  ## Constant model
-  fit0 <- glm(y~1, xbin, family = quasibinomial())
-
-  ## alternative models
-  fit <- vector('list', 3)
-  fit[[1]] <- glm(y~x, xbin, family = quasibinomial())
-  fit[[2]] <- glm(y~poly(x,2), xbin, family = quasibinomial())
-  fit[[3]] <- glm(y~poly(x,3), xbin, family = quasibinomial())
-
-  ## Evaluate p-values of the F-test
-  fun <- function(z) anova(fit0, z, test = 'F')[2,6]
-
-  ## Return minimal p-value
-  return(min(vapply(fit,fun, numeric(1)), na.rm = TRUE))
+  fit <- glm(y~x, xbin, family = quasibinomial())
+  ans <- summary(fit)$coefficient[2,4]
+  return(ans)
 }
-

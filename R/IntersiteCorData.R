@@ -1,20 +1,15 @@
-#' Intersite correlation matrix
+#' Intersite correlation matrix for annual maxima
 #'
-#' Return the intersite correlation matrix list of station based on annual
-#' maximum discharge extracted from HYDAT.
+#' Return the intersite correlation matrix for a list of stations based on
+#' their annual maximum discharges.
 #'
 #' @param db HYDAT database
 #' @param x List of stations
+#' @param type Method used to evaluate the correlation coefficients. One of
+#'   \code{'emp'}, \code{'exp'}, \code{'raw'} or \code{'avg'}. See
+#'   \link[CSHShydRology]{Intersite} for more details.
 #'
-#' @details
-#'
-#' The intersite correlations represent the correlation coefficients of an underlying
-#' multivariate Gaussian distribution (Normal Copula).
-#' First the spearman correlation is evaluated for each pair of sites with a
-#' distance less than 500km.
-#' Next the weighted least-squared method is used to evaluate the
-#' parameter of an exponential model.
-#' Finally, the fitted coefficient of each sites is returned.
+#' @param ... Other parameter passed to \link[CSHShydRology]{Intersite}.
 #'
 #' @references
 #'
@@ -28,28 +23,58 @@
 #' @examples
 #'
 #' \dontrun{
-#' ##Intersite correlation for a given super region
-#' IntersiteData(DB_HYDAT, GetSuperRegion('01AF009'))
+#'
+#' ## The variable DB_HYDAT contains the path of the HYDAT database.
+#' DB_HYDAT <- '.../Hydat.sqlite3'
+#'
+#' ## Meta-information about stations
+#' gaugedSites <- read.csv('.../gauged_sites.csv')
+#'
+#' sreg <- which(gaugedSites$supreg_km12 == 10)
+#' sites <- as.character(gaugedSites$station)[sreg]
+#'
+#' ## Intersite correlation for a given super region
+#' x <- IntersiteCorData(DB_HYDAT, sites, smooth = .6, distance.max = 200)
+#'
+#' #' ## Intersite correlation for a given super region
+#' x <- IntersiteCorData(DB_HYDAT, sites, type = 'emp' )
+#'
 #' }
-IntersiteCorData <- function(db, x){
+#'
+IntersiteCorData <- function(db, x, type = 'exp', ...){
 
 	x <- as.character(x)
+
 	## Extract Annual Maximum
 	an <- AmaxData(db,x)
   an$year <- as.integer(format(an$date,'%Y'))
   anw <- CSHShydRology::DataWide(value~site+year , an)
 
   ## Evaluate distance
-  stn <- StationData(db,x)
-  h <- CSHShydRology::GeoDist(stn[,c('lon','lat')])
+  if( type == 'exp'){
+	  stn <- StationData(db,x)
+  	h <- CSHShydRology::GeoDist(stn[,c('lon','lat')])
 
-  ## Fit an intersite correlation model
-  suppressWarnings(
-  	icor <- CSHShydRology::Intersite(anw, type = 'exp', distance = h,
-  																 distance.max = 500))
+  	## Fit an intersite correlation model
+  	suppressWarnings(
+  		ans <- CSHShydRology::Intersite(anw, type = 'exp',
+  				 distance = h, ...)$model)
 
-  ans <- icor$model
-  rownames(ans) <- colnames(ans) <- x
+  } else if(type == 'emp'){
+		suppressWarnings(
+  		ans <- CSHShydRology::Intersite(anw, type = 'emp', ...)$model)
+
+  } else if(type %in% c('raw', 'avg')){
+		suppressWarnings(
+  		ans <- CSHShydRology::Intersite(anw, type = 'emp',
+  																		 defpos = FALSE)$corr)
+
+  	 if(type == 'avg'){
+  	 	 ans <- ans[lower.tri(ans)]
+  	 	 ans <- mean(ans, na.rm = TRUE)
+  	 }
+
+  }
 
   return(ans)
 

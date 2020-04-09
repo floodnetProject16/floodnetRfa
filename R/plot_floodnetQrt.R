@@ -75,7 +75,8 @@ plot.floodnetRoi <- function(x, type = 'f', ...){
 
 .QrtCv <- function(x, point.args = NULL, line.args = NULL,
 										xlab = 'Pooling group size',
-										ylab1 = 'Skill - MAD (log)', ylab2 = 'Nash-Sutcliffe (log)'){
+										ylab1 = 'Skill - MAD (log)', ylab2 = 'Nash-Sutcliffe (log)',
+									  colour = ''){
 
 	## Verify that cross-validation was performed on several candidates
 	if(is.null(x$cv))
@@ -112,7 +113,7 @@ plot.floodnetRoi <- function(x, type = 'f', ...){
 	## Create a second axis
 	plt <- plt + scale_y_continuous(ylab1, sec.axis = sec_axis(~ Finv(.), name = ylab2))
 
-	plt <- plt + xlab(xlab)
+	plt <- plt + labs(x = xlab, colour = colour)
 
 	return(plt)
 }

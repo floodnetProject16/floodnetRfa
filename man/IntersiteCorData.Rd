@@ -2,34 +2,46 @@
 % Please edit documentation in R/IntersiteCorData.R
 \name{IntersiteCorData}
 \alias{IntersiteCorData}
-\title{Intersite correlation matrix}
+\title{Intersite correlation matrix for annual maxima}
 \usage{
-IntersiteCorData(db, x)
+IntersiteCorData(db, x, type = "exp", ...)
 }
 \arguments{
 \item{db}{HYDAT database}
 
 \item{x}{List of stations}
+
+\item{type}{Method used to evaluate the correlation coefficients. One of
+\code{'emp'}, \code{'exp'}, \code{'raw'} or \code{'avg'}. See
+\link[CSHShydRology]{Intersite} for more details.}
+
+\item{...}{Other parameter passed to \link[CSHShydRology]{Intersite}.}
 }
 \description{
-Return the intersite correlation matrix list of station based on annual
-maximum discharge extracted from HYDAT.
-}
-\details{
-The intersite correlations represent the correlation coefficients of an underlying
-multivariate Gaussian distribution (Normal Copula).
-First the spearman correlation is evaluated for each pair of sites with a
-distance less than 500km.
-Next the weighted least-squared method is used to evaluate the
-parameter of an exponential model.
-Finally, the fitted coefficient of each sites is returned.
+Return the intersite correlation matrix for a list of stations based on
+their annual maximum discharges.
 }
 \examples{
 
 \dontrun{
-##Intersite correlation for a given super region
-IntersiteData(DB_HYDAT, GetSuperRegion('01AF009'))
+
+## The variable DB_HYDAT contains the path of the HYDAT database.
+DB_HYDAT <- '.../Hydat.sqlite3'
+
+## Meta-information about stations
+gaugedSites <- read.csv('.../gauged_sites.csv')
+
+sreg <- which(gaugedSites$supreg_km12 == 10)
+sites <- as.character(gaugedSites$station)[sreg]
+
+## Intersite correlation for a given super region
+x <- IntersiteCorData(DB_HYDAT, sites, smooth = .6, distance.max = 200)
+
+#' ## Intersite correlation for a given super region
+x <- IntersiteCorData(DB_HYDAT, sites, type = 'emp' )
+
 }
+
 }
 \references{
 Durocher, M., Burn, D. H., & Mostofi Zadeh, S. (2018). A nationwide regional

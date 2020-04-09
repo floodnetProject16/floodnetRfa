@@ -58,10 +58,9 @@ Inference on the estimated flood quantiles is performed by parametric bootstraps
 
 If \code{verbose == TRUE}, a Mann-Kendall test and logistic regression are used
 to verify the presence of trends in the mean excess and the number of peaks per years.
-If the data fails one of the tests, a warning is issued.
-For the logistic regression, an analysis of deviance (F-test) is used to compare the
-constant model with polynomial trends.
-#' If the data fails one of the tests at significance level 0.05,
+For the logistic regression, a t-test examines the significance of the slope
+parameter for a linear trend.
+If the data fails one of the tests at significance level 0.05,
 a warning is issued.
 }
 \examples{
