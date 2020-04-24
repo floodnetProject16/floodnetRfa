@@ -1,13 +1,17 @@
 context('Testing AmaxData')
 
-## This is a config file that once loaded create a variable DB_HYDAT that point to the location of a downloaded version of HYDAT database
+## This is a config file that once loaded create a variable DB_HYDAT, which
+## point to the location of a local version of HYDAT database
 source(system.file('config', package = 'floodnetRfa'))
 
 test_that('Verifying AmaxData', {
 
 sites <- c('01AD002','01AF009')
 
-out <- AmaxData(sites, DB_HYDAT)
+## test pipe
+out <- DB_HYDAT %>% AmaxData(sites)
+
+out <- AmaxData(DB_HYDAT, sites)
 
 expect_equal(colnames(out), c('site','date','value'))
 expect_equal(unique(out$site), sites)
@@ -36,21 +40,37 @@ sname <- sort(order(hm[,3])[1:3])
 sname <- colnames(hm)[sname]
 
 ## Extract info for pooling group
-out <- AmaxData(sites,DB_HYDAT, size = 3, distance = hm[3,])
+out <- AmaxData(DB_HYDAT, sites, size = 3, distance = hm[3,])
 out.sites <- sort(unique(out$site))
 
 expect_equal(sname, out.sites)
 
-## A distance is passed
-out1 <- AmaxData(sites,DB_HYDAT, target = sites[3], size = 3)
-expect_equal(out1,out)
+## A target is passed
+out1 <- AmaxData(DB_HYDAT, sites, target = sites[3], size = 3)
 
-## only target is passed
-out1 <- AmaxData(sites,DB_HYDAT, target = sites[3], size = 3)
-
-sdis <- SeasonDistanceData(sites, db =  DB_HYDAT, target = 3)
-out2 <- AmaxData(sites,DB_HYDAT, distance = sdis, size = 3)
+sdis <- SeasonDistanceData(DB_HYDAT, sites = sites, target = sites[3])
+out2 <- AmaxData(DB_HYDAT, sites, distance = sdis, size = 3)
 
 expect_equal(out1,out2)
+
+})
+
+
+test_that('Verifying AmaxData', {
+
+  ## This station is known to have a NA in HYDAT for annual maximum
+  ## Must verify that the code pass
+  sites <- c('01AP004')
+
+  con <- RSQLite::dbConnect(RSQLite::SQLite(), DB_HYDAT)
+  an <- HYDAT::AnnualPeakData(con, get_flow = TRUE, as.character(sites))
+  RSQLite::dbDisconnect(con)
+
+  an <- an[an$peak == 'MAXIMUM',]
+  nyear <- sum(!is.na(an$value))
+
+	out <-  AmaxData(DB_HYDAT, sites)
+
+	expect_equal(nrow(out), nyear)
 
 })

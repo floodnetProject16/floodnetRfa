@@ -2,9 +2,17 @@
 % Please edit documentation in R/FloodnetAmax.R
 \name{FloodnetAmax}
 \alias{FloodnetAmax}
-\title{Estimate flood quantiles using using annual maxima}
+\title{Estimate flood quantiles using annual maxima}
 \usage{
-FloodnetAmax(x, ...)
+FloodnetAmax(
+  x,
+  period = c(2, 5, 10, 20, 50, 100),
+  distr = NULL,
+  nsim = 2000,
+  level = 0.95,
+  out.model = FALSE,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{x}{Hydrometric data. Vector of annual maxima.}
@@ -14,13 +22,11 @@ FloodnetAmax(x, ...)
 \item{distr}{Distribution. One of \code{'gev'},\code{'gno'},\code{'glo'}
 or \code{'pe3'}}
 
-\item{instant}{Logical, should the instantaneous peaks be used.}
-
 \item{nsim}{Number of bootstrap samples used for inference.}
 
 \item{level}{Confidence level.}
 
-\item{out.model}{Logical. Should the model be output. This correspond to the
+\item{out.model}{Logical. Should the model be output. This corresponds to the
 output of \link{FitAmax}. Otherwise only the estimated flood quantiles are
 returned.}
 
@@ -37,8 +43,8 @@ selected using Akaike Information Criterion (AIC) among the
 Generalized Extreme Value (GEV), Generalized logistic (GLO), the
 Generalized Normal (GNO) and the Pearson type 3 distributions.
 A preference is given to the GEV when the AIC of the other distributions is not
-greater than at least two.
-Inference on the estimated flood quantiles is performed by parametric bootstrap.
+greater than at least two AIC.
+Inference on the estimated flood quantiles is performed by parametric bootstraps.
 
 If \code{verbose == TRUE}, a Mann-Kendall and a Pettitt's test are used
 to verify the presence of trend and change points in the data.
@@ -47,16 +53,10 @@ a warning is issued.
 }
 \examples{
 
-\dontrun{
-	## Path the HYDAT database
- db <- DB_HYDAT
+ an <- DemoData('amax')
+ fit <- FloodnetAmax(an, period = c(20,50))
+ summary(fit)
 
- ## Read Amax data
- x <- AmaxData('01AD002', db)
-
- ## Performing the analysis
- FloodnetAmax(x, period = c(20,50), nsim = 200, verbose = FALSE)
-}
 
 }
 \references{

@@ -7,10 +7,12 @@
 #'
 #' @examples
 #'
-#' FloodnetToolbox()
-#'
+#' \dontrun{
+#'   FloodnetToolbox()
+#' }
 FloodnetApp <- function(){
 
+	NULL
   ## Start the shinyApp
 	shiny::runApp(appDir = system.file('shinyApp/app.R', package = 'floodnetRfa'), launch.browser = TRUE)
 }

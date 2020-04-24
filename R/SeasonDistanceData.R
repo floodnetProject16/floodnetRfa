@@ -1,39 +1,51 @@
-#' Seasonal distance between stations
+#' Similarity measure based on seasonality of annual maxima
 #'
 #' Return the distance matrix between stations based on the
-#' annual flood peaks regularity and timing.
+#' seasonality of the annual maximum events.
+#' Optionally, a target can be passed to extract only the
+#' pooling group from a list of stations.
 #'
-#' @param sites Stations
+#' @param x Hydrometric data.
 #'
-#' @param db HYDAT database
+#' @param db Path of the HYDAT database,
 #'
-#' @param x Alternative input. Must be a data.frame of annual maximums
-#'    with 3 columns: site, time, value. The time variable must be of the class 'Date'.
+#' @param sites List of sites in HYDAT.
 #'
-#' @param ... Other parameter passed to \link[CSHShydRology]{DistSeason}.
+#' @param form Formula of the form date~site, that point to the columns with
+#'   date and site ID.
+#'
+#' @param target Sites for which distance is returned.
+#'
+#' @param ... Other parameters passed to \link[CSHShydRology]{DistSeason}.
+#'
+#' @seealso \link{AmaxData}.
 #'
 #' @export
 #'
 #' @examples
+#'
+#' ## Extract similarity measure from multiple site
+#' ## with respect to target station 01AF009
+#' h <- SeasonDistance(DemoData('region'))
+#' print(h[1:3,1:3])
+#' print(h[2,])
+#'
 #' \dontrun{
-#' db <- 'extdata/Hydat.sqlite3'
 #'
-#' mysites <- c("01AD002", "01AD003", "01AE001", "01AF007", "01AF009")
+#' ## Path to HYDAT
+#' # DB_HYDAT = ".../hydat.sqlite3"
 #'
-#' SeasonDistanceData(mysites, db)
+#' ## Compute the distance using HYDAT directly
+#' SeasonDistanceData(DB_HYDAT, names(h), target = '01AF009')
+#'
 #' }
 #'
-SeasonDistanceData <- function(sites, db, x = NULL, target = NULL, ...){
+SeasonDistance <- function(x, form = date ~ site, target = NULL, ...){
 
-  if(!is.null(x)){
-    an <- as.data.frame(x)[,1:2]
-    colnames(an) <- c('site','date')
+  x <- as.data.frame(x)
+  x <- stats::na.omit(x)
 
-  } else{
-    an <- AmaxData(sites, db)
-  }
-
-  season <- CSHShydRology::SeasonStat(date ~ site, an)
+  season <- CSHShydRology::SeasonStat(form, x)
   season.dist <- CSHShydRology::DistSeason(radius~angle,season, ...)
   colnames(season.dist) <- rownames(season.dist) <- rownames(season)
 
@@ -41,4 +53,11 @@ SeasonDistanceData <- function(sites, db, x = NULL, target = NULL, ...){
     season.dist <- season.dist[target,]
 
   return(season.dist)
+}
+
+#' @export
+#' @rdname SeasonDistance
+SeasonDistanceData <- function(db, sites, ...){
+  x <- AmaxData(db, sites)
+  return(SeasonDistance(x, ...))
 }

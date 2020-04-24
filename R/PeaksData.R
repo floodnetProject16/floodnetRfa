@@ -2,6 +2,12 @@
 #' @rdname DailyPeaksData
 PeaksData <- function(x, meta){
 
+	## Case to remove the meta data
+	if(is.null(meta)){
+		attr(x, 'meta') <- NULL
+		return(x)
+	}
+
 	## Sort data by site
 	meta <- as.data.frame(meta)
 	x <- as.data.frame(x)
@@ -29,3 +35,12 @@ PeaksData <- function(x, meta){
 
   return(ans)
 }
+
+#' @export
+#' @rdname DailyPeaksData
+`PeaksMeta<-` <- function(x,value) PeaksData(x,value)
+
+#' @export
+#' @rdname DailyPeaksData
+PeaksMeta <- function(x) attr(x, 'meta')
+

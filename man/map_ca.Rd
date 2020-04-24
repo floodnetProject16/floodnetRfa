@@ -9,15 +9,7 @@
 map_ca
 }
 \description{
-Simple map of Canada that covers the stations found in the
-dataset gaugedSites.
+To produce a quick and simple map of Canada.
 Original data were from https://www.naturalearthdata.com/.
-}
-\examples{
-
-sp::plot(map_ca)
-with(gaugedSites, points(lat~lon, col = supreg_km6,
-                         pch = 16, cex = .6))
-
 }
 \keyword{datasets}

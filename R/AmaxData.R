@@ -1,61 +1,73 @@
-#' Extract Annual, daily data from HYDAT
+#' Extract annual or daily hydrometric data from HYDAT
 #'
-#' Return a dataset of hydrometric data from HYDAT.
-#' Optionally, a vector distance can be passed and so only a pooling groups is returned.
-#' the target is the site with distance zero.
+#' Return a dataset of hydrometric data from a local HYDAT database.
+#' Optionally, a target or vector of distances can be passed to extract only the
+#' pooling group from a list of stations.
+#' If a distance is passed, the target has a distance of zero.
+#' If a target is passed, the similarity measure based on the seasonality of the
+#' annual maxima are used as the distance.
 #'
-#' @param sites List of stations.
+#' @param db Path of the HYDAT database.
 #'
-#' @param db HYDAT database.
+#' @param sites List of stations from which to extract the data.
 #'
-#' @param year Logical. Should the full date be return or only the year.
+#' @param distance A vector of distance between all sites. The target has distance
+#'   equal to zero.
 #'
-#' @param distance A vector of distance between all sites.
+#' @param target Target site.
 #'
 #' @param size Size of the pooling group.
 #'
 #' @param pad,tol Logical and number of days. Should the daily data be padded.
 #'   See \link[CSHShydRology]{PadPot}.
 #'
-#' @seealso \link{DailyPeaksData}.
+#' @seealso \link{DailyPeaksData}, \link{SeasonDistance}.
 #'
 #' @export
 #'
 #' @examples
 #'
 #' \dontrun{
-#' ## This create a variable DB_HYDAT that point to the database
-#' db <- DB_HYDAT
+#' ## The variable DB_HYDAT contains the path to the HYDAT database.
+#' DB_HYDAT <- '.../Hydat.sqlite3'
 #'
-#' ## Reading AMAX data for one station
-#' x <- AmaxData(c('01AD002'), db)
+#' ## Meta-information about stations
+#' gaugedSites <- read.csv('.../gauged_sites.csv')
+#'
+#' ## Reading AMAX data for one station.
+#' x <- AmaxData(DB_HYDAT, c('01AD002'))
 #' head(x, 3)
 #'
-#' ## Reading multiple stations
-#' x <- AmaxData(c('01AD002','01AF009'), db, year = FALSE)
+#' ## Reading multiple stations.
+#' x <- AmaxData(DB_HYDAT, c('01AD002', '01AF009'))
 #' x[seq(85,95),]
 #'
-#' ## Reading Daily data
-#' x <- DailyData(c('01AD002','01AF009'), db)
+#' ## Reading Daily data.
+#' x <- DailyData(DB_HYDAT, c('01AD002','01AF009'))
 #' head(x, 3)
 #'
-#' ## Filter the stations to keep only a pooling group of size 5
-#' sid <- gaugedSites$supreg_km12 == 11
-#' sites <- gaugedSites$station[sid]
+#' ## A pooling group of size 5 based on seasonality distance.
+#' x <- AmaxData(DB_HYDAT, gaugedSites$station, target = '01AF009', size = 5)
 #'
-#' coord <- gaugedSites[sid, c('lon','lat')]
-#' rownames(coord) <- sites
+#' ## Extracted site.
+#' sort(unique(x$site))
 #'
-#' h <- as.matrix(dist(coord))
+#' ## Pooling group with different a distance.
+#' meta <- log(gaugedSites[, c('area','map')])
+#' h <- as.matrix(dist(scale(meta)))
+#' x <- AmaxData(DB_HYDAT, gaugedSites$station, distance = h[2,], size = 5)
 #'
-#' x <- AmaxData(sites, db, target = '01AF009', size = 5,  distance = h)
-#' table(x$station)
-#' round(sort(h['01AF009',])[1:10],2)
+#' ## Extracted site.
+#' sort(unique(x$site))
+#'
 #' }
 #'
-AmaxData <- function(sites, db, target = NULL, distance = NULL, size = 25){
-
-  ## Verify that there is an unique target if distances are passed
+AmaxData <- function(
+    db,
+    sites,
+    target = NULL,
+    distance = NULL,
+    size = 25){
 
   ###################################
   ## Extract annual data
@@ -65,13 +77,13 @@ AmaxData <- function(sites, db, target = NULL, distance = NULL, size = 25){
   an <- HYDAT::AnnualPeakData(con, get_flow = TRUE, as.character(sites))
   RSQLite::dbDisconnect(con)
 
-  an <- an[an$peak == 'MAXIMUM',]
+  an <- an[an$peak == 'MAXIMUM',1:6]
+  an <- stats::na.omit(an)
+
   an$date <- as.Date(with(an, paste(year,month,day, sep = '/')), optional = TRUE)
   an <- an[, c('station_number','date','value')]
   rownames(an) <- NULL
   colnames(an) <- c('site','date','value')
-
-  an <- stats::na.omit(an)
 
   ###################################
   ## Find the pooling groups

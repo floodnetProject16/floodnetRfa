@@ -1,5 +1,35 @@
+#' Seasonality plot
+#'
+#' Create a canvas to represent the timing and the regularity of seasonal measures
+#' in a polar coordinate system.
+#'
+#' @param xlab,ylab Axis labels.
+#'
+#' @param ... Other parameters passed to \link{ggplot}.
+#'
+#' @import ggplot2
 #' @export
-#' @rdname floodnetGraphics
+#'
+#' @examples
+#'
+#' library(CSHShydRology)
+#' library(ggplot2)
+#'
+#' ## Basic plot
+#'
+#' SeasonPlot()
+#'
+#' ## Plot with points
+#'
+#' xd <- DemoData('region')
+#' stat.season <- as.data.frame(SeasonStat(date~site, xd))
+#'
+#' SeasonPlot() +
+#'   geom_point(data = stat.season, aes(x = angle, y = radius),
+#'              colour = 'blue') +
+#'   theme_bw()
+#'
+#'
 SeasonPlot <- function(... , xlab = 'Timing', ylab = 'Regularity'){
 
 	## Starting of the month in radian

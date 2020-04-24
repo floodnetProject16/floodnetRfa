@@ -1,6 +1,6 @@
 #' @export
 #' @rdname AmaxData
-DailyData <- function(sites, db,
+DailyData <- function(db, sites,
                       pad = FALSE, tol = 346,
                       target = NULL, distance = NULL, size = 25){
 
