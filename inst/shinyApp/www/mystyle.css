@@ -29,6 +29,9 @@
 	display: inline-block;
 }
 
+.content-wrapper {
+	overflow-y: hidden;
+}
 
 /* logo */
 .skin-blue .main-header .logo  {
@@ -40,21 +43,20 @@
 	display: flex;
 	align-items: center;
 	text-align: center;
-	
 	background-color: #fff;
 }
 
 /* logo when hovered */
 
 .skin-blue .main-header .logo:hover {
-	background-color: rgba(75, 146, 104, 0.3);	 
+	background-color: rgba(75, 146, 104, 0.3);
 }
 
 
 /* navbar (rest of the header) */
 .skin-blue .main-header .navbar {
 	background-color: #7BAC8F;
-}        
+}
 
 /* main sidebar */
 .skin-blue .main-sidebar {
@@ -78,12 +80,12 @@
 
 /* other links in the sidebarmenu when hovered */
 /*
- .skin-blue .main-sidebar .sidebar .sidebar-menu a:hover{
+.skin-blue .main-sidebar .sidebar .sidebar-menu a:hover{
     background-color: #ff69b4;
 }
 */
 
-/* toggle button when hovered  */                    
+/* toggle button when hovered  */
 .skin-blue .main-header .navbar .sidebar-toggle:hover{
 	background-color: rgba(75, 146, 104, 0.3);
 }
@@ -108,13 +110,21 @@
 	color: #DD2D1F;
 }
 
+h2{		/* specifically not .h2  -- modifying so Box Titles have no spacing above */
+	margin-top: 0px;
+}
+
 .background-box{
-	height: 320px;
+	position: relative;
 	padding: 10px ;
 	background-color: #CDE1D5;
-	 border: 1px black;
+	border: 1px black;
 	box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
-	
+	margin-bottom: 20px;
+}
+
+.fixed-height{
+	height: 400px;
 }
 
 .left-item{
@@ -133,4 +143,31 @@
 	margin-bottom: 0px;
 }
 
+.bottom-button{
+	position: absolute;
+	bottom: 20px;
+	width: 135px;
+	font-size: 24px;
+	border-radius: 5px;
+}
+
+.red-button{
+	background-color: #DD2D1F;
+	color: #fff;
+	border-color: black;
+}
+
+.blue-button{
+	background-color: #0C3F86;
+	color: #fff;
+	border-color: black;
+}
+
+.right-button{
+	right: 20px;
+}
+
+.left-button{
+	left: 20px;
+}
 
