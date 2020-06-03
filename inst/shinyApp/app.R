@@ -78,7 +78,13 @@ body <- dashboardBody(
 					 				 				 								 selectInput("disthresh", label = h3("Threshold"),
 					 				 				 								 						choices = list("Default" =  "Default",
 					 				 				 								 													 "Read from List..." = "etc"
-					 				 				 								 						), selected = "Default")
+					 				 				 								 													# "10" = 10,
+					 				 				 								 													#  "20" = 20,
+					 				 				 								 													#  "30" = 30,
+					 				 				 								 													#  "50" = 50,
+					 				 				 								 													#  "70" = 70,
+					 				 				 								 													#  "90" = 90
+					 				 				 								 						), selected = "20")
 					 				 				 ),
 
 					 				 				 ## Action button for running the model - always on bottom right
@@ -271,7 +277,8 @@ server <- function(input, output, session) {
 	# output functions to table/plot
 	output$table <- renderDT(
 		as.data.frame(result()), options = list(
-			pageLength = 6
+			pageLength = 6,
+			scrollX = TRUE
 			#paging = FALSE #FALSE = becomes one long list instead of multiple properly-sized lists
 		)
 	)
@@ -282,8 +289,8 @@ server <- function(input, output, session) {
 		values$df,
 		colnames = c("Site", "Period", "Method", "Distribution/Threshold", "Super Region"),
 		options = list(
-			pageLength = 4
-
+			pageLength = 4,
+			scrollX = TRUE
 		)
 	)
 
@@ -356,7 +363,10 @@ server <- function(input, output, session) {
 		# plot result
 		output$graphicsQuantiles <- renderDT(
 			as.data.frame(resultGraphics()), options = list(
-				pageLength = 6
+				pageLength = 6,
+				# autoWidth = TRUE,
+				# columnDefs = list(list(width = '10', visible = TRUE, targets = "_all")),
+				scrollX = TRUE
 				#paging = FALSE #FALSE = becomes one long list instead of multiple properly-sized lists
 			)
 		)
