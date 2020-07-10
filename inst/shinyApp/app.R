@@ -11,15 +11,68 @@
 library(shiny)
 library(shinydashboard)
 library(shinyjs)
+library(shinyFiles)
 library(DT)
+
 
 
 # Load global variable from the config file
 # Temporary solution to load the db, Will need a menu
-source(system.file('config', package = 'floodnetRfa'))
+#source(system.file('config', package = 'floodnetRfa'))
+
+options(shiny.maxRequestSize = 10000*1024^2) # Arbitrarily-large (~10GB) max upload file size since this will be done locally
 
 sidebar <- dashboardSidebar(
 
+	# --- Button box ---
+	fluidRow(
+		tags$div(class = "sidebar-box button-box",
+			# Red buttons - open and save
+			actionButton("openButton", class = " sidebar-button red-button left-sidebar-button top-sidebar-button", label = "Open"),
+			actionButton("saveButton", class = "sidebar-button red-button right-sidebar-button top-sidebar-button", label = "Save"),
+
+			# Blue buttons - Reset and Quit
+			actionButton("resetButton", class = "sidebar-button blue-button left-sidebar-button bottom-sidebar-button", label = "Reset"),
+			actionButton("quitButton", class = "sidebar-button blue-button right-sidebar-button bottom-sidebar-button", label = "Quit")
+		)
+	),
+
+	# --- Data Box ---
+	fluidRow(
+		tags$div(class = "sidebar-box data-box",
+			 ## Headline
+			 tags$h2("Data"),
+			 shinyFilesButton(id = "hydroData", label = "Hydrometric Data" , title = "Hydrometric Data:", multiple = FALSE, buttonType = "data", class = NULL),
+			 shinyFilesButton(id = "stationData", label = "Station Data" , title = "Station Data:", multiple = FALSE, buttonType = "data", class = NULL)
+			 #fileInput(inputId = 'hydroData', label = "Hydrometric Data", multiple = FALSE, accept = NULL, width = NULL),
+			 #fileInput(inputId = 'stationData', label = "Station Data", multiple = FALSE, accept = NULL, width = NULL)
+		)
+	),
+
+	# --- Options Box ---
+	fluidRow(
+		tags$div(class = "sidebar-box options-box",
+						 ## Headline
+						 tags$h2("Options"),
+						 # Confidence Level - Corresponds to argument `level` in `FloodnetAmax`, `FloodnetPOT` and `FloodnetPool`
+						 numericInput(inputId = 'confidenceLevel', label = "Confidence Level", value = 0.95, min = 0, max = 1, step = NA, width = NULL),
+						 # Simulations - size of bootstrap sample - Corresponds to argument `nsim` in `FloodnetAmax`, `FloodnetPOT` and `FloodnetPool`
+						 numericInput(inputId = 'simulations', label = "Simulations", value = 1000, min = 1, max = NA, step = 1, width = NULL),
+						 # Heterogeneity - Corresponds to argument `tol.H` in `FloodnetPool`
+						 numericInput(inputId = 'heterogeneity', label = "Heterogeneity", value = 2, min = 0, max = NA, step = NA, width = NULL),
+						 # Pooling group - Corresponds to argument `size` in `AmaxData`, `DailyData` and `DailyPeaksData`
+						 numericInput(inputId = 'pool', label = "Pooling Group", value = 25, min = 0, max = NA, step = 1, width = NULL),
+						 # Intersite Correlation  - Corresponds to argument `corr` in `FloodnetPool`
+						 numericInput(inputId = 'intersite', label = "Intersite Correlation", value = 0, min = -1, max = 1, step = NA, width = NULL),
+						 # Graphical theme (Character): Possibility to chose a theme for the graphical output. See `ggplot2::ggtheme`. To be discussed.
+						 selectInput(inputId = "theme", label = "Graphical Theme",
+						 					 choices = list("Light" = "light"
+						 					 							 #"POT" = "pot",
+						 					 							 #"RFA AMAX" = "rfaAmax",
+						 					 							 #"RFA POT" = "rfaPot"
+						 					 ), selected = "light")
+		)
+	)
 )
 
 body <- dashboardBody(
@@ -39,24 +92,30 @@ body <- dashboardBody(
 					 				 tags$h2("Model Configuration"),
 					 				 ## Left side -------------------------------
 					 				 tags$div(class = "left-item",
+					 				 				 textInput("mID", label = h3("Model ID"),
+					 				 				 					placeholder = "Enter Unique Name for Model..."),
 					 				 				 textInput("station", label = h3("Target Site"),
 					 				 				 					placeholder = "Enter Station ID..."),
 					 				 				 textInput("periodString", label = h3("Return Period"),
-					 				 				 					value = "2, 5, 10, 20, 50, 100"),
+					 				 				 					value = "2, 5, 10, 20, 50, 100")
+
+					 				 ),
+					 				 ## Right side --------------------------------
+					 				 tags$div(class = "right-item",
 					 				 				 selectInput("method", label = h3("Method"),
 					 				 				 						choices = list("AMAX" = "amax",
 					 				 				 													 "POT" = "pot",
 					 				 				 													 "RFA AMAX" = "rfaAmax",
 					 				 				 													 "RFA POT" = "rfaPot"
-					 				 				 						), selected = "amax")
-					 				 ),
-					 				 ## Right side --------------------------------
-					 				 tags$div(class = "right-item",
+					 				 				 						), selected = "amax"),
+
 					 				 				 conditionalPanel(condition = "input.method == 'rfaAmax' || input.method == 'rfaPot'",
 					 				 				 								 selectInput("supReg", label = h3("Super Region"),
-					 				 				 								 						choices = list("Province" = "province",
-					 				 				 								 													 "User-Made" = "userMade"),
-					 				 				 								 						selected = "Province")
+					 				 				 								 						choices = list("HC6" = "supreg_hc6",
+					 				 				 								 													 "HC12" = "supreg_hc12",
+					 				 				 								 													 "KM6" = "supreg_km6",
+					 				 				 								 													 "KM12" = "supreg_km12"
+					 				 				 								 													 ), selected = "KM12")
 					 				 				 ),
 
 					 				 				 ## The option to select the distribution method is only available for AMAX
@@ -78,13 +137,7 @@ body <- dashboardBody(
 					 				 				 								 selectInput("disthresh", label = h3("Threshold"),
 					 				 				 								 						choices = list("Default" =  "Default",
 					 				 				 								 													 "Read from List..." = "etc"
-					 				 				 								 													# "10" = 10,
-					 				 				 								 													#  "20" = 20,
-					 				 				 								 													#  "30" = 30,
-					 				 				 								 													#  "50" = 50,
-					 				 				 								 													#  "70" = 70,
-					 				 				 								 													#  "90" = 90
-					 				 				 								 						), selected = "20")
+					 				 				 								 						), selected = "Default")
 					 				 				 ),
 
 					 				 				 ## Action button for running the model - always on bottom right
@@ -128,7 +181,8 @@ body <- dashboardBody(
 )
 
 graphicsSidebar <- dashboardSidebar(
-
+	## --- Back Button ---
+	actionButton("backButton", class = "back-button blue-button", label = "← Back")
 )
 
 graphicsBody <- dashboardBody(
@@ -184,9 +238,10 @@ graphicsBody <- dashboardBody(
 		## -- L-moment Ratio Diagram box --
 		column(5, offset = 1,
 					 tags$div(class = "background-box fixed-height",
+					 				 id = "lMomentBox",
 					 				 h2("L-Moment Ratio Diagram"),
 					 				 # imageOutput("loading"),
-					 				 plotOutput("momPlot")
+					 				 plotOutput("lMomentPlot")
 					 ))
 	),
 
@@ -248,46 +303,91 @@ ui <- navbarPage("FloodNet RFA", id="pageId",
 server <- function(input, output, session) {
 
 	# ------ Models Page Functions ------
-	# Making eventReactive so table/plot updates with button instead of automatically
-	# Storing values in result so each function is only run once
-	result <- shiny::eventReactive(input$fitModel, floodnetRfa::.ClickUpdate(input, db = DB_HYDAT))
 
+	# Initialize various reactive variables (lists mostly)
 	# Add fitted model to list
 	values <- reactiveValues() # Found a similar solution on stackoverflow (23236944), but do we need all of values just for df?
 	#values$df <- data.frame(Column1 = NA, Column2 = NA, Column3 = NA) # Column names need to be the same else match.names error .. only needed to initialize table
-  mList <- reactiveValues() #list of models to be shown in graphics page ... unsure if should be reactiveValues or some other kind of data structure?
-  graphicsModel <- reactiveValues() #current (temp) model to be displayed in graphics
+	resultList <- reactiveValues() # Store each result here with the "key" being the unique identifier mID
+	PLOTHEIGHT <- 327 #Constant value - Height for plots
+	DB_HYDAT <- "" #Initialize DB and GUAGED as empty strings, so they can be checked before fitting model
+	GAUGEDSITES <- ""
 
+	# --- ShinyFiles File Selection ---
+	volumes <- getVolumes()
+	shinyFileChoose(input,'hydroData', roots=volumes, filetypes = c('csv', 'sqlite3'))
+	shinyFileChoose(input,'stationData', roots=volumes, filetypes = c('csv'))
+
+
+
+	# Making eventReactive so table/plot updates with button instead of automatically
+	# Storing values in result so each function is only run once
+	# result <- shiny::eventReactive(input$fitModel, # Checks to see if ID isn't already in list or blank
+	# 															 if ( is.null(resultList[[input$mID]]) & (input$mID != "")) {floodnetRfa::.ClickUpdate(input, db = DB_HYDAT)}
+	# 															 else {reactiveValuesToList(resultList)[[input$mID]]})
 
 	newModel <- observeEvent(input$fitModel, {
-		# When a model is fit, a new line is made for the Fitted Models datatable and contains the model info
-		if (input$method == "amax" || input$method == "pot") { #need to create NA for superregion for non-RFA methods
-			values$supReg <- "N/A"   ## Can't modify input... have to create new reactive value
-		} else {
-			values$supReg <- input$supReg # Store input supreg in same reactive value as non-rfa, so it can be used together in DT
-		}
-		newLine <- isolate(cbind.data.frame(input$station, input$periodString, input$method, input$disthresh, values$supReg))
-		isolate(values$df <- rbind.data.frame(values$df, newLine))
-	})
+		# Check that fields are filled in
+		if ((input$mID != "") & (input$station != "") & (input$periodString != "")) {
+
+		# Check that DB_HYDAT and GAUGEDSITES are selected - they are initialized as integer, but once files selected become lists!
+		if (typeof(input$hydroData) == "list" & typeof(input$stationData) == "list"){
+
+		# Check that this model ID hasn't already been used
+		if ( is.null(resultList[[input$mID]]) ) {
+
+			# Setting DB_HYDAT when file selected with Hydrometric Data button
+			DB_HYDAT <- as.character(parseFilePaths(volumes,input$hydroData)$datapath)
+			# Setting secondary Station Data filepath (I believe GAUGEDSITES is the correct name for this one? Or should it be DESCRIPTORS? Or something else entirely?)
+			GAUGEDSITES <- read.csv(as.character(parseFilePaths(volumes,input$stationData)$datapath))
+
+			result <- reactive(floodnetRfa::.ClickUpdate(input, db = DB_HYDAT))
+
+			# When a model is fit, a new line is made for the Fitted Models datatable and contains the model info
+			if (input$method == "amax" || input$method == "pot") { #need to create NA for superregion for non-RFA methods
+				values$supReg <- "N/A"   ## Can't modify input... have to create new reactive value
+			} else {
+				values$supReg <- input$supReg # Store input supreg in same reactive value as non-rfa, so it can be used together in DT
+			}
+			newLine <- isolate(cbind.data.frame(input$mID, input$station, input$periodString, input$method, input$disthresh, values$supReg))
+			isolate(values$df <- rbind.data.frame(values$df, newLine))
+
+
+			# store result in resultList
+			resultList[[input$mID]] <- result()
+			#resultList[[input$mID]] <- floodnetRfa::.ClickUpdate(input, db = DB_HYDAT)()
+
+			# Reset text box
+			updateTextInput(session, "mID", value="")
+
+			# output functions to table/plot
+			output$table <- renderDT(
+				as.data.frame(result()), options = list(
+					pageLength = 6,
+					scrollX = TRUE
+					#paging = FALSE #FALSE = becomes one long list instead of multiple properly-sized lists
+				)
+			)
+			output$plot <- shiny::renderPlot(plot(result()), height = PLOTHEIGHT ) #327 height leaves 20px bottom margin - same as buttons
+
+		} #end of Check that this model ID hasn't already been used
+			else {
+				showNotification("Model ID has already been used. Please enter a unique Model ID.", type = "warning")
+		}} #end of check for data selected
+			else {
+				showNotification("Please select files for Hydrometric Data and Station Data before fitting a model.", type = "warning")
+		}} #end of  Check that fields are filled in
+			else {
+				showNotification("One or more fields are blank. Please ensure Model ID, Target Site, and Return Period are filled in.", type = "warning")
+		}})
 
 
 
-	# Keep hidden data table of 'result's, tied to visable list of models
-
-	# output functions to table/plot
-	output$table <- renderDT(
-		as.data.frame(result()), options = list(
-			pageLength = 6,
-			scrollX = TRUE
-			#paging = FALSE #FALSE = becomes one long list instead of multiple properly-sized lists
-		)
-	)
-	output$plot <- shiny::renderPlot(plot(result()), height = 327 ) #327 height leaves 20px bottom margin - same as buttons
 
 	# List of Fitted Models
 	output$modelsTable <- renderDT(
 		values$df,
-		colnames = c("Site", "Period", "Method", "Distribution/Threshold", "Super Region"),
+		colnames = c("Model ID", "Site", "Period", "Method", "Distribution/Threshold", "Super Region"),
 		options = list(
 			pageLength = 4,
 			scrollX = TRUE
@@ -321,6 +421,12 @@ server <- function(input, output, session) {
 		selectedRows <- input$modelsTable_rows_selected
 
 		if (!is.null(selectedRows)) {
+			# Remove models from resultList
+			for (i in selectedRows) {
+				modelName <- as.character(values$df[i,"input$mID"])  #read values list #as.character() was needed!!!
+				resultList[[modelName]] <- NULL
+			}
+
 			values$df <- values$df[-as.numeric(selectedRows),]
 		} else {
 			showNotification("Please select a model from the list first.", type = "warning")
@@ -330,6 +436,10 @@ server <- function(input, output, session) {
 
 	# When "Show" button pressed to compare models in table
 	observeEvent(input$showButton, {
+
+		# Initialize list of models to be shown in graphics page
+		mList <- reactiveValues()  # Needs to be re-initialized in this loop else problems will occur with multiple "Show" attempts
+
 		# get selected rows
 		selectedRows <- input$modelsTable_rows_selected
 
@@ -338,44 +448,60 @@ server <- function(input, output, session) {
 			return()
 		}
 
-		for (i in length(selectedRows)) {
-			# load all data from selected models into mList
-			mList$station[i] <- as.character(values$df[selectedRows[i],"input$station"])  #read values list #as.character() was needed!!!
-			mList$periodString[i] <- as.character(values$df[selectedRows[i],"input$periodString"])
-			mList$method[i] <- as.character(values$df[selectedRows[i],"input$method"])
-			mList$disthresh[i] <- as.character(values$df[selectedRows[i],"input$disthresh"])
-			mList$supReg[i] <- as.character(values$df[selectedRows[i],"values$supReg"])
+		for (i in selectedRows) {
+			# Load results for each mID for each selected row into mList
+			modelName <- as.character(values$df[i,"input$mID"])  #read values list #as.character() was needed!!!
+
+			mList[[modelName]] <- resultList[[modelName]]
 		}
 
+
+
 		# --- generate plots for first model in list ---
-		# load temp model variable
-		graphicsModel$station <- mList$station[1]
-		graphicsModel$periodString <- mList$periodString[1]
-		graphicsModel$method <- mList$method[1]
-		graphicsModel$disthresh <- mList$disthresh[1]
-		graphicsModel$supReg <- mList$supReg[1]
+		# Need modelName of 1st to display (for some reason $mID is part of copied result list)
+		modelName <- as.character(values$df[selectedRows[1],"input$mID"])
+		resultGraphics <- reactiveValuesToList(mList)[[modelName]] # grab the 1st model in list ... still a temporary method for graphics page # need to convert to list to get [1]
 
-		#output$tableTest <- renderTable(graphicsModel$periodString)
+		# Create a compareModels list with each selected model from the table (for comparative plots)
+		lst.fit <- do.call(floodnetRfa::CompareModels, reactiveValuesToList(mList)) # compare all models in mList
 
-		# calculate result
-		resultGraphics <- shiny::reactive(floodnetRfa::.ClickUpdate(graphicsModel, db = DB_HYDAT))
+		# # calculate result
+		# resultGraphics <- shiny::reactive(floodnetRfa::.ClickUpdate(graphicsModel, db = DB_HYDAT))
 
-		# plot result
+		# --- Plot result ---
+		# Flood quantiles
 		output$graphicsQuantiles <- renderDT(
-			as.data.frame(resultGraphics()), options = list(
+			as.data.frame(resultGraphics), options = list(
 				pageLength = 6,
 				# autoWidth = TRUE,
 				# columnDefs = list(list(width = '10', visible = TRUE, targets = "_all")),
 				scrollX = TRUE
-				#paging = FALSE #FALSE = becomes one long list instead of multiple properly-sized lists
+				#paging = FALSE #FALSE -= becomes one long list instead of multiple properly-sized lists
 			)
 		)
-		output$graphicsReturnPlot <- shiny::renderPlot(plot(resultGraphics()), height = 327 )
-
+		# Return level plot
+		output$graphicsReturnPlot <- shiny::renderPlot(plot(resultGraphics), height = PLOTHEIGHT)
+		# Confidence intervals plot
+		output$confIntervals <- shiny::renderPlot(plot(lst.fit), height = PLOTHEIGHT)
+		# Coefficient of variation plot
+		output$ceoffVariation <- shiny::renderPlot(plot(lst.fit, 'cv'), height = PLOTHEIGHT)
+		# Histogram
+		output$histogram <- shiny::renderPlot(hist(resultGraphics, histogram.args = list( bins = 15)), height = PLOTHEIGHT)
+		# L-Moment Ratio Diagram --- only display when model is RFA AMAX
+		if (as.character(values$df[selectedRows[1],"input$method"]) == "rfaAmax") {
+			show("lMomentBox")
+			output$lMomentPlot <- shiny::renderPlot(plot(resultGraphics, 'l'), height = PLOTHEIGHT)
+		} else {
+			hide("lMomentBox")
+		}
+		# Space diagrams --- may be best to make another helper function like ClickUpdate to make these - check vignette pdf for help
+		## Geographical Space
+		## Seasonal space (SeasonPlot.R)
+		## Descriptor space
 
 		# Switch view to Graphics tab
 		updateTabsetPanel(session, inputId = "pageId", selected = "Graphics")
-	})
+	}) ## End of Show Button
 
 	# ----- End of Models Page -----
 	# ----- Start of Graphics Page -----
