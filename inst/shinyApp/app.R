@@ -18,7 +18,7 @@ library(DT)
 
 # Load global variable from the config file
 # Temporary solution to load the db, Will need a menu
-#source(system.file('config', package = 'floodnetRfa'))
+# source(system.file('config', package = 'floodnetRfa'))
 
 options(shiny.maxRequestSize = 10000*1024^2) # Arbitrarily-large (~10GB) max upload file size since this will be done locally
 
@@ -310,8 +310,9 @@ server <- function(input, output, session) {
 	#values$df <- data.frame(Column1 = NA, Column2 = NA, Column3 = NA) # Column names need to be the same else match.names error .. only needed to initialize table
 	resultList <- reactiveValues() # Store each result here with the "key" being the unique identifier mID
 	PLOTHEIGHT <- 327 #Constant value - Height for plots
-	DB_HYDAT <- "" #Initialize DB and GUAGED as empty strings, so they can be checked before fitting model
-	GAUGEDSITES <- ""
+	db_hydat <- "" #Initialize DB and GUAGED as empty strings, so they can be checked before fitting model
+	gaugedSites <- ""
+	spacePlots <- reactiveValues()
 
 	# --- ShinyFiles File Selection ---
 	volumes <- getVolumes()
@@ -337,11 +338,11 @@ server <- function(input, output, session) {
 		if ( is.null(resultList[[input$mID]]) ) {
 
 			# Setting DB_HYDAT when file selected with Hydrometric Data button
-			DB_HYDAT <- as.character(parseFilePaths(volumes,input$hydroData)$datapath)
+			db_hydat <- as.character(parseFilePaths(volumes,input$hydroData)$datapath)
 			# Setting secondary Station Data filepath (I believe GAUGEDSITES is the correct name for this one? Or should it be DESCRIPTORS? Or something else entirely?)
-			GAUGEDSITES <- read.csv(as.character(parseFilePaths(volumes,input$stationData)$datapath))
+			gaugedSites <- read.csv(as.character(parseFilePaths(volumes,input$stationData)$datapath))
 
-			result <- reactive(floodnetRfa::.ClickUpdate(input, db = DB_HYDAT))
+			result <- reactive(floodnetRfa::.ClickUpdate(input, db = db_hydat, gaugedSites))
 
 			# When a model is fit, a new line is made for the Fitted Models datatable and contains the model info
 			if (input$method == "amax" || input$method == "pot") { #need to create NA for superregion for non-RFA methods
@@ -440,6 +441,9 @@ server <- function(input, output, session) {
 		# Initialize list of models to be shown in graphics page
 		mList <- reactiveValues()  # Needs to be re-initialized in this loop else problems will occur with multiple "Show" attempts
 
+		# Re-grab gaugedSites since it is local to Fit button... (it could have changed too, and maybe show will be used without Fit button on a load, so good to do anyways)
+		gaugedSites <- read.csv(as.character(parseFilePaths(volumes,input$stationData)$datapath))
+
 		# get selected rows
 		selectedRows <- input$modelsTable_rows_selected
 
@@ -494,10 +498,15 @@ server <- function(input, output, session) {
 		} else {
 			hide("lMomentBox")
 		}
+
 		# Space diagrams --- may be best to make another helper function like ClickUpdate to make these - check vignette pdf for help
+		spacePlots <- floodnetRfa::.spacePlots(gaugedSites)
 		## Geographical Space
-		## Seasonal space (SeasonPlot.R)
+		output$coordinatesPlot <-shiny::renderPlot(spacePlots$coordinates, height = PLOTHEIGHT)
+		## Seasonal space
+		output$descriptorPlot <-shiny::renderPlot(spacePlots$descriptor, height = PLOTHEIGHT)
 		## Descriptor space
+		output$seasonalPlot <-shiny::renderPlot(spacePlots$seasonal, height = PLOTHEIGHT)
 
 		# Switch view to Graphics tab
 		updateTabsetPanel(session, inputId = "pageId", selected = "Graphics")
@@ -507,6 +516,11 @@ server <- function(input, output, session) {
 	# ----- Start of Graphics Page -----
 
 
+
+	observeEvent(input$backButton, {
+	# Switch view to Models tab
+	updateTabsetPanel(session, inputId = "pageId", selected = "Models")
+	})
 
 }
 

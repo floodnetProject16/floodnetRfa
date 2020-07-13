@@ -1,5 +1,5 @@
 #' @export
-.ClickUpdate <- function(input, db){
+.ClickUpdate <- function(input, db, gaugedSites){
 
 	# Extract return periods from string
 	period.str <- as.numeric(unlist(strsplit(input$periodString,',')))
@@ -11,9 +11,9 @@
 	} else if(input$method == "pot"){
 		ans <- .ClickUpdatePot(input$station, period.str, db, input$disthresh)
 	} else if(input$method == "rfaAmax"){
-		ans <- .ClickUpdateRfaAmax(input$station, period.str, input$disthresh, db, input$supReg)
+		ans <- .ClickUpdateRfaAmax(input$station, period.str, input$disthresh, db, gaugedSites, input$supReg)
 	} else if(input$method == "rfaPot"){
-		ans <- .ClickUpdateRfaPot(input$station, period.str, db, input$supReg)
+		ans <- .ClickUpdateRfaPot(input$station, period.str, db, gaugedSites, input$supReg)
 	}
 
 	return(ans)
@@ -51,7 +51,7 @@
 # 	return(out)
 # }
 
-.ClickUpdateRfaAmax <- function(station, period, distr, db, supregSelected)
+.ClickUpdateRfaAmax <- function(station, period, distr, db, gaugedSites, supregSelected)
 {
 
 	if(distr == "Default") {
@@ -59,26 +59,26 @@
 	}
 
 	## Filter nonstationary sites from the super region of the target
-	## If/else (switch case possible?) needed to access different names of GAUGEDSITES -- is it possible to access GAUGEDSITES$"variable" directly?
+	## If/else (switch case possible?) needed to access different names of gaugedSites -- is it possible to access gaugedSites$"variable" directly?
 	if (supregSelected == "supreg_hc6") {
-		target.supreg <- GAUGEDSITES$supreg_hc6[GAUGEDSITES$station == station][1]
-		cond.supreg <- with(GAUGEDSITES, supreg_hc6 == target.supreg)
+		target.supreg <- gaugedSites$supreg_hc6[gaugedSites$station == station][1]
+		cond.supreg <- with(gaugedSites, supreg_hc6 == target.supreg)
 	} else if (supregSelected == "supreg_hc12") {
-		target.supreg <- GAUGEDSITES$supreg_hc12[GAUGEDSITES$station == station][1]
-		cond.supreg <- with(GAUGEDSITES, supreg_hc12 == target.supreg)
+		target.supreg <- gaugedSites$supreg_hc12[gaugedSites$station == station][1]
+		cond.supreg <- with(gaugedSites, supreg_hc12 == target.supreg)
 	} else if (supregSelected == "supreg_km6") {
-		target.supreg <- GAUGEDSITES$supreg_km6[GAUGEDSITES$station == station][1]
-		cond.supreg <- with(GAUGEDSITES, supreg_km6 == target.supreg)
+		target.supreg <- gaugedSites$supreg_km6[gaugedSites$station == station][1]
+		cond.supreg <- with(gaugedSites, supreg_km6 == target.supreg)
 	} else {
-		target.supreg <- GAUGEDSITES$supreg_km12[GAUGEDSITES$station == station][1]
-		cond.supreg <- with(GAUGEDSITES, supreg_km12 == target.supreg)
+		target.supreg <- gaugedSites$supreg_km12[gaugedSites$station == station][1]
+		cond.supreg <- with(gaugedSites, supreg_km12 == target.supreg)
 	}
 
 
-#	pval.mk <- GAUGEDSITES$trend_mk ## Mann-Kendall
-#	pval.pt <- GAUGEDSITES$trend_pt ## Pettitt
+#	pval.mk <- gaugedSites$trend_mk ## Mann-Kendall
+#	pval.pt <- gaugedSites$trend_pt ## Pettitt
 #	cond.trend <- pval.mk >= .05 & pval.pt >= .05
-	mysites <- GAUGEDSITES[cond.supreg, 'station'] #& cond.trend, 'station']
+	mysites <- gaugedSites[cond.supreg, 'station'] #& cond.trend, 'station']
 
 	out <- db %>%
 
@@ -97,13 +97,13 @@
 # 	}
 #
 # 	## Filter nonstationary sites from the super region of the target
-# 	target.supreg <- GAUGEDSITES$supreg_km12[GAUGEDSITES$station == station][1]
-# 	cond.supreg <- with(GAUGEDSITES, supreg_km12 == target.supreg)
+# 	target.supreg <- gaugedSites$supreg_km12[gaugedSites$station == station][1]
+# 	cond.supreg <- with(gaugedSites, supreg_km12 == target.supreg)
 #
-# 	pval.mk <- GAUGEDSITES$trend_mk ## Mann-Kendall
-# 	pval.pt <- GAUGEDSITES$trend_pt ## Pettitt
+# 	pval.mk <- gaugedSites$trend_mk ## Mann-Kendall
+# 	pval.pt <- gaugedSites$trend_pt ## Pettitt
 # 	cond.trend <- pval.mk >= .05 & pval.pt >= .05
-# 	mysites <- GAUGEDSITES[cond.supreg & cond.trend, 'station']
+# 	mysites <- gaugedSites[cond.supreg & cond.trend, 'station']
 #
 # 	xd <- AmaxData(mysites, db, target = station, size = 15)
 #
@@ -132,29 +132,29 @@
 # 	return(out)
 # }
 
-.ClickUpdateRfaPot <- function(station, period, db, supregSelected){
+.ClickUpdateRfaPot <- function(station, period, db, gaugedSites, supregSelected){
 
 	## Filter nonstationary sites from the super region of the target
-	## If/else (switch case possible?) needed to access different names of GAUGEDSITES -- is it possible to access GAUGEDSITES$"variable" directly?
+	## If/else (switch case possible?) needed to access different names of gaugedSites -- is it possible to access gaugedSites$"variable" directly?
 	if (supregSelected == "supreg_hc6") {
-		target.supreg <- GAUGEDSITES$supreg_hc6[GAUGEDSITES$station == station][1]
-		cond.supreg <- with(GAUGEDSITES, supreg_hc6 == target.supreg)
+		target.supreg <- gaugedSites$supreg_hc6[gaugedSites$station == station][1]
+		cond.supreg <- with(gaugedSites, supreg_hc6 == target.supreg)
 	} else if (supregSelected == "supreg_hc12") {
-		target.supreg <- GAUGEDSITES$supreg_hc12[GAUGEDSITES$station == station][1]
-		cond.supreg <- with(GAUGEDSITES, supreg_hc12 == target.supreg)
+		target.supreg <- gaugedSites$supreg_hc12[gaugedSites$station == station][1]
+		cond.supreg <- with(gaugedSites, supreg_hc12 == target.supreg)
 	} else if (supregSelected == "supreg_km6") {
-		target.supreg <- GAUGEDSITES$supreg_km6[GAUGEDSITES$station == station][1]
-		cond.supreg <- with(GAUGEDSITES, supreg_km6 == target.supreg)
+		target.supreg <- gaugedSites$supreg_km6[gaugedSites$station == station][1]
+		cond.supreg <- with(gaugedSites, supreg_km6 == target.supreg)
 	} else {
-		target.supreg <- GAUGEDSITES$supreg_km12[GAUGEDSITES$station == station][1]
-		cond.supreg <- with(GAUGEDSITES, supreg_km12 == target.supreg)
+		target.supreg <- gaugedSites$supreg_km12[gaugedSites$station == station][1]
+		cond.supreg <- with(gaugedSites, supreg_km12 == target.supreg)
 	}
 
-# pval.mx <- GAUGEDSITES$trend_mx ## Mann-Kendall
-# pval.lg <- GAUGEDSITES$trend_lg ## logistic regression
+# pval.mx <- gaugedSites$trend_mx ## Mann-Kendall
+# pval.lg <- gaugedSites$trend_lg ## logistic regression
 #	cond.trend <- pval.lg >= .05 & pval.mx >= .05
 
-	info <- GAUGEDSITES[cond.supreg, c('station','auto','area')]
+	info <- gaugedSites[cond.supreg, c('station','auto','area')]
 
 	out <- db %>%
 
@@ -168,13 +168,13 @@
 # .ClickUpdateRfaPot <- function(station, period, db){
 #
 # 	## Filter nonstationary sites from the super region of the target
-# 	target.supreg <- GAUGEDSITES$supreg_km12[GAUGEDSITES$station == station][1]
-# 	cond.supreg <- with(GAUGEDSITES, supreg_km12 == target.supreg)
-# 	pval.mx <- GAUGEDSITES$trend_mx ## Mann-Kendall
-# 	pval.lg <- GAUGEDSITES$trend_lg ## logistic regression
+# 	target.supreg <- gaugedSites$supreg_km12[gaugedSites$station == station][1]
+# 	cond.supreg <- with(gaugedSites, supreg_km12 == target.supreg)
+# 	pval.mx <- gaugedSites$trend_mx ## Mann-Kendall
+# 	pval.lg <- gaugedSites$trend_lg ## logistic regression
 # 	cond.trend <- pval.lg >= .05 & pval.mx >= .05
 #
-# 	info <- GAUGEDSITES[cond.supreg, c('station','auto','area')]
+# 	info <- gaugedSites[cond.supreg, c('station','auto','area')]
 #
 # 	xd <- DailyPeaksData(info, db, target = station, size = 25)
 #
