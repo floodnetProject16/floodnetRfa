@@ -342,7 +342,7 @@ server <- function(input, output, session) {
 			# Setting secondary Station Data filepath (I believe GAUGEDSITES is the correct name for this one? Or should it be DESCRIPTORS? Or something else entirely?)
 			gaugedSites <- read.csv(as.character(parseFilePaths(volumes,input$stationData)$datapath))
 
-			result <- reactive(floodnetRfa::.ClickUpdate(input, db = db_hydat, gaugedSites))
+			result <- floodnetRfa::.ClickUpdate(input, db = db_hydat, gaugedSites)
 
 			# When a model is fit, a new line is made for the Fitted Models datatable and contains the model info
 			if (input$method == "amax" || input$method == "pot") { #need to create NA for superregion for non-RFA methods
@@ -355,7 +355,7 @@ server <- function(input, output, session) {
 
 
 			# store result in resultList
-			resultList[[input$mID]] <- result()
+			resultList[[input$mID]] <- result
 			#resultList[[input$mID]] <- floodnetRfa::.ClickUpdate(input, db = DB_HYDAT)()
 
 			# Reset text box
@@ -363,13 +363,13 @@ server <- function(input, output, session) {
 
 			# output functions to table/plot
 			output$table <- renderDT(
-				as.data.frame(result()), options = list(
+				as.data.frame(result), options = list(
 					pageLength = 6,
 					scrollX = TRUE
 					#paging = FALSE #FALSE = becomes one long list instead of multiple properly-sized lists
 				)
 			)
-			output$plot <- shiny::renderPlot(plot(result()), height = PLOTHEIGHT ) #327 height leaves 20px bottom margin - same as buttons
+			output$plot <- shiny::renderPlot(plot(result), height = PLOTHEIGHT ) #327 height leaves 20px bottom margin - same as buttons
 
 		} #end of Check that this model ID hasn't already been used
 			else {

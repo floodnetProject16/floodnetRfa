@@ -7,19 +7,21 @@
 
 
 	if(input$method == "amax"){
-		ans <- .ClickUpdateAmax(input$station, period.str, input$disthresh, db)
+		ans <- .ClickUpdateAmax(input$station, period.str, input$disthresh, db, input$confidenceLevel, input$simulations, input$pool)
 	} else if(input$method == "pot"){
-		ans <- .ClickUpdatePot(input$station, period.str, db, input$disthresh)
+		ans <- .ClickUpdatePot(input$station, period.str, db, input$disthresh, input$confidenceLevel, input$simulations, input$pool)
 	} else if(input$method == "rfaAmax"){
-		ans <- .ClickUpdateRfaAmax(input$station, period.str, input$disthresh, db, gaugedSites, input$supReg)
+		ans <- .ClickUpdateRfaAmax(input$station, period.str, input$disthresh, db, gaugedSites, input$supReg, input$confidenceLevel, input$simulations,
+															 input$heterogeneity, input$pool, input$intersite)
 	} else if(input$method == "rfaPot"){
-		ans <- .ClickUpdateRfaPot(input$station, period.str, db, gaugedSites, input$supReg)
+		ans <- .ClickUpdateRfaPot(input$station, period.str, db, gaugedSites, input$supReg, input$confidenceLevel, input$simulations,
+															input$heterogeneity, input$pool, input$intersite)
 	}
 
 	return(ans)
 }
 
-.ClickUpdateAmax <- function(station, period, distr, db)
+.ClickUpdateAmax <- function(station, period, distr, db, level, nsim, size)
 {
 
 	if(distr == "Default") {
@@ -28,9 +30,9 @@
 
 	out <- db %>%
 
-		floodnetRfa::AmaxData(station) %>%
+		floodnetRfa::AmaxData(station, size = size) %>%
 
-		floodnetRfa::FloodnetAmax(period = period, distr = distr, out.model = TRUE)
+		floodnetRfa::FloodnetAmax(period = period, distr = distr, level = level, nsim = nsim, out.model = TRUE)
 
 	return(out)
 }
@@ -51,7 +53,7 @@
 # 	return(out)
 # }
 
-.ClickUpdateRfaAmax <- function(station, period, distr, db, gaugedSites, supregSelected)
+.ClickUpdateRfaAmax <- function(station, period, distr, db, gaugedSites, supregSelected, level, nsim, tol.H, size, corr)
 {
 
 	if(distr == "Default") {
@@ -82,9 +84,9 @@
 
 	out <- db %>%
 
-		floodnetRfa::AmaxData(mysites, target = station, size = 15) %>%
+		floodnetRfa::AmaxData(mysites, target = station, size = size) %>%
 
-		floodnetRfa::FloodnetPool(target = station, period = period, distr = distr, verbose = FALSE)
+		floodnetRfa::FloodnetPool(target = station, period = period, distr = distr, level = level, nsim = nsim, tol.H = tol.H, corr = corr, verbose = FALSE)
 
 	return(out)
 }
@@ -112,13 +114,13 @@
 # 	return(out)
 # }
 
-.ClickUpdatePot <- function(station, period, db, thresh){
+.ClickUpdatePot <- function(station, period, db, thresh, level, nsim, size){
 
 	out <- db %>%
 
-		floodnetRfa::DailyData(station) %>%
+		floodnetRfa::DailyData(station, size = size) %>%
 
-		floodnetRfa::FloodnetPot(area = 184, u = 20, period = period, out.model = TRUE)
+		floodnetRfa::FloodnetPot(area = 184, u = 20, period = period, level = level, nsim = nsim, out.model = TRUE)
 	#it looks like u is no longer used? trying to use custom input other than 20 gives "Error: non-numeric argument to binary operator", with as.numeric(thresh), it has another "expecting TRUE/FALSE"-like error
 
 	return(out)
@@ -132,7 +134,7 @@
 # 	return(out)
 # }
 
-.ClickUpdateRfaPot <- function(station, period, db, gaugedSites, supregSelected){
+.ClickUpdateRfaPot <- function(station, period, db, gaugedSites, supregSelected, level, nsim, tol.H, size, corr){
 
 	## Filter nonstationary sites from the super region of the target
 	## If/else (switch case possible?) needed to access different names of gaugedSites -- is it possible to access gaugedSites$"variable" directly?
@@ -158,9 +160,9 @@
 
 	out <- db %>%
 
-		floodnetRfa::DailyPeaksData(info, target = station, size = 25) %>%
+		floodnetRfa::DailyPeaksData(info, target = station, size = size) %>%
 
-		floodnetRfa::FloodnetPool(target = station, period = period, verbose = TRUE, out.model = TRUE)
+		floodnetRfa::FloodnetPool(target = station, period = period, level = level, nsim = nsim, tol.H = tol.H, corr = corr, verbose = TRUE, out.model = TRUE)
 
 	return(out)
 }
