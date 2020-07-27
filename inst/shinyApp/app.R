@@ -13,6 +13,7 @@ library(shinydashboard)
 library(shinyjs)
 library(shinyFiles)
 library(DT)
+library(floodnetRfa) #needed for supporting functions... I think the problem was ggplots wasn't loading but is loaded through floodnetRfa?
 
 
 
@@ -28,8 +29,8 @@ sidebar <- dashboardSidebar(
 	fluidRow(
 		tags$div(class = "sidebar-box button-box",
 			# Red buttons - open and save
-			actionButton("openButton", class = " sidebar-button red-button left-sidebar-button top-sidebar-button", label = "Open"),
-			actionButton("saveButton", class = "sidebar-button red-button right-sidebar-button top-sidebar-button", label = "Save"),
+			shinyFilesButton(id = "openButton", label = "Open" , title = "Fit Models Data", class = "sidebar-button red-button left-sidebar-button top-sidebar-button", multiple = FALSE, buttonType = "data"),
+			shinySaveButton("saveButton", label = "Save", title = "Save Models", class = "sidebar-button red-button right-sidebar-button top-sidebar-button", filetype =  ".Rdata"),
 
 			# Blue buttons - Reset and Quit
 			actionButton("resetButton", class = "sidebar-button blue-button left-sidebar-button bottom-sidebar-button", label = "Reset"),
@@ -309,15 +310,78 @@ server <- function(input, output, session) {
 	values <- reactiveValues() # Found a similar solution on stackoverflow (23236944), but do we need all of values just for df?
 	#values$df <- data.frame(Column1 = NA, Column2 = NA, Column3 = NA) # Column names need to be the same else match.names error .. only needed to initialize table
 	resultList <- reactiveValues() # Store each result here with the "key" being the unique identifier mID
+#	resultListKeys <- reactive
 	PLOTHEIGHT <- 327 #Constant value - Height for plots
 	db_hydat <- "" #Initialize DB and GUAGED as empty strings, so they can be checked before fitting model
 	gaugedSites <- ""
 	spacePlots <- reactiveValues()
+	savePath <- "NA"
 
 	# --- ShinyFiles File Selection ---
 	volumes <- getVolumes()
 	shinyFileChoose(input,'hydroData', roots=volumes, filetypes = c('csv', 'sqlite3'))
 	shinyFileChoose(input,'stationData', roots=volumes, filetypes = c('csv'))
+#	shinyFileSave(input, "saveButton", roots=volumes, session = session)
+	shinyFileChoose(input, "openButton", roots=volumes, filetypes = c('Rdata'))
+
+	# --- Save Button Functions ---
+	observe({
+		shinyFileSave(input, "saveButton", roots=volumes, session=session)
+		savePath <- parseSavePath(volumes, input$saveButton) #get path for file
+		#if (length(resultList) == 0) { -- I cannot find a way to get this to work.. resultList doesn't seem to actually delete entries when set to null
+	#		showNotification("No fitted models to save. Please Fit a model before saving.", type = "warning")
+	#	} else {
+		if (nrow(savePath) > 0) {
+			savedValues <- values
+			savedResultList <- resultList
+			save(savedValues, savedResultList, file = savePath$datapath)
+		}
+#		}
+	})
+
+	# --- Load Rdata File ---
+	observeEvent(input$openButton,{ # observeEvent needed over observe so that values/resultList can be updated
+		print(resultList)
+		for (each in reactiveValuesToList( resultList)) {
+			print(each)
+		}
+		loadPath <- parseFilePaths(volumes, input$openButton) #get path for file
+		if (nrow(loadPath) > 0) {
+			load(loadPath$datapath)
+			# Remove values in resultList first, since we can't just set resultList <- NULL
+			for (eachResult in (values$df[1])){ #gives "list"(integer..) of model IDs
+				for (eachName in as.character(eachResult)){
+					resultList[[eachName]] <- NULL
+				}
+			}
+
+			# Now that resultList is cleaned up, we can repopulate it from the saved list
+			for (eachResult in (savedValues$df[1])){ #gives "list"(integer..) of model IDs
+				for (eachName in as.character(eachResult)){
+					resultList[[eachName]] <- savedResultList[[eachName]]
+				}
+			}
+
+			values$df <- savedValues$df # Finally, overwrite values with the new savedValues
+		}
+	})
+
+# 	observeEvent(input$saveButton, {
+# 		savePath <- as.character(parseSavePath(volumes, input$saveButton)) #get path for file
+# 	})
+#
+# 	# -- Saving Data to File --
+#   observeEvent(savePath, {
+#   	print(savePath)
+#   	# if (length(resultList) == 0) {
+#   	# 	showNotification("No fitted models to save. Please Fit a model before saving.", type = "warning")
+#   	# } else {
+#   	# 	if (nrow(savePath) > 0) {
+#   	# 		save(values, resultList, file = savePath$datapath)
+#   	# 	}
+#   	# }
+#   }
+#   )
 
 
 
@@ -327,7 +391,7 @@ server <- function(input, output, session) {
 	# 															 if ( is.null(resultList[[input$mID]]) & (input$mID != "")) {floodnetRfa::.ClickUpdate(input, db = DB_HYDAT)}
 	# 															 else {reactiveValuesToList(resultList)[[input$mID]]})
 
-	newModel <- observeEvent(input$fitModel, {
+	observeEvent(input$fitModel, {
 		# Check that fields are filled in
 		if ((input$mID != "") & (input$station != "") & (input$periodString != "")) {
 
@@ -356,6 +420,7 @@ server <- function(input, output, session) {
 
 			# store result in resultList
 			resultList[[input$mID]] <- result
+#			resultListKeys <- c(resultListKeys, input$mID) #add unique ID to list of keys... right now used to check if there are any
 			#resultList[[input$mID]] <- floodnetRfa::.ClickUpdate(input, db = DB_HYDAT)()
 
 			# Reset text box
@@ -380,12 +445,13 @@ server <- function(input, output, session) {
 		}} #end of  Check that fields are filled in
 			else {
 				showNotification("One or more fields are blank. Please ensure Model ID, Target Site, and Return Period are filled in.", type = "warning")
-		}})
+	}})
 
 
 
 
 	# List of Fitted Models
+	# observe(
 	output$modelsTable <- renderDT(
 		values$df,
 		colnames = c("Model ID", "Site", "Period", "Method", "Distribution/Threshold", "Super Region"),
@@ -394,6 +460,7 @@ server <- function(input, output, session) {
 			scrollX = TRUE
 		)
 	)
+	# )
 
 	# # Table button functions  ## Most likely not going to use these - showing an error message instead
 	# shiny::observe(
@@ -425,7 +492,9 @@ server <- function(input, output, session) {
 			# Remove models from resultList
 			for (i in selectedRows) {
 				modelName <- as.character(values$df[i,"input$mID"])  #read values list #as.character() was needed!!!
+				print(resultList[[modelName]])
 				resultList[[modelName]] <- NULL
+			#	resultListKeys[[modelName]] <- NULL
 			}
 
 			values$df <- values$df[-as.numeric(selectedRows),]

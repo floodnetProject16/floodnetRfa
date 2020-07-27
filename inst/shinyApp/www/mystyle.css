@@ -186,7 +186,7 @@ h2{		/* specifically not .h2  -- modifying so Box Titles have no spacing above *
 
 .sidebar-button{
 	position: absolute;
-	width: 78px;
+	width: 78px !important;
 	height: 30px;
 	border-radius: 5px;
 
