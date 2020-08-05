@@ -183,7 +183,12 @@ body <- dashboardBody(
 
 graphicsSidebar <- dashboardSidebar(
 	## --- Back Button ---
-	actionButton("backButton", class = "back-button blue-button", label = "← Back")
+	actionButton("backButton", class = "back-button blue-button", label = "← Back"),
+
+	## --- Model Selector ---
+	tags$div(class = "sidebar-box model-box",
+					 selectInput("modelSelect", label = "Display Model", choices = NULL, selected = NULL)
+	)
 )
 
 graphicsBody <- dashboardBody(
@@ -316,6 +321,8 @@ server <- function(input, output, session) {
 	gaugedSites <- ""
 	spacePlots <- reactiveValues()
 	savePath <- "NA"
+	mListMIDs <- reactiveVal()
+	mListMIDsCopy <- reactiveVal()
 
 	# --- ShinyFiles File Selection ---
 	volumes <- getVolumes()
@@ -526,20 +533,24 @@ server <- function(input, output, session) {
 			modelName <- as.character(values$df[i,"input$mID"])  #read values list #as.character() was needed!!!
 
 			mList[[modelName]] <- resultList[[modelName]]
+			mListMIDs <- c(mListMIDs, modelName) #add modelName to list - for model selection list
 		}
 
+		# --- Generate selectInput for list of models, select 1st from list to display by default
 
+		mListMIDs <- mListMIDs[-1]
+		modelName <- as.character(mListMIDs[1])
+
+		mListMIDsCopy <<- mListMIDs #I have no idea why mListMIDs is innacessible outside of this observeEvent, but this lets us see it elsewhere..
+
+		updateSelectInput(session = session, inputId = "modelSelect", label = "Display Model", choices = mListMIDs,
+											selected = modelName)
 
 		# --- generate plots for first model in list ---
-		# Need modelName of 1st to display (for some reason $mID is part of copied result list)
-		modelName <- as.character(values$df[selectedRows[1],"input$mID"])
-		resultGraphics <- reactiveValuesToList(mList)[[modelName]] # grab the 1st model in list ... still a temporary method for graphics page # need to convert to list to get [1]
+		resultGraphics <- reactiveValuesToList(mList)[[modelName]] # grab the 1st model in list ... for some reason input$modelSelect does not update in time
 
 		# Create a compareModels list with each selected model from the table (for comparative plots)
 		lst.fit <- do.call(floodnetRfa::CompareModels, reactiveValuesToList(mList)) # compare all models in mList
-
-		# # calculate result
-		# resultGraphics <- shiny::reactive(floodnetRfa::.ClickUpdate(graphicsModel, db = DB_HYDAT))
 
 		# --- Plot result ---
 		# Flood quantiles
@@ -561,12 +572,13 @@ server <- function(input, output, session) {
 		# Histogram
 		output$histogram <- shiny::renderPlot(hist(resultGraphics, histogram.args = list( bins = 15)), height = PLOTHEIGHT)
 		# L-Moment Ratio Diagram --- only display when model is RFA AMAX
-		if (as.character(values$df[selectedRows[1],"input$method"]) == "rfaAmax") {
-			show("lMomentBox")
-			output$lMomentPlot <- shiny::renderPlot(plot(resultGraphics, 'l'), height = PLOTHEIGHT)
-		} else {
-			hide("lMomentBox")
-		}
+		# if (as.character(values$df[selectedRows[1],"input$method"]) == "rfaAmax") {
+		# 	show("lMomentBox")
+		# 	output$lMomentPlot <- shiny::renderPlot(plot(resultGraphics, 'l'), height = PLOTHEIGHT)
+		# } else {
+		# 	hide("lMomentBox")
+		# }
+
 
 		# Space diagrams --- may be best to make another helper function like ClickUpdate to make these - check vignette pdf for help
 		spacePlots <- floodnetRfa::.spacePlots(gaugedSites)
@@ -577,6 +589,9 @@ server <- function(input, output, session) {
 		## Descriptor space
 		output$seasonalPlot <-shiny::renderPlot(spacePlots$seasonal, height = PLOTHEIGHT)
 
+
+		# TODO -- unhide model selection box in sidebar
+
 		# Switch view to Graphics tab
 		updateTabsetPanel(session, inputId = "pageId", selected = "Graphics")
 	}) ## End of Show Button
@@ -584,13 +599,58 @@ server <- function(input, output, session) {
 	# ----- End of Models Page -----
 	# ----- Start of Graphics Page -----
 
-
-
 	observeEvent(input$backButton, {
 	# Switch view to Models tab
 	updateTabsetPanel(session, inputId = "pageId", selected = "Models")
 	})
 
+ # Update plots when model is selected
+	observeEvent(input$modelSelect, {
+		if(input$modelSelect != "") {
+			mList <- reactiveValues()  # Needs to be re-initialized here
+			 for (eachModel in mListMIDsCopy) {
+				 	mList[[eachModel]] <- resultList[[eachModel]]
+				 	#print(mList[[eachModel]][2]$method)
+			 }
+
+	# --- generate plots for first model in list ---
+	# Need modelName of 1st to display (for some reason $mID is part of copied result list)
+	resultGraphics <- reactiveValuesToList(resultList)[[input$modelSelect]] # grab the 1st model in list ... still a temporary method for graphics page # need to convert to list to get [1]
+
+	# Create a compareModels list with each selected model from the table (for comparative plots)
+	lst.fit <- do.call(floodnetRfa::CompareModels, reactiveValuesToList(mList)) # compare all models in mList
+
+	# --- Plot result ---
+	# Flood quantiles
+	output$graphicsQuantiles <- renderDT(
+		as.data.frame(resultGraphics), options = list(
+			pageLength = 6,
+			# autoWidth = TRUE,
+			# columnDefs = list(list(width = '10', visible = TRUE, targets = "_all")),
+			scrollX = TRUE
+			#paging = FALSE #FALSE -= becomes one long list instead of multiple properly-sized lists
+		)
+	)
+	# Return level plot
+	output$graphicsReturnPlot <- shiny::renderPlot(plot(resultGraphics), height = PLOTHEIGHT)
+	# Confidence intervals plot
+	output$confIntervals <- shiny::renderPlot(plot(lst.fit), height = PLOTHEIGHT)
+	# Coefficient of variation plot
+	output$ceoffVariation <- shiny::renderPlot(plot(lst.fit, 'cv'), height = PLOTHEIGHT)
+	# Histogram
+	output$histogram <- shiny::renderPlot(hist(resultGraphics, histogram.args = list( bins = 15)), height = PLOTHEIGHT)
+
+	print(mList[[input$modelSelect]][2]$method)
+
+	# L-Moment Ratio Diagram --- only display when model is RFA AMAX
+	if (mList[[input$modelSelect]][2]$method == "pool_amax") {
+		show("lMomentBox")
+		output$lMomentPlot <- shiny::renderPlot(plot(resultGraphics, 'l'), height = PLOTHEIGHT)
+	} else {
+		# hide("lMomentBox")
+	}
+		}
+	})
 }
 
 # Run the application
