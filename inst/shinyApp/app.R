@@ -44,9 +44,9 @@ sidebar <- dashboardSidebar(
 			 ## Headline
 			 tags$h2("Data"),
 			 shinyFilesButton(id = "hydroData", label = "Hydrometric Data" , title = "Hydrometric Data:", multiple = FALSE, buttonType = "data", class = NULL),
-			 shinyFilesButton(id = "stationData", label = "Station Data" , title = "Station Data:", multiple = FALSE, buttonType = "data", class = NULL)
-			 #fileInput(inputId = 'hydroData', label = "Hydrometric Data", multiple = FALSE, accept = NULL, width = NULL),
-			 #fileInput(inputId = 'stationData', label = "Station Data", multiple = FALSE, accept = NULL, width = NULL)
+			 textOutput("hydroFile"),
+			 shinyFilesButton(id = "stationData", label = "Station Data" , title = "Station Data:", multiple = FALSE, buttonType = "data", class = NULL),
+			 textOutput("stationFile")
 		)
 	),
 
@@ -124,12 +124,12 @@ body <- dashboardBody(
 					 				 				 conditionalPanel(condition = "input.method == 'amax' || input.method == 'rfaAmax'",
 					 				 				 								 # disthresh used instead of seperate distr and thresh ... otherwise cannot merge in table
 					 				 				 								 selectInput("disthresh", label = h3("Distribution"),
-					 				 				 								 						choices = list("Default" =  "Default",
+					 				 				 								 						choices = list("Auto" =  "Default",
 					 				 				 								 													 "gev" = "gev",
 					 				 				 								 													 "glo" = "glo",
 					 				 				 								 													 "gno" = "gno",
 					 				 				 								 													 "pe3" = "pe3"
-					 				 				 								 						), selected = "Default")
+					 				 				 								 						), selected = "Auto")
 					 				 				 ),
 
 					 				 				 ## The option to select the threshold is only available for AMAX
@@ -188,7 +188,25 @@ graphicsSidebar <- dashboardSidebar(
 	## --- Model Selector ---
 	tags$div(class = "sidebar-box model-box",
 					 selectInput("modelSelect", label = "Display Model", choices = NULL, selected = NULL)
-	)
+	),
+
+	## --- Export Settings ---
+	tags$div(class = "sidebar-box export-box",
+					 # Options to export
+					 checkboxGroupInput("exportPlots", label = h2("Export Settings"),
+					 									 choices = list("Flood Quantiles (PDF)" = "quantilesPdf",
+					 									 							 "Flood Quantiles (CSV)" = "quantilesCsv",
+					 									 							 "Return Level Plot" = "returnPlot",
+					 									 							 "Condifence Intervals" = "intervalsPlot",
+					 									 							 "Coefficient of Variations" = "variationsPlot",
+					 									 							 "Histogram" = "histogramPlot",
+					 									 							 "L-Moment Ratio Diagram" = 'lMomentPlot',
+					 									 							 #"Coordinates" = "coordinates",
+					 									 							 "Seasonal Space" = "seasonalPlot",
+					 									 							 "Descriptor Space" = "descriptorPlot")
+					 									 ),
+					 shinySaveButton("exportButton", label = "Export", title = "Export Plots", class = "sidebar-button red-button bottom-sidebar-button", filetype = ".pdf")
+					 )
 )
 
 graphicsBody <- dashboardBody(
@@ -252,13 +270,22 @@ graphicsBody <- dashboardBody(
 	),
 
 	fluidRow( ## 4th row graphics
-		## -- Coordinates box --
+		# ## -- Coordinates box --
+		# column(5,
+		# 			 tags$div(class = "background-box fixed-height",
+		# 			 				 h2("Coordinates"),
+		# 			 				 # imageOutput("loading"),
+		# 			 				 plotOutput("coordinatesPlot")
+		# 			 )),
+
+		## -- Seasonal Space box --
 		column(5,
 					 tags$div(class = "background-box fixed-height",
-					 				 h2("Coordinates"),
+					 				 h2("Seasonal Space"),
 					 				 # imageOutput("loading"),
-					 				 plotOutput("coordinatesPlot")
-					 )),
+					 				 plotOutput("seasonalPlot")
+					 )
+		),
 		## -- Descriptor Space box --
 		column(5, offset = 1,
 					 tags$div(class = "background-box fixed-height",
@@ -267,17 +294,6 @@ graphicsBody <- dashboardBody(
 					 				 plotOutput("descriptorPlot")
 					 ))
 	),
-
-	fluidRow( ## 5th row graphics
-		## -- Seasonal Space box --
-		column(5,
-					 tags$div(class = "background-box fixed-height",
-					 				 h2("Seasonal Space"),
-					 				 # imageOutput("loading"),
-					 				 plotOutput("seasonalPlot")
-					 )
-		)
-	)
 )
 
 ui <- navbarPage("FloodNet RFA", id="pageId",
@@ -327,7 +343,13 @@ server <- function(input, output, session) {
 	# --- ShinyFiles File Selection ---
 	volumes <- getVolumes()
 	shinyFileChoose(input,'hydroData', roots=volumes, filetypes = c('csv', 'sqlite3'))
+	observeEvent(input$hydroData, {
+		output$hydroFile <- renderText(as.character(parseFilePaths(volumes,input$hydroData)$datapath)) # Display the hydro data file loaded
+	})
 	shinyFileChoose(input,'stationData', roots=volumes, filetypes = c('csv'))
+	observeEvent(input$stationData, {
+		output$stationFile <- renderText(as.character(parseFilePaths(volumes,input$stationData)$datapath)) # Display the station data file loaded
+	})
 #	shinyFileSave(input, "saveButton", roots=volumes, session = session)
 	shinyFileChoose(input, "openButton", roots=volumes, filetypes = c('Rdata'))
 
@@ -348,10 +370,6 @@ server <- function(input, output, session) {
 
 	# --- Load Rdata File ---
 	observeEvent(input$openButton,{ # observeEvent needed over observe so that values/resultList can be updated
-		print(resultList)
-		for (each in reactiveValuesToList( resultList)) {
-			print(each)
-		}
 		loadPath <- parseFilePaths(volumes, input$openButton) #get path for file
 		if (nrow(loadPath) > 0) {
 			load(loadPath$datapath)
@@ -499,7 +517,6 @@ server <- function(input, output, session) {
 			# Remove models from resultList
 			for (i in selectedRows) {
 				modelName <- as.character(values$df[i,"input$mID"])  #read values list #as.character() was needed!!!
-				print(resultList[[modelName]])
 				resultList[[modelName]] <- NULL
 			#	resultListKeys[[modelName]] <- NULL
 			}
@@ -546,52 +563,6 @@ server <- function(input, output, session) {
 		updateSelectInput(session = session, inputId = "modelSelect", label = "Display Model", choices = mListMIDs,
 											selected = modelName)
 
-		# --- generate plots for first model in list ---
-		resultGraphics <- reactiveValuesToList(mList)[[modelName]] # grab the 1st model in list ... for some reason input$modelSelect does not update in time
-
-		# Create a compareModels list with each selected model from the table (for comparative plots)
-		lst.fit <- do.call(floodnetRfa::CompareModels, reactiveValuesToList(mList)) # compare all models in mList
-
-		# --- Plot result ---
-		# Flood quantiles
-		output$graphicsQuantiles <- renderDT(
-			as.data.frame(resultGraphics), options = list(
-				pageLength = 6,
-				# autoWidth = TRUE,
-				# columnDefs = list(list(width = '10', visible = TRUE, targets = "_all")),
-				scrollX = TRUE
-				#paging = FALSE #FALSE -= becomes one long list instead of multiple properly-sized lists
-			)
-		)
-		# Return level plot
-		output$graphicsReturnPlot <- shiny::renderPlot(plot(resultGraphics), height = PLOTHEIGHT)
-		# Confidence intervals plot
-		output$confIntervals <- shiny::renderPlot(plot(lst.fit), height = PLOTHEIGHT)
-		# Coefficient of variation plot
-		output$ceoffVariation <- shiny::renderPlot(plot(lst.fit, 'cv'), height = PLOTHEIGHT)
-		# Histogram
-		output$histogram <- shiny::renderPlot(hist(resultGraphics, histogram.args = list( bins = 15)), height = PLOTHEIGHT)
-		# L-Moment Ratio Diagram --- only display when model is RFA AMAX
-		# if (as.character(values$df[selectedRows[1],"input$method"]) == "rfaAmax") {
-		# 	show("lMomentBox")
-		# 	output$lMomentPlot <- shiny::renderPlot(plot(resultGraphics, 'l'), height = PLOTHEIGHT)
-		# } else {
-		# 	hide("lMomentBox")
-		# }
-
-
-		# Space diagrams --- may be best to make another helper function like ClickUpdate to make these - check vignette pdf for help
-		spacePlots <- floodnetRfa::.spacePlots(gaugedSites)
-		## Geographical Space
-		output$coordinatesPlot <-shiny::renderPlot(spacePlots$coordinates, height = PLOTHEIGHT)
-		## Seasonal space
-		output$descriptorPlot <-shiny::renderPlot(spacePlots$descriptor, height = PLOTHEIGHT)
-		## Descriptor space
-		output$seasonalPlot <-shiny::renderPlot(spacePlots$seasonal, height = PLOTHEIGHT)
-
-
-		# TODO -- unhide model selection box in sidebar
-
 		# Switch view to Graphics tab
 		updateTabsetPanel(session, inputId = "pageId", selected = "Graphics")
 	}) ## End of Show Button
@@ -606,11 +577,14 @@ server <- function(input, output, session) {
 
  # Update plots when model is selected
 	observeEvent(input$modelSelect, {
+		siteList <- c()
 		if(input$modelSelect != "") {
+			gaugedSites <- read.csv(as.character(parseFilePaths(volumes,input$stationData)$datapath))  # Needs to be re-initialized here
 			mList <- reactiveValues()  # Needs to be re-initialized here
 			 for (eachModel in mListMIDsCopy) {
 				 	mList[[eachModel]] <- resultList[[eachModel]]
-				 	#print(mList[[eachModel]][2]$method)
+				 	if ((mList[[eachModel]][1]$site %in% siteList) == FALSE) {siteList <- c(siteList, mList[[eachModel]][1]$site)} # Making list of each station in comparison
+				 #	print(mList[[eachModel]][1]$site)
 			 }
 
 	# --- generate plots for first model in list ---
@@ -640,16 +614,30 @@ server <- function(input, output, session) {
 	# Histogram
 	output$histogram <- shiny::renderPlot(hist(resultGraphics, histogram.args = list( bins = 15)), height = PLOTHEIGHT)
 
-	print(mList[[input$modelSelect]][2]$method)
+	#print(mList[[input$modelSelect]][1])
 
 	# L-Moment Ratio Diagram --- only display when model is RFA AMAX
 	if (mList[[input$modelSelect]][2]$method == "pool_amax") {
-		show("lMomentBox")
+		shinyjs::show("lMomentBox")
 		output$lMomentPlot <- shiny::renderPlot(plot(resultGraphics, 'l'), height = PLOTHEIGHT)
 	} else {
-		# hide("lMomentBox")
+		shinyjs::hide("lMomentBox")
 	}
-		}
+
+	print(siteList)
+	print(gaugedSites)
+
+	# Space diagrams --- may be best to make another helper function like ClickUpdate to make these - check vignette pdf for help
+	spacePlots <- floodnetRfa::.spacePlots(gaugedSites, siteList)
+	# ## Geographical Space
+	# output$coordinatesPlot <-shiny::renderPlot(spacePlots$coordinates, height = PLOTHEIGHT)
+	## Seasonal space
+	output$descriptorPlot <-shiny::renderPlot(spacePlots$descriptor, height = PLOTHEIGHT)
+	## Descriptor space
+	output$seasonalPlot <-shiny::renderPlot(spacePlots$seasonal, height = PLOTHEIGHT)
+
+
+		} # END of Display Model select-actions
 	})
 }
 

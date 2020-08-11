@@ -1,15 +1,43 @@
 #' @export
-.spacePlots <- function(gaugedSites){ #, supReg){
+.spacePlots <- function(gaugedSites, siteList){ #, supReg){
 
-	## Extract data
-	xd <- gaugedSites[, c('station', 'lon', 'lat')]
-										#c("station","description","prov","lon","lat","area","map","trend_mk","trend_pt","trend_lg","trend_mx","supreg_hc6","supreg_hc12","supreg_km6","supreg_km12","season_x","season_y","season_angle","season_radius","auto","ppy250","ppy225","ppy200","ppy175","ppy150","ppy125","ppy100")]
-									#old c('station', 'lon', 'lat')]
-	xd$area <- log(gaugedSites$area)
-	xd$map <- log(gaugedSites$map)
-	xd$region <- as.factor(gaugedSites$supreg_km12)
-	xd$theta <- gaugedSites$season_angle
-	xd$r <- gaugedSites$season_radius
+	## Extract data ONLY for the selected sites
+	matchList <- c()
+	stationNames <- c()
+	xd <- data.frame()
+	count = 1
+	for (eachRow in gaugedSites[[1]]){
+		if (eachRow %in% siteList){
+			matchList <- c(matchList, count)#eachcol[[count]])
+			stationNames[[count]] <- eachRow
+		}
+		count <- count+1
+	}
+
+	for (eachMatch in matchList) {
+		## Extract data
+		station <- stationNames[[eachMatch]] #gaugedSites[eachMatch, 'station']) I'm not sure why, but this was not working..
+		lon <- gaugedSites[eachMatch, 'lon']
+		lat <- gaugedSites[eachMatch, 'lat']
+		area <- log(gaugedSites[eachMatch,'area'])
+		map <- log(gaugedSites[eachMatch,'map'])
+		region <- as.factor(gaugedSites[eachMatch,'supreg_km12'])
+		theta <- gaugedSites[eachMatch,'season_angle']
+		r <- gaugedSites[eachMatch,'season_radius']
+
+		row <- cbind.data.frame(station, lon, lat, area, map, region, theta, r)
+		xd <- rbind.data.frame(xd, row)
+	}
+
+	# ## Extract data
+	# xd <- gaugedSites[, c('station', 'lon', 'lat')]
+	# 									#c("station","description","prov","lon","lat","area","map","trend_mk","trend_pt","trend_lg","trend_mx","supreg_hc6","supreg_hc12","supreg_km6","supreg_km12","season_x","season_y","season_angle","season_radius","auto","ppy250","ppy225","ppy200","ppy175","ppy150","ppy125","ppy100")]
+	# 								#old c('station', 'lon', 'lat')]
+	# xd$area <- log(gaugedSites$area)
+	# xd$map <- log(gaugedSites$map)
+	# xd$region <- as.factor(gaugedSites$supreg_km12)
+	# xd$theta <- gaugedSites$season_angle
+	# xd$r <- gaugedSites$season_radius
 
 	# Choose superregion (supReg) based on type from fitted model... unsure how to specify if multiple RFAs in list or no RFA in list
 
