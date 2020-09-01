@@ -14,6 +14,7 @@ library(shinyjs)
 library(shinyFiles)
 library(DT)
 library(floodnetRfa) #needed for supporting functions... I think the problem was ggplots wasn't loading but is loaded through floodnetRfa?
+library(gridExtra) #needed for outputting dataframes to pdf
 
 
 
@@ -337,6 +338,7 @@ server <- function(input, output, session) {
 	gaugedSites <- ""
 	spacePlots <- reactiveValues()
 	savePath <- "NA"
+	exportPath <- "NA"
 	mListMIDs <- reactiveVal()
 	mListMIDsCopy <- reactiveVal()
 
@@ -459,7 +461,7 @@ server <- function(input, output, session) {
 					#paging = FALSE #FALSE = becomes one long list instead of multiple properly-sized lists
 				)
 			)
-			output$plot <- shiny::renderPlot(plot(result), height = PLOTHEIGHT ) #327 height leaves 20px bottom margin - same as buttons
+			output$plot <- shiny::renderPlot(plot(result) + ggplot2::ggtitle(isolate(input$station)), height = PLOTHEIGHT ) #327 height leaves 20px bottom margin - same as buttons
 
 		} #end of Check that this model ID hasn't already been used
 			else {
@@ -587,58 +589,149 @@ server <- function(input, output, session) {
 				 #	print(mList[[eachModel]][1]$site)
 			 }
 
-	# --- generate plots for first model in list ---
-	# Need modelName of 1st to display (for some reason $mID is part of copied result list)
-	resultGraphics <- reactiveValuesToList(resultList)[[input$modelSelect]] # grab the 1st model in list ... still a temporary method for graphics page # need to convert to list to get [1]
+			# --- generate plots for first model in list ---
+			# Need modelName of 1st to display (for some reason $mID is part of copied result list)
+			resultGraphics <- reactiveValuesToList(resultList)[[input$modelSelect]] # grab the model selected by modelSelect
 
-	# Create a compareModels list with each selected model from the table (for comparative plots)
-	lst.fit <- do.call(floodnetRfa::CompareModels, reactiveValuesToList(mList)) # compare all models in mList
+			# Create a compareModels list with each selected model from the table (for comparative plots)
+			lst.fit <- do.call(floodnetRfa::CompareModels, reactiveValuesToList(mList)) # compare all models in mList
 
-	# --- Plot result ---
-	# Flood quantiles
-	output$graphicsQuantiles <- renderDT(
-		as.data.frame(resultGraphics), options = list(
-			pageLength = 6,
-			# autoWidth = TRUE,
-			# columnDefs = list(list(width = '10', visible = TRUE, targets = "_all")),
-			scrollX = TRUE
-			#paging = FALSE #FALSE -= becomes one long list instead of multiple properly-sized lists
-		)
-	)
-	# Return level plot
-	output$graphicsReturnPlot <- shiny::renderPlot(plot(resultGraphics), height = PLOTHEIGHT)
-	# Confidence intervals plot
-	output$confIntervals <- shiny::renderPlot(plot(lst.fit), height = PLOTHEIGHT)
-	# Coefficient of variation plot
-	output$ceoffVariation <- shiny::renderPlot(plot(lst.fit, 'cv'), height = PLOTHEIGHT)
-	# Histogram
-	output$histogram <- shiny::renderPlot(hist(resultGraphics, histogram.args = list( bins = 15)), height = PLOTHEIGHT)
+			# --- Plot result ---
+			# Flood quantiles
+			output$graphicsQuantiles <- renderDT(
+				as.data.frame(resultGraphics), options = list(
+					pageLength = 6,
+					# autoWidth = TRUE,
+					# columnDefs = list(list(width = '10', visible = TRUE, targets = "_all")),
+					scrollX = TRUE
+					#paging = FALSE #FALSE -= becomes one long list instead of multiple properly-sized lists
+				)
+			)
+			# Return level plot
+			output$graphicsReturnPlot <- shiny::renderPlot(plot(resultGraphics), height = PLOTHEIGHT)
+			# Confidence intervals plot
+			output$confIntervals <- shiny::renderPlot(plot(lst.fit), height = PLOTHEIGHT)
+			# Coefficient of variation plot
+			output$ceoffVariation <- shiny::renderPlot(plot(lst.fit, 'cv'), height = PLOTHEIGHT)
+			# Histogram
+			output$histogram <- shiny::renderPlot(hist(resultGraphics, histogram.args = list( bins = 15)), height = PLOTHEIGHT)
 
-	#print(mList[[input$modelSelect]][1])
+			#print(mList[[input$modelSelect]][1])
 
-	# L-Moment Ratio Diagram --- only display when model is RFA AMAX
-	if (mList[[input$modelSelect]][2]$method == "pool_amax") {
-		shinyjs::show("lMomentBox")
-		output$lMomentPlot <- shiny::renderPlot(plot(resultGraphics, 'l'), height = PLOTHEIGHT)
-	} else {
-		shinyjs::hide("lMomentBox")
-	}
+			# L-Moment Ratio Diagram --- only display when model is RFA AMAX
+			if (mList[[input$modelSelect]][2]$method == "pool_amax") {
+				shinyjs::show("lMomentBox")
+				output$lMomentPlot <- shiny::renderPlot(plot(resultGraphics, 'l'), height = PLOTHEIGHT)
+			} else {
+				shinyjs::hide("lMomentBox")
+			}
 
-	print(siteList)
-	print(gaugedSites)
-
-	# Space diagrams --- may be best to make another helper function like ClickUpdate to make these - check vignette pdf for help
-	spacePlots <- floodnetRfa::.spacePlots(gaugedSites, siteList)
-	# ## Geographical Space
-	# output$coordinatesPlot <-shiny::renderPlot(spacePlots$coordinates, height = PLOTHEIGHT)
-	## Seasonal space
-	output$descriptorPlot <-shiny::renderPlot(spacePlots$descriptor, height = PLOTHEIGHT)
-	## Descriptor space
-	output$seasonalPlot <-shiny::renderPlot(spacePlots$seasonal, height = PLOTHEIGHT)
+			# Space diagrams --- may be best to make another helper function like ClickUpdate to make these - check vignette pdf for help
+			spacePlots <- floodnetRfa::.spacePlots(gaugedSites, siteList)
+			# ## Geographical Space
+			# output$coordinatesPlot <-shiny::renderPlot(spacePlots$coordinates, height = PLOTHEIGHT)
+			## Seasonal space
+			output$descriptorPlot <-shiny::renderPlot(spacePlots$descriptor, height = PLOTHEIGHT)
+			## Descriptor space
+			output$seasonalPlot <-shiny::renderPlot(spacePlots$seasonal, height = PLOTHEIGHT)
 
 
 		} # END of Display Model select-actions
 	})
+
+	# --- Export Button Functions ---
+	observe({
+		shinyFileSave(input, "exportButton", roots=volumes, session=session)
+		exportPath <- parseSavePath(volumes, input$exportButton) #get path for file
+		isolate( #isolating everything so updating tick-box after selecting save path doesn't end up rewriting pdf
+			if (nrow(exportPath) > 0) {
+
+						siteList <- c()
+						gaugedSites <- read.csv(as.character(parseFilePaths(volumes,isolate(input$stationData))$datapath))  # Needs to be re-initialized here
+						mList <- reactiveValues()  # Needs to be re-initialized here
+						for (eachModel in mListMIDsCopy) { #get list of models into local memory
+							mList[[eachModel]] <- resultList[[eachModel]]
+							if ((mList[[eachModel]][1]$site %in% siteList) == FALSE) {siteList <- c(siteList, mList[[eachModel]][1]$site)} # Making list of each station in comparison
+						}
+
+						pdf(file = exportPath$datapath) #open pdf
+
+						# --- Plots for individual models ---
+						for (eachModel in mListMIDsCopy) { #get list of models into local memory
+							resultGraphics <- reactiveValuesToList(resultList)[[eachModel]] #get the result for eachModel from resultList
+
+							# --- CSV Output ---
+							csvFile <- paste(substring(exportPath$datapath,1,nchar(exportPath$datapath)-4), eachModel, sep = "_") #Make unique name for each model, extract .pdf out of name
+							csvFile <- paste(csvFile, ".csv", sep = "") #Add .csv to end
+							print(csvFile)
+							write.csv(as.data.frame(resultGraphics), file = csvFile)
+
+							modelTitle <- paste(eachModel, mList[[eachModel]][1]$site, mList[[eachModel]][2]$method,  sep = " - ")
+							print(modelTitle) #Print ID of model as a title for the model-section .. any way to do this like a title in pdf?
+
+							#quantilesPdf #quantilesCsv -- do seperate?
+							if ("quantilesPdf" %in% input$exportPlots) {
+								plot.new()
+								print(gridExtra::grid.table(as.data.frame(resultGraphics)))
+							}
+
+							#returnPlot
+							if ("returnPlot" %in% input$exportPlots) {
+								print(plot(resultGraphics) + ggplot2::ggtitle(paste("Return Levels: ", modelTitle)))
+							}
+
+
+							#histogramPlot
+							if ("histogramPlot" %in% input$exportPlots) {
+								print(hist(resultGraphics, histogram.args = list( bins = 15)) + ggplot2::ggtitle(paste("Histogram (better name for this?): ",modelTitle)))
+							}
+
+
+							#lMomentPlot (check if method == "pool_amax")
+							if ("lMomentPlot" %in% input$exportPlots) {
+								if (mList[[eachModel]][2]$method == "pool_amax") {
+								print(plot(resultGraphics, 'l') + ggplot2::ggtitle(paste("L-Moment Ratio Diagram: ",modelTitle)))
+							}
+							}
+
+
+						} #end of individual plots section
+
+						# --- Group plots ---
+						# Create a compareModels list with each selected model from the table (for comparative plots)
+						lst.fit <- do.call(floodnetRfa::CompareModels, reactiveValuesToList(mList)) # compare all models in mList
+						spacePlots <- floodnetRfa::.spacePlots(gaugedSites, siteList)
+
+						if ("intervalsPlot" %in% input$exportPlots) {
+							print(plot(lst.fit) + ggplot2::ggtitle("Confidence Intervals"))
+						}
+
+						if ("variationsPlot" %in% input$exportPlots) {
+							print(plot(lst.fit, 'cv') + ggplot2::ggtitle("Coefficients of Variation"))
+						}
+
+						if ("coordinates" %in% input$exportPlots) {
+							print(spacePlots$coordinates + ggplot2::ggtitle("Coordinates of Stations"))
+						}
+
+						if ("seasonalPlot" %in% input$exportPlots) {
+							print(spacePlots$seasonal + ggplot2::ggtitle("Seasonal Space"))
+						}
+
+						if ("descriptorPlot" %in% input$exportPlots) {
+							print(spacePlots$descriptor + ggplot2::ggtitle("Descriptor Space"))
+						}
+
+
+						dev.off() # End pdf-printing session
+
+						# NEED some way to stop printing pdf once complete... otherwise any changes in boxes will change what's been printed to pdf when button pressed
+						# will something like this work? exportPath <- NULL ??
+					}
+		)
+
+		#		}
+	}) # END of Export Button Functions
 }
 
 # Run the application
