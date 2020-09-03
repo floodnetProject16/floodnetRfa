@@ -24,7 +24,7 @@
 #'
 #' MapCA() +
 #'   geom_point(data = xd, aes(x = lon, y = lat), colour = 'orange') +
-#'   coord_cartesian(xlim = c(-90,-50), ylim = c(42,60))
+#'   coord_cartesian(xlim = c(-70,-58), ylim = c(43,50))
 #'
 MapCA <- function(..., polygon.args = NULL,
 									xlab = 'Longitude', ylab = 'Latitude'){
@@ -35,7 +35,7 @@ MapCA <- function(..., polygon.args = NULL,
 	if(is.null(polygon.args))
 		polygon.args <- list(fill = '#737373')
 
-	polygon.args$data <- get("map_ca")
+	polygon.args$data <- floodnetRfa::map_ca
 	polygon.args$mapping <- aes(x = .data$long, y = .data$lat, group = .data$group)
 
 	plt <- plt + do.call(geom_polygon, polygon.args)
