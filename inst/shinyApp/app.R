@@ -168,7 +168,7 @@ body <- dashboardBody(
 					 				 DT::dataTableOutput("modelsTable"),
 					 				 ## Action button for removing selected models from datatable
 					 				 actionButton("removeButton", class = "bottom-button blue-button left-button", label = "Remove"),
-					 				 ## Action button for showing selected models from datatable in graphics tab
+					 				 ## Action button for showing selected models from datatable in results tab
 					 				 actionButton("showButton", class = "bottom-button red-button right-button", label = "Show")
 					 )
 	  ),
@@ -182,7 +182,7 @@ body <- dashboardBody(
 	)
 )
 
-graphicsSidebar <- dashboardSidebar(
+resultsSidebar <- dashboardSidebar(
 	## --- Back Button ---
 	actionButton("backButton", class = "back-button blue-button", label = "← Back"),
 
@@ -210,7 +210,7 @@ graphicsSidebar <- dashboardSidebar(
 					 )
 )
 
-graphicsBody <- dashboardBody(
+resultsBody <- dashboardBody(
 
 	#Use custom css
 	tags$head(
@@ -282,6 +282,7 @@ graphicsBody <- dashboardBody(
 		## -- Seasonal Space box --
 		column(5,
 					 tags$div(class = "background-box fixed-height",
+					 				 id = "seasonalBox",
 					 				 h2("Seasonal Space"),
 					 				 # imageOutput("loading"),
 					 				 plotOutput("seasonalPlot")
@@ -290,6 +291,7 @@ graphicsBody <- dashboardBody(
 		## -- Descriptor Space box --
 		column(5, offset = 1,
 					 tags$div(class = "background-box fixed-height",
+					 				 id = "descriptorBox",
 					 				 h2("Descriptor Space"),
 					 				 # imageOutput("loading"),
 					 				 plotOutput("descriptorPlot")
@@ -308,15 +310,15 @@ ui <- navbarPage("FloodNet RFA", id="pageId",
 								 				 	sidebar,
 								 				 	body)
 								 ),
-								 tabPanel("Graphics",
+								 tabPanel("Results",
 								 				 dashboardPage(
 								 				 	dashboardHeader(disable = TRUE,
 								 				 									#For some reason, color styling had to be done like this and not in css
 								 				 									title = tags$div(tags$span(id = "floodnetText", "FloodNet"),
 								 				 																	 tags$span(id = "rfaText", "RFA"))
 								 				 	),
-								 				 	graphicsSidebar,
-								 				 	graphicsBody
+								 				 	resultsSidebar,
+								 				 	resultsBody
 								 				 )
 								 )
 )
@@ -330,13 +332,13 @@ server <- function(input, output, session) {
 	# Initialize various reactive variables (lists mostly)
 	# Add fitted model to list
 	values <- reactiveValues() # Found a similar solution on stackoverflow (23236944), but do we need all of values just for df?
-	#values$df <- data.frame(Column1 = NA, Column2 = NA, Column3 = NA) # Column names need to be the same else match.names error .. only needed to initialize table
-	resultList <- reactiveValues() # Store each result here with the "key" being the unique identifier mID
-#	resultListKeys <- reactive
-	PLOTHEIGHT <- 327 #Constant value - Height for plots
-	db_hydat <- "" #Initialize DB and GUAGED as empty strings, so they can be checked before fitting model
-	gaugedSites <- ""
+	values$db_hydat <- "" #Initialize DB and GUAGED as empty strings, so they can be checked before fitting model
+	values$gaugedSites <- ""
 	spacePlots <- reactiveValues()
+	# spacePlots$descriptor <- "" #Initialized so they can be saved and loaded without risk of errors
+	# spacePlots$seasonal <- ""
+	resultList <- reactiveValues() # Store each result here with the "key" being the unique identifier mID
+	PLOTHEIGHT <- 327 #Constant value - Height for plots
 	savePath <- "NA"
 	exportPath <- "NA"
 	mListMIDs <- reactiveVal()
@@ -344,18 +346,33 @@ server <- function(input, output, session) {
 
 	# --- ShinyFiles File Selection ---
 	volumes <- getVolumes()
-	shinyFileChoose(input,'hydroData', roots=volumes, filetypes = c('csv', 'sqlite3'))
-	observeEvent(input$hydroData, {
-		output$hydroFile <- renderText(as.character(parseFilePaths(volumes,input$hydroData)$datapath)) # Display the hydro data file loaded
+	# -- Load Hydro Data
+	observe({
+		shinyFileChoose(input,'hydroData', roots=volumes, filetypes = c('csv', 'sqlite3'))
+		loadPath <- parseFilePaths(volumes,input$hydroData) #get path for file
+		if (nrow(loadPath) > 0) {
+			loadPath <- loadPath$datapath # Can't use datapath before check, since it won't exist before anything loaded
+			# Check if csv or sqlite
+			if (substring(loadPath,nchar(loadPath)-3,nchar(loadPath)) == "csv"){
+				values$db_hydat <- read.csv(as.character(loadPath))
+			} else { # if not csv, should be sqlite
+				values$db_hydat <- as.character(loadPath)
+			}
+			output$hydroFile <- renderText(as.character(loadPath)) # Display the hydro data file loaded
+		}
 	})
-	shinyFileChoose(input,'stationData', roots=volumes, filetypes = c('csv'))
-	observeEvent(input$stationData, {
-		output$stationFile <- renderText(as.character(parseFilePaths(volumes,input$stationData)$datapath)) # Display the station data file loaded
+	# -- Load Station Data
+	observe({
+		shinyFileChoose(input,'stationData', roots=volumes, filetypes = c('csv'))
+		loadPath <- parseFilePaths(volumes,input$stationData) #get path for file
+		if (nrow(loadPath) > 0) {
+			loadPath <- loadPath$datapath
+			values$gaugedSites <- read.csv(as.character(loadPath))
+			output$stationFile <- renderText(as.character(loadPath)) # Display the station data file loaded
+		}
 	})
-#	shinyFileSave(input, "saveButton", roots=volumes, session = session)
-	shinyFileChoose(input, "openButton", roots=volumes, filetypes = c('Rdata'))
 
-	# --- Save Button Functions ---
+	# -- Save Button Functions --
 	observe({
 		shinyFileSave(input, "saveButton", roots=volumes, session=session)
 		savePath <- parseSavePath(volumes, input$saveButton) #get path for file
@@ -365,13 +382,15 @@ server <- function(input, output, session) {
 		if (nrow(savePath) > 0) {
 			savedValues <- values
 			savedResultList <- resultList
+			# savedSpacePlots <- spacePlots
 			save(savedValues, savedResultList, file = savePath$datapath)
 		}
 #		}
 	})
 
-	# --- Load Rdata File ---
-	observeEvent(input$openButton,{ # observeEvent needed over observe so that values/resultList can be updated
+	# -- Load Rdata File --
+	observe({ # observeEvent needed over observe so that values/resultList can be updated
+		shinyFileChoose(input, "openButton", roots=volumes, filetypes = c('Rdata'))
 		loadPath <- parseFilePaths(volumes, input$openButton) #get path for file
 		if (nrow(loadPath) > 0) {
 			load(loadPath$datapath)
@@ -389,7 +408,13 @@ server <- function(input, output, session) {
 				}
 			}
 
-			values$df <- savedValues$df # Finally, overwrite values with the new savedValues
+			values$df <- savedValues$df # overwrite values with the new savedValues
+			values$db_hydat <- savedValues$db_hydat # the data files will always at least be "", so no risk of not existing
+			values$gaugedSites <- savedValues$gaugedSites
+
+			# # load spacePlots..
+			# spacePlots$descriptor <- savedSpacePlots$descriptor
+			# spacePlots$seasonal <- savedSpacePlots$seasonal
 		}
 	})
 
@@ -421,19 +446,19 @@ server <- function(input, output, session) {
 	observeEvent(input$fitModel, {
 		# Check that fields are filled in
 		if ((input$mID != "") & (input$station != "") & (input$periodString != "")) {
-
-		# Check that DB_HYDAT and GAUGEDSITES are selected - they are initialized as integer, but once files selected become lists!
-		if (typeof(input$hydroData) == "list" & typeof(input$stationData) == "list"){
+		# Check that values$db_hydat has been loaded
+		if (values$db_hydat != "") {
+		# If RFA/pool, check for values$gaugedSites
+		if ((input$method == "amax" | input$method == "pot") | (values$gaugedSites != "")) {
 
 		# Check that this model ID hasn't already been used
 		if ( is.null(resultList[[input$mID]]) ) {
+			# # Setting DB_HYDAT when file selected with Hydrometric Data button
+			# db_hydat <- as.character(parseFilePaths(volumes,input$hydroData)$datapath)
+			# # Setting secondary Station Data filepath (I believe GAUGEDSITES is the correct name for this one? Or should it be DESCRIPTORS? Or something else entirely?)
+			# gaugedSites <- read.csv(as.character(parseFilePaths(volumes,input$stationData)$datapath))
 
-			# Setting DB_HYDAT when file selected with Hydrometric Data button
-			db_hydat <- as.character(parseFilePaths(volumes,input$hydroData)$datapath)
-			# Setting secondary Station Data filepath (I believe GAUGEDSITES is the correct name for this one? Or should it be DESCRIPTORS? Or something else entirely?)
-			gaugedSites <- read.csv(as.character(parseFilePaths(volumes,input$stationData)$datapath))
-
-			result <- floodnetRfa::.ClickUpdate(input, db = db_hydat, gaugedSites)
+			result <- floodnetRfa::.ClickUpdate(input, db = values$db_hydat, values$gaugedSites)
 
 			# When a model is fit, a new line is made for the Fitted Models datatable and contains the model info
 			if (input$method == "amax" || input$method == "pot") { #need to create NA for superregion for non-RFA methods
@@ -466,9 +491,12 @@ server <- function(input, output, session) {
 		} #end of Check that this model ID hasn't already been used
 			else {
 				showNotification("Model ID has already been used. Please enter a unique Model ID.", type = "warning")
+		}} #end check for station data (RFA/Pool)
+			else {
+				showNotification("Please load Station Data before fitting an RFA model")
 		}} #end of check for data selected
 			else {
-				showNotification("Please select files for Hydrometric Data and Station Data before fitting a model.", type = "warning")
+				showNotification("Please select files for Hydrometric Data before fitting a model.", type = "warning")
 		}} #end of  Check that fields are filled in
 			else {
 				showNotification("One or more fields are blank. Please ensure Model ID, Target Site, and Return Period are filled in.", type = "warning")
@@ -533,11 +561,11 @@ server <- function(input, output, session) {
 	# When "Show" button pressed to compare models in table
 	observeEvent(input$showButton, {
 
-		# Initialize list of models to be shown in graphics page
+		# Initialize list of models to be shown in results page
 		mList <- reactiveValues()  # Needs to be re-initialized in this loop else problems will occur with multiple "Show" attempts
 
-		# Re-grab gaugedSites since it is local to Fit button... (it could have changed too, and maybe show will be used without Fit button on a load, so good to do anyways)
-		gaugedSites <- read.csv(as.character(parseFilePaths(volumes,input$stationData)$datapath))
+		# # Re-grab gaugedSites since it is local to Fit button... (it could have changed too, and maybe show will be used without Fit button on a load, so good to do anyways)
+		# gaugedSites <- read.csv(as.character(parseFilePaths(volumes,input$stationData)$datapath))
 
 		# get selected rows
 		selectedRows <- input$modelsTable_rows_selected
@@ -565,12 +593,12 @@ server <- function(input, output, session) {
 		updateSelectInput(session = session, inputId = "modelSelect", label = "Display Model", choices = mListMIDs,
 											selected = modelName)
 
-		# Switch view to Graphics tab
-		updateTabsetPanel(session, inputId = "pageId", selected = "Graphics")
+		# Switch view to Results tab
+		updateTabsetPanel(session, inputId = "pageId", selected = "Results")
 	}) ## End of Show Button
 
 	# ----- End of Models Page -----
-	# ----- Start of Graphics Page -----
+	# ----- Start of Results Page -----
 
 	observeEvent(input$backButton, {
 	# Switch view to Models tab
@@ -580,13 +608,14 @@ server <- function(input, output, session) {
  # Update plots when model is selected
 	observeEvent(input$modelSelect, {
 		siteList <- c()
+		rfaCheck <- 0
 		if(input$modelSelect != "") {
-			gaugedSites <- read.csv(as.character(parseFilePaths(volumes,input$stationData)$datapath))  # Needs to be re-initialized here
+			# gaugedSites <- read.csv(as.character(parseFilePaths(volumes,input$stationData)$datapath))  # Needs to be re-initialized here
 			mList <- reactiveValues()  # Needs to be re-initialized here
 			 for (eachModel in mListMIDsCopy) {
 				 	mList[[eachModel]] <- resultList[[eachModel]]
 				 	if ((mList[[eachModel]][1]$site %in% siteList) == FALSE) {siteList <- c(siteList, mList[[eachModel]][1]$site)} # Making list of each station in comparison
-				 #	print(mList[[eachModel]][1]$site)
+				 	if ((mList[[eachModel]][2]$method == "pool_amax") | (mList[[eachModel]][2]$method == "pool_pot")) { rfaCheck <- 1} # Indicate that at least 1 of the models are rfa-type
 			 }
 
 			# --- generate plots for first model in list ---
@@ -626,14 +655,20 @@ server <- function(input, output, session) {
 				shinyjs::hide("lMomentBox")
 			}
 
-			# Space diagrams --- may be best to make another helper function like ClickUpdate to make these - check vignette pdf for help
-			spacePlots <- floodnetRfa::.spacePlots(gaugedSites, siteList)
-			# ## Geographical Space
-			# output$coordinatesPlot <-shiny::renderPlot(spacePlots$coordinates, height = PLOTHEIGHT)
-			## Seasonal space
-			output$descriptorPlot <-shiny::renderPlot(spacePlots$descriptor, height = PLOTHEIGHT)
-			## Descriptor space
-			output$seasonalPlot <-shiny::renderPlot(spacePlots$seasonal, height = PLOTHEIGHT)
+			# Space diagrams --- only display when model is RFA AMAX or POT
+			if (rfaCheck == 1) {
+				spacePlots <- floodnetRfa::.spacePlots(values$gaugedSites, siteList)
+				# ## Geographical Space
+				# output$coordinatesPlot <-shiny::renderPlot(spacePlots$coordinates, height = PLOTHEIGHT)
+				## Seasonal space
+				output$descriptorPlot <-shiny::renderPlot(spacePlots$descriptor, height = PLOTHEIGHT)
+				## Descriptor space
+				output$seasonalPlot <-shiny::renderPlot(spacePlots$seasonal, height = PLOTHEIGHT)
+			} else {
+				shinyjs::hide("seasonalBox")
+				shinyjs::hide("descriptorBox")
+			}
+
 
 
 		} # END of Display Model select-actions
@@ -645,94 +680,102 @@ server <- function(input, output, session) {
 		exportPath <- parseSavePath(volumes, input$exportButton) #get path for file
 		isolate( #isolating everything so updating tick-box after selecting save path doesn't end up rewriting pdf
 			if (nrow(exportPath) > 0) {
+				rfaCheck <- 0
+				siteList <- c()
+				# gaugedSites <- read.csv(as.character(parseFilePaths(volumes,isolate(input$stationData))$datapath))  # Needs to be re-initialized here
+				mList <- reactiveValues()  # Needs to be re-initialized here
+				for (eachModel in mListMIDsCopy) { #get list of models into local memory
+					mList[[eachModel]] <- resultList[[eachModel]]
+					if ((mList[[eachModel]][1]$site %in% siteList) == FALSE) {siteList <- c(siteList, mList[[eachModel]][1]$site)} # Making list of each station in comparison
+				}
 
-						siteList <- c()
-						gaugedSites <- read.csv(as.character(parseFilePaths(volumes,isolate(input$stationData))$datapath))  # Needs to be re-initialized here
-						mList <- reactiveValues()  # Needs to be re-initialized here
-						for (eachModel in mListMIDsCopy) { #get list of models into local memory
-							mList[[eachModel]] <- resultList[[eachModel]]
-							if ((mList[[eachModel]][1]$site %in% siteList) == FALSE) {siteList <- c(siteList, mList[[eachModel]][1]$site)} # Making list of each station in comparison
-						}
+				pdf(file = exportPath$datapath) #open pdf
 
-						pdf(file = exportPath$datapath) #open pdf
+				# --- Plots for individual models ---
+				for (eachModel in mListMIDsCopy) { #get list of models into local memory
 
-						# --- Plots for individual models ---
-						for (eachModel in mListMIDsCopy) { #get list of models into local memory
-							resultGraphics <- reactiveValuesToList(resultList)[[eachModel]] #get the result for eachModel from resultList
+					if ((mList[[eachModel]][2]$method == "pool_amax") | (mList[[eachModel]][2]$method == "pool_pot")) { rfaCheck <- 1} # Indicate that at least 1 of the models are rfa-type
+					resultGraphics <- reactiveValuesToList(resultList)[[eachModel]] #get the result for eachModel from resultList
 
-							# --- CSV Output ---
-							csvFile <- paste(substring(exportPath$datapath,1,nchar(exportPath$datapath)-4), eachModel, sep = "_") #Make unique name for each model, extract .pdf out of name
-							csvFile <- paste(csvFile, ".csv", sep = "") #Add .csv to end
-							print(csvFile)
-							write.csv(as.data.frame(resultGraphics), file = csvFile)
+					# --- CSV Output ---
+					csvFile <- paste(substring(exportPath$datapath,1,nchar(exportPath$datapath)-4), eachModel, sep = "_") #Make unique name for each model, extract .pdf out of name
+					csvFile <- paste(csvFile, ".csv", sep = "") #Add .csv to end
+					print(csvFile)
+					write.csv(as.data.frame(resultGraphics), file = csvFile)
 
-							modelTitle <- paste(eachModel, mList[[eachModel]][1]$site, mList[[eachModel]][2]$method,  sep = " - ")
-							print(modelTitle) #Print ID of model as a title for the model-section .. any way to do this like a title in pdf?
+					modelTitle <- paste(eachModel, mList[[eachModel]][1]$site, mList[[eachModel]][2]$method,  sep = " - ")
+					print(modelTitle) #Print ID of model as a title for the model-section .. any way to do this like a title in pdf?
 
-							#quantilesPdf #quantilesCsv -- do seperate?
-							if ("quantilesPdf" %in% input$exportPlots) {
-								plot.new()
-								print(gridExtra::grid.table(as.data.frame(resultGraphics)))
-							}
-
-							#returnPlot
-							if ("returnPlot" %in% input$exportPlots) {
-								print(plot(resultGraphics) + ggplot2::ggtitle(paste("Return Levels: ", modelTitle)))
-							}
-
-
-							#histogramPlot
-							if ("histogramPlot" %in% input$exportPlots) {
-								print(hist(resultGraphics, histogram.args = list( bins = 15)) + ggplot2::ggtitle(paste("Histogram (better name for this?): ",modelTitle)))
-							}
-
-
-							#lMomentPlot (check if method == "pool_amax")
-							if ("lMomentPlot" %in% input$exportPlots) {
-								if (mList[[eachModel]][2]$method == "pool_amax") {
-								print(plot(resultGraphics, 'l') + ggplot2::ggtitle(paste("L-Moment Ratio Diagram: ",modelTitle)))
-							}
-							}
-
-
-						} #end of individual plots section
-
-						# --- Group plots ---
-						# Create a compareModels list with each selected model from the table (for comparative plots)
-						lst.fit <- do.call(floodnetRfa::CompareModels, reactiveValuesToList(mList)) # compare all models in mList
-						spacePlots <- floodnetRfa::.spacePlots(gaugedSites, siteList)
-
-						if ("intervalsPlot" %in% input$exportPlots) {
-							print(plot(lst.fit) + ggplot2::ggtitle("Confidence Intervals"))
-						}
-
-						if ("variationsPlot" %in% input$exportPlots) {
-							print(plot(lst.fit, 'cv') + ggplot2::ggtitle("Coefficients of Variation"))
-						}
-
-						if ("coordinates" %in% input$exportPlots) {
-							print(spacePlots$coordinates + ggplot2::ggtitle("Coordinates of Stations"))
-						}
-
-						if ("seasonalPlot" %in% input$exportPlots) {
-							print(spacePlots$seasonal + ggplot2::ggtitle("Seasonal Space"))
-						}
-
-						if ("descriptorPlot" %in% input$exportPlots) {
-							print(spacePlots$descriptor + ggplot2::ggtitle("Descriptor Space"))
-						}
-
-
-						dev.off() # End pdf-printing session
-
-						# NEED some way to stop printing pdf once complete... otherwise any changes in boxes will change what's been printed to pdf when button pressed
-						# will something like this work? exportPath <- NULL ??
+					#quantilesPdf #quantilesCsv -- do seperate?
+					if ("quantilesPdf" %in% input$exportPlots) {
+						plot.new()
+						print(gridExtra::grid.table(as.data.frame(resultGraphics)))
 					}
+
+					#returnPlot
+					if ("returnPlot" %in% input$exportPlots) {
+						print(plot(resultGraphics) + ggplot2::ggtitle(paste("Return Levels: ", modelTitle)))
+					}
+
+
+					#histogramPlot
+					if ("histogramPlot" %in% input$exportPlots) {
+						print(hist(resultGraphics, histogram.args = list( bins = 15)) + ggplot2::ggtitle(paste("Histogram (better name for this?): ",modelTitle)))
+					}
+
+
+					#lMomentPlot (check if method == "pool_amax")
+					if ("lMomentPlot" %in% input$exportPlots) {
+						if (mList[[eachModel]][2]$method == "pool_amax") {
+						print(plot(resultGraphics, 'l') + ggplot2::ggtitle(paste("L-Moment Ratio Diagram: ",modelTitle)))
+					}
+					}
+
+
+				} #end of individual plots section
+
+				# --- Group plots ---
+				# Create a compareModels list with each selected model from the table (for comparative plots)
+				lst.fit <- do.call(floodnetRfa::CompareModels, reactiveValuesToList(mList)) # compare all models in mList
+				spacePlots <- floodnetRfa::.spacePlots(values$gaugedSites, siteList)
+
+				if ("intervalsPlot" %in% input$exportPlots) {
+					print(plot(lst.fit) + ggplot2::ggtitle("Confidence Intervals"))
+				}
+
+				if ("variationsPlot" %in% input$exportPlots) {
+					print(plot(lst.fit, 'cv') + ggplot2::ggtitle("Coefficients of Variation"))
+				}
+
+				if ("coordinates" %in% input$exportPlots) {
+					print(spacePlots$coordinates + ggplot2::ggtitle("Coordinates of Stations"))
+				}
+
+				if ("seasonalPlot" %in% input$exportPlots) {
+					if (rfaCheck == 1) {
+						print(spacePlots$seasonal + ggplot2::ggtitle("Seasonal Space"))
+					}
+				}
+
+				if ("descriptorPlot" %in% input$exportPlots) {
+					if (rfaCheck == 1) {
+						print(spacePlots$descriptor + ggplot2::ggtitle("Descriptor Space"))
+					}
+				}
+
+
+				dev.off() # End pdf-printing session
+
+				# NEED some way to stop printing pdf once complete... otherwise any changes in boxes will change what's been printed to pdf when button pressed
+				# will something like this work? exportPath <- NULL ??
+			}
 		)
 
 		#		}
 	}) # END of Export Button Functions
 }
+
+
 
 # Run the application
 shinyApp(ui = ui, server = server)
