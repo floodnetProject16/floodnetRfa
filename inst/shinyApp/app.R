@@ -15,7 +15,8 @@ library(shinyFiles)
 library(DT)
 library(floodnetRfa) #needed for supporting functions... I think the problem was ggplots wasn't loading but is loaded through floodnetRfa?
 library(gridExtra) #needed for outputting dataframes to pdf
-
+# library(shinyalert) #for quit button popup
+# library(bsModal) #for quit button popup#unavailable...
 
 
 # Load global variable from the config file
@@ -117,7 +118,7 @@ body <- dashboardBody(
 					 				 				 								 													 "HC12" = "supreg_hc12",
 					 				 				 								 													 "KM6" = "supreg_km6",
 					 				 				 								 													 "KM12" = "supreg_km12"
-					 				 				 								 													 ), selected = "KM12")
+					 				 				 								 													 ), selected = "supreg_km12")
 					 				 				 ),
 
 					 				 				 ## The option to select the distribution method is only available for AMAX
@@ -130,7 +131,7 @@ body <- dashboardBody(
 					 				 				 								 													 "glo" = "glo",
 					 				 				 								 													 "gno" = "gno",
 					 				 				 								 													 "pe3" = "pe3"
-					 				 				 								 						), selected = "Auto")
+					 				 				 								 						), selected = "Default")
 					 				 				 ),
 
 					 				 				 ## The option to select the threshold is only available for AMAX
@@ -333,7 +334,9 @@ server <- function(input, output, session) {
 	# Add fitted model to list
 	values <- reactiveValues() # Found a similar solution on stackoverflow (23236944), but do we need all of values just for df?
 	values$db_hydat <- "" #Initialize DB and GUAGED as empty strings, so they can be checked before fitting model
+	values$dbPath <- ""
 	values$gaugedSites <- ""
+	values$gaugedSitesPath <- ""
 	spacePlots <- reactiveValues()
 	# spacePlots$descriptor <- "" #Initialized so they can be saved and loaded without risk of errors
 	# spacePlots$seasonal <- ""
@@ -350,26 +353,26 @@ server <- function(input, output, session) {
 	observe({
 		shinyFileChoose(input,'hydroData', roots=volumes, filetypes = c('csv', 'sqlite3'))
 		loadPath <- parseFilePaths(volumes,input$hydroData) #get path for file
+		isolate(
 		if (nrow(loadPath) > 0) {
-			loadPath <- loadPath$datapath # Can't use datapath before check, since it won't exist before anything loaded
-			# Check if csv or sqlite
-			if (substring(loadPath,nchar(loadPath)-3,nchar(loadPath)) == "csv"){
-				values$db_hydat <- read.csv(as.character(loadPath))
-			} else { # if not csv, should be sqlite
-				values$db_hydat <- as.character(loadPath)
-			}
-			output$hydroFile <- renderText(as.character(loadPath)) # Display the hydro data file loaded
-		}
+				values$dbPath <- loadPath$datapath # Can't use datapath before check, since it won't exist before anything loaded
+				# Check if csv or sqlite
+				ifelse(substring(values$dbPath,nchar(values$dbPath)-3,nchar(loadPath)) == "csv",
+							 values$db_hydat <- read.csv(as.character(values$dbPath)),
+							 #else if not csv, should be sqlite
+							 values$db_hydat <- as.character(values$dbPath)
+				)
+		}	) #end isolate
 	})
 	# -- Load Station Data
 	observe({
 		shinyFileChoose(input,'stationData', roots=volumes, filetypes = c('csv'))
 		loadPath <- parseFilePaths(volumes,input$stationData) #get path for file
+		isolate(
 		if (nrow(loadPath) > 0) {
-			loadPath <- loadPath$datapath
-			values$gaugedSites <- read.csv(as.character(loadPath))
-			output$stationFile <- renderText(as.character(loadPath)) # Display the station data file loaded
-		}
+			values$gaugedSitesPath <- loadPath$datapath
+			values$gaugedSites <- read.csv(as.character(values$gaugedSitesPath))
+		} ) #end isolate
 	})
 
 	# -- Save Button Functions --
@@ -379,12 +382,14 @@ server <- function(input, output, session) {
 		#if (length(resultList) == 0) { -- I cannot find a way to get this to work.. resultList doesn't seem to actually delete entries when set to null
 	#		showNotification("No fitted models to save. Please Fit a model before saving.", type = "warning")
 	#	} else {
+		isolate(
 		if (nrow(savePath) > 0) {
 			savedValues <- values
 			savedResultList <- resultList
 			# savedSpacePlots <- spacePlots
 			save(savedValues, savedResultList, file = savePath$datapath)
 		}
+		) #end isolate
 #		}
 	})
 
@@ -392,6 +397,7 @@ server <- function(input, output, session) {
 	observe({ # observeEvent needed over observe so that values/resultList can be updated
 		shinyFileChoose(input, "openButton", roots=volumes, filetypes = c('Rdata'))
 		loadPath <- parseFilePaths(volumes, input$openButton) #get path for file
+		isolate(
 		if (nrow(loadPath) > 0) {
 			load(loadPath$datapath)
 			# Remove values in resultList first, since we can't just set resultList <- NULL
@@ -410,12 +416,68 @@ server <- function(input, output, session) {
 
 			values$df <- savedValues$df # overwrite values with the new savedValues
 			values$db_hydat <- savedValues$db_hydat # the data files will always at least be "", so no risk of not existing
+			values$dbPath <-  savedValues$dbPath
 			values$gaugedSites <- savedValues$gaugedSites
+			values$gaugedSitesPath <- savedValues$gaugedSitesPath
 
 			# # load spacePlots..
 			# spacePlots$descriptor <- savedSpacePlots$descriptor
 			# spacePlots$seasonal <- savedSpacePlots$seasonal
+		} ) #end isolate
+	})
+
+	output$hydroFile <- renderText(as.character(values$dbPath)) # Display the hydro data file loaded
+	output$stationFile <- renderText(as.character(values$gaugedSitesPath)) # Display the station data file loaded
+
+	# --- Reset Button - set all data and fields back to default
+	observeEvent(input$resetButton, {
+		# Data Input
+		values$db_hydat <- ""
+		values$dbPath <- ""
+		values$gaugedSites <- ""
+		values$gaugedSitesPath <- ""
+
+		# Options (sidebar)
+		updateNumericInput(session, inputId = 'confidenceLevel', value = 0.95, min = 0, max = 1, step = NA)
+		updateNumericInput(session, inputId = 'simulations', value = 1000, min = 1, max = NA, step = 1)
+		updateNumericInput(session, inputId = 'heterogeneity', value = 2, min = 0, max = NA, step = NA)
+		updateNumericInput(session, inputId = 'pool', value = 25, min = 0, max = NA, step = 1)
+		updateNumericInput(session, inputId = 'intersite', value = 0, min = -1, max = 1, step = NA)
+		updateSelectInput(session, inputId = "theme",
+											choices = list("Light" = "light"
+																		 #"POT" = "pot",
+																		 #"RFA AMAX" = "rfaAmax",
+																		 #"RFA POT" = "rfaPot"
+											), selected = "light")
+
+		# Model config
+		updateTextInput(session, "mID", value = "")
+		updateTextInput(session, "station", value = "")
+		updateTextInput(session, "periodString", value = "2, 5, 10, 20, 50, 100")
+		updateSelectInput(session, "method", selected = "amax")
+		# Conditional Panels
+		updateSelectInput(session, "supReg", selected = "supreg_km12")
+		updateSelectInput(session, "disthresh", selected = "Default")
+		updateSelectInput(session, "disthresh", selected = "Default")
+
+		# Fitted Models data
+		# Remove values in resultList first, since we can't just set resultList <- NULL
+		for (eachResult in (values$df[1])){ #gives "list"(integer..) of model IDs
+			for (eachName in as.character(eachResult)){
+				resultList[[eachName]] <- NULL
+			}
 		}
+		values$df <- NULL
+
+
+	})
+
+	observeEvent(input$quitButton, {
+		# shinyalert::shinyalert(title = "Save before quitting?", type = "input", closeOnEsc = TRUE, closeOnClickOutside =  TRUE,
+		# 											 showConfirmButton = TRUE, confirmButtonText = "Save",
+		# 											 showCancelButton = TRUE, cancelButtonText = "Cancel")
+		# shinyalert("Oops!", "Something went wrong.", type = "error")
+
 	})
 
 # 	observeEvent(input$saveButton, {
@@ -445,11 +507,11 @@ server <- function(input, output, session) {
 
 	observeEvent(input$fitModel, {
 		# Check that fields are filled in
-		if ((input$mID != "") & (input$station != "") & (input$periodString != "")) {
+		if ((input$mID != "") && (input$station != "") && (input$periodString != "")) {
 		# Check that values$db_hydat has been loaded
 		if (values$db_hydat != "") {
 		# If RFA/pool, check for values$gaugedSites
-		if ((input$method == "amax" | input$method == "pot") | (values$gaugedSites != "")) {
+		if ((input$method == "amax" || input$method == "pot") || (values$gaugedSites != "")) {
 
 		# Check that this model ID hasn't already been used
 		if ( is.null(resultList[[input$mID]]) ) {
@@ -615,7 +677,7 @@ server <- function(input, output, session) {
 			 for (eachModel in mListMIDsCopy) {
 				 	mList[[eachModel]] <- resultList[[eachModel]]
 				 	if ((mList[[eachModel]][1]$site %in% siteList) == FALSE) {siteList <- c(siteList, mList[[eachModel]][1]$site)} # Making list of each station in comparison
-				 	if ((mList[[eachModel]][2]$method == "pool_amax") | (mList[[eachModel]][2]$method == "pool_pot")) { rfaCheck <- 1} # Indicate that at least 1 of the models are rfa-type
+				 	if ((mList[[eachModel]][2]$method == "pool_amax") || (mList[[eachModel]][2]$method == "pool_pot")) { rfaCheck <- 1} # Indicate that at least 1 of the models are rfa-type
 			 }
 
 			# --- generate plots for first model in list ---
@@ -694,7 +756,7 @@ server <- function(input, output, session) {
 				# --- Plots for individual models ---
 				for (eachModel in mListMIDsCopy) { #get list of models into local memory
 
-					if ((mList[[eachModel]][2]$method == "pool_amax") | (mList[[eachModel]][2]$method == "pool_pot")) { rfaCheck <- 1} # Indicate that at least 1 of the models are rfa-type
+					if ((mList[[eachModel]][2]$method == "pool_amax") || (mList[[eachModel]][2]$method == "pool_pot")) { rfaCheck <- 1} # Indicate that at least 1 of the models are rfa-type
 					resultGraphics <- reactiveValuesToList(resultList)[[eachModel]] #get the result for eachModel from resultList
 
 					# --- CSV Output ---
