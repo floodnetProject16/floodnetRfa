@@ -15,8 +15,6 @@ library(shinyFiles)
 library(DT)
 library(floodnetRfa) #needed for supporting functions... I think the problem was ggplots wasn't loading but is loaded through floodnetRfa?
 library(gridExtra) #needed for outputting dataframes to pdf
-# library(shinyalert) #for quit button popup
-# library(bsModal) #for quit button popup#unavailable...
 
 
 # Load global variable from the config file
@@ -25,14 +23,17 @@ library(gridExtra) #needed for outputting dataframes to pdf
 
 options(shiny.maxRequestSize = 10000*1024^2) # Arbitrarily-large (~10GB) max upload file size since this will be done locally
 
+jscode <- "shinyjs.closeWindow = function() { window.close(); }"
+#jscode <- "Shiny.addCustomMessageHandler('closeWindow', function(m) {window.close();});" #native-shiny application, jscode was giving "attempt to apply non-function" error #jscode <- "shinyjs.closewindow = function() { window.close(); }"
+
 sidebar <- dashboardSidebar(
 
 	# --- Button box ---
 	fluidRow(
 		tags$div(class = "sidebar-box button-box",
 			# Red buttons - open and save
-			shinyFilesButton(id = "openButton", label = "Open" , title = "Fit Models Data", class = "sidebar-button red-button left-sidebar-button top-sidebar-button", multiple = FALSE, buttonType = "data"),
-			shinySaveButton("saveButton", label = "Save", title = "Save Models", class = "sidebar-button red-button right-sidebar-button top-sidebar-button", filetype =  ".Rdata"),
+			shinyFilesButton(id = "openButton", label = "Open" , title = "Open Saved Session's Data", class = "sidebar-button red-button left-sidebar-button top-sidebar-button", multiple = FALSE, buttonType = "data"),
+			shinySaveButton("saveButton", label = "Save", title = "Save Session", class = "sidebar-button red-button right-sidebar-button top-sidebar-button", filetype =  ".Rdata"),
 
 			# Blue buttons - Reset and Quit
 			actionButton("resetButton", class = "sidebar-button blue-button left-sidebar-button bottom-sidebar-button", label = "Reset"),
@@ -85,7 +86,6 @@ body <- dashboardBody(
 		tags$link(rel = "stylesheet", type = "text/css", href = "mystyle.css"),
 		tags$style(class = "body")
 	),
-	useShinyjs(),
 
 	fluidRow(
 		column(5,
@@ -300,7 +300,8 @@ resultsBody <- dashboardBody(
 	),
 )
 
-ui <- navbarPage("FloodNet RFA", id="pageId",
+ui <- tagList(shinyjs::useShinyjs(),  # Include shinyjs,
+							navbarPage("FloodNet RFA", id="pageId",
 								 tabPanel("Models",
 								 				 dashboardPage(
 								 				 	dashboardHeader(disable = TRUE,
@@ -322,7 +323,7 @@ ui <- navbarPage("FloodNet RFA", id="pageId",
 								 				 	resultsBody
 								 				 )
 								 )
-)
+))
 
 
 # ----------  SERVER Function  ------------------------------------------------------------------------
@@ -473,37 +474,47 @@ server <- function(input, output, session) {
 	})
 
 	observeEvent(input$quitButton, {
-		# shinyalert::shinyalert(title = "Save before quitting?", type = "input", closeOnEsc = TRUE, closeOnClickOutside =  TRUE,
-		# 											 showConfirmButton = TRUE, confirmButtonText = "Save",
-		# 											 showCancelButton = TRUE, cancelButtonText = "Cancel")
-		# shinyalert("Oops!", "Something went wrong.", type = "error")
+		print("Quit")
+		showModal(modalDialog(
+			title = "Quit",
+			"Do you want to save before quitting?",
+			easyClose = FALSE,
 
+			footer = tagList(
+				# Save button
+				shinySaveButton("saveQuitButton", label = "Save & Quit", title = "Save Session", class = "red-button", filetype =  ".Rdata"),
+				actionButton(inputId = "nosaveQuitButton", label = "Don't Save", class = "blue-button"),
+										# onclick = "setTimeout(function(){window.close();},500);"),  # close browser
+				modalButton("Cancel")
+		)))
 	})
 
-# 	observeEvent(input$saveButton, {
-# 		savePath <- as.character(parseSavePath(volumes, input$saveButton)) #get path for file
-# 	})
-#
-# 	# -- Saving Data to File --
-#   observeEvent(savePath, {
-#   	print(savePath)
-#   	# if (length(resultList) == 0) {
-#   	# 	showNotification("No fitted models to save. Please Fit a model before saving.", type = "warning")
-#   	# } else {
-#   	# 	if (nrow(savePath) > 0) {
-#   	# 		save(values, resultList, file = savePath$datapath)
-#   	# 	}
-#   	# }
-#   }
-#   )
+	# Save & Quit Button
+	# -- Save Button Functions --
+	observe({
+		shinyFileSave(input, "saveQuitButton", roots=volumes, session=session)
+		savePath <- parseSavePath(volumes, input$saveQuitButton) #get path for file
+		isolate(
+			if (nrow(savePath) > 0) {
+				savedValues <- values
+				savedResultList <- resultList
+				# savedSpacePlots <- spacePlots
+				save(savedValues, savedResultList, file = savePath$datapath)
 
+				# QUIT
+				shinyjs::runjs("window.close();")
+				#shinyjs::js$closeWindow() for some reason functions now working -- "attempt to apply non-function
+				stopApp()
+			}
+		) #end isolate
+	})
 
-
-	# Making eventReactive so table/plot updates with button instead of automatically
-	# Storing values in result so each function is only run once
-	# result <- shiny::eventReactive(input$fitModel, # Checks to see if ID isn't already in list or blank
-	# 															 if ( is.null(resultList[[input$mID]]) & (input$mID != "")) {floodnetRfa::.ClickUpdate(input, db = DB_HYDAT)}
-	# 															 else {reactiveValuesToList(resultList)[[input$mID]]})
+	# Quit without Saving
+	observeEvent(input$nosaveQuitButton, {
+		shinyjs::runjs("window.close();")
+		#shinyjs::js$closeWindow() for some reason functions now working -- "attempt to apply non-function
+		stopApp()
+	})
 
 	observeEvent(input$fitModel, {
 		# Check that fields are filled in
