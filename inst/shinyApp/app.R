@@ -225,25 +225,44 @@ resultsBody <- dashboardBody(
 					 tags$div(class = "background-box fixed-height",
 					 				 h2("Flood Quantiles"),
 					 				 # imageOutput("loading"),
-					 				 DT::dataTableOutput("graphicsQuantiles")
+					 				 DT::dataTableOutput("resultsQuantiles")
 					 )),
-		## -- Return plot box --
+		## -- Parameters Dataframe --
 		column(5, offset = 1,
 					 tags$div(class = "background-box fixed-height",
-					 				 h2("Return Level Plot"),
+					 				 h2("Parameters"),
 					 				 # imageOutput("loading"),
-					 				 plotOutput("graphicsReturnPlot")
+					 				 DT::dataTableOutput("resultsParameters")
 					 ))
 		),
 
 	fluidRow( ## 2nd row graphics
+		## -- Return plot box --
+		column(5,
+					 tags$div(class = "background-box fixed-height",
+					 				 h2("Return Level Plot"),
+					 				 # imageOutput("loading"),
+					 				 plotOutput("graphicsReturnPlot")
+					 )),
+
+		## -- Histogram box --
+		column(5, offset = 1,
+					 tags$div(class = "background-box fixed-height",
+					 				 h2("Histogram"),
+					 				 # imageOutput("loading"),
+					 				 plotOutput("histogram")
+					 ))
+	),
+
+	fluidRow( ## 3rd row graphics
 		## -- Confidence Intervals box --
 		column(5,
 					 tags$div(class = "background-box fixed-height",
 					 				 h2("Confidence Intervals"),
 					 				 # imageOutput("loading"),
 					 				 plotOutput("confIntervals")
-					 )),
+					 ))
+		,
 		## -- Coefficient of Variation box --
 		column(5, offset = 1,
 					 tags$div(class = "background-box fixed-height",
@@ -253,51 +272,43 @@ resultsBody <- dashboardBody(
 					 ))
 	),
 
-	fluidRow( ## 3rd row graphics
-		## -- Histogram box --
+	fluidRow( ## 4th row graphics - RFA Only
+		## -- Descriptor Space box --
 		column(5,
 					 tags$div(class = "background-box fixed-height",
-					 				 h2("Histogram"),
+					 				 id = "descriptorBox",
+					 				 h2("Descriptor Space"),
 					 				 # imageOutput("loading"),
-					 				 plotOutput("histogram")
+					 				 plotOutput("descriptorPlot")
 					 )),
-		## -- L-moment Ratio Diagram box --
+		## -- Seasonal Space box --
 		column(5, offset = 1,
+					 tags$div(class = "background-box fixed-height",
+					 				 id = "seasonalBox",
+					 				 h2("Seasonal Space"),
+					 				 # imageOutput("loading"),
+					 				 plotOutput("seasonalPlot")
+					 ))
+	),
+
+	fluidRow( ## 5th row graphics - RFA Only
+		## -- L-moment Ratio Diagram box --
+		column(5,
 					 tags$div(class = "background-box fixed-height",
 					 				 id = "lMomentBox",
 					 				 h2("L-Moment Ratio Diagram"),
 					 				 # imageOutput("loading"),
 					 				 plotOutput("lMomentPlot")
 					 ))
-	),
-
-	fluidRow( ## 4th row graphics
 		# ## -- Coordinates box --
-		# column(5,
+		# column(5, offset = 1,
 		# 			 tags$div(class = "background-box fixed-height",
 		# 			 				 h2("Coordinates"),
 		# 			 				 # imageOutput("loading"),
 		# 			 				 plotOutput("coordinatesPlot")
-		# 			 )),
+		# 			 ))
 
-		## -- Seasonal Space box --
-		column(5,
-					 tags$div(class = "background-box fixed-height",
-					 				 id = "seasonalBox",
-					 				 h2("Seasonal Space"),
-					 				 # imageOutput("loading"),
-					 				 plotOutput("seasonalPlot")
-					 )
-		),
-		## -- Descriptor Space box --
-		column(5, offset = 1,
-					 tags$div(class = "background-box fixed-height",
-					 				 id = "descriptorBox",
-					 				 h2("Descriptor Space"),
-					 				 # imageOutput("loading"),
-					 				 plotOutput("descriptorPlot")
-					 ))
-	),
+	)
 )
 
 ui <- tagList(shinyjs::useShinyjs(),  # Include shinyjs,
@@ -700,8 +711,18 @@ server <- function(input, output, session) {
 
 			# --- Plot result ---
 			# Flood quantiles
-			output$graphicsQuantiles <- renderDT(
+			output$resultsQuantiles <- renderDT(
 				as.data.frame(resultGraphics), options = list(
+					pageLength = 6,
+					# autoWidth = TRUE,
+					# columnDefs = list(list(width = '10', visible = TRUE, targets = "_all")),
+					scrollX = TRUE
+					#paging = FALSE #FALSE -= becomes one long list instead of multiple properly-sized lists
+				)
+			)
+			# Model Parameters
+			output$resultsParameters <- renderDT(
+				as.data.frame(resultGraphics, type = 'p'), options = list(
 					pageLength = 6,
 					# autoWidth = TRUE,
 					# columnDefs = list(list(width = '10', visible = TRUE, targets = "_all")),
