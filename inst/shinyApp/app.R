@@ -189,7 +189,7 @@ resultsSidebar <- dashboardSidebar(
 
 	## --- Model Selector ---
 	tags$div(class = "sidebar-box model-box",
-					 selectInput("modelSelect", label = "Display Model", choices = NULL, selected = NULL)
+					 selectInput("modelSelect", label = h2("Display Model"), choices = NULL, selected = NULL)
 	),
 
 	## --- Export Settings ---
@@ -198,14 +198,16 @@ resultsSidebar <- dashboardSidebar(
 					 checkboxGroupInput("exportPlots", label = h2("Export Settings"),
 					 									 choices = list("Flood Quantiles (PDF)" = "quantilesPdf",
 					 									 							 "Flood Quantiles (CSV)" = "quantilesCsv",
+					 									 							 "Model Parameters" = "modelParameters",
 					 									 							 "Return Level Plot" = "returnPlot",
+					 									 							 "Histogram" = "histogramPlot",
 					 									 							 "Condifence Intervals" = "intervalsPlot",
 					 									 							 "Coefficient of Variations" = "variationsPlot",
-					 									 							 "Histogram" = "histogramPlot",
-					 									 							 "L-Moment Ratio Diagram" = 'lMomentPlot',
-					 									 							 #"Coordinates" = "coordinates",
+					 									 							 "Descriptor Space" = "descriptorPlot",
 					 									 							 "Seasonal Space" = "seasonalPlot",
-					 									 							 "Descriptor Space" = "descriptorPlot")
+					 									 							 "L-Moment Ratio Diagram" = 'lMomentPlot'
+					 									 							 #"Coordinates" = "coordinates"
+					 									 							 )
 					 									 ),
 					 shinySaveButton("exportButton", label = "Export", title = "Export Plots", class = "sidebar-button red-button bottom-sidebar-button", filetype = ".pdf")
 					 )
@@ -230,7 +232,7 @@ resultsBody <- dashboardBody(
 		## -- Parameters Dataframe --
 		column(5, offset = 1,
 					 tags$div(class = "background-box fixed-height",
-					 				 h2("Parameters"),
+					 				 h2("Model Parameters"),
 					 				 # imageOutput("loading"),
 					 				 DT::dataTableOutput("resultsParameters")
 					 ))
@@ -674,7 +676,7 @@ server <- function(input, output, session) {
 
 		mListMIDsCopy <<- mListMIDs #I have no idea why mListMIDs is innacessible outside of this observeEvent, but this lets us see it elsewhere..
 
-		updateSelectInput(session = session, inputId = "modelSelect", label = "Display Model", choices = mListMIDs,
+		updateSelectInput(session = session, inputId = "modelSelect", choices = mListMIDs,
 											selected = modelName)
 
 		# Switch view to Results tab
@@ -806,6 +808,12 @@ server <- function(input, output, session) {
 						print(gridExtra::grid.table(as.data.frame(resultGraphics)))
 					}
 
+					#modelParameters
+					if ("modelParameters" %in% input$exportPlots) {
+						plot.new()
+						print(gridExtra::grid.table(as.data.frame(resultGraphics, type = 'p')))
+					}
+
 					#returnPlot
 					if ("returnPlot" %in% input$exportPlots) {
 						print(plot(resultGraphics) + ggplot2::ggtitle(paste("Return Levels: ", modelTitle)))
@@ -841,8 +849,10 @@ server <- function(input, output, session) {
 					print(plot(lst.fit, 'cv') + ggplot2::ggtitle("Coefficients of Variation"))
 				}
 
-				if ("coordinates" %in% input$exportPlots) {
-					print(spacePlots$coordinates + ggplot2::ggtitle("Coordinates of Stations"))
+				if ("descriptorPlot" %in% input$exportPlots) {
+					if (rfaCheck == 1) {
+						print(spacePlots$descriptor + ggplot2::ggtitle("Descriptor Space"))
+					}
 				}
 
 				if ("seasonalPlot" %in% input$exportPlots) {
@@ -851,10 +861,8 @@ server <- function(input, output, session) {
 					}
 				}
 
-				if ("descriptorPlot" %in% input$exportPlots) {
-					if (rfaCheck == 1) {
-						print(spacePlots$descriptor + ggplot2::ggtitle("Descriptor Space"))
-					}
+				if ("coordinates" %in% input$exportPlots) {
+					print(spacePlots$coordinates + ggplot2::ggtitle("Coordinates of Stations"))
 				}
 
 
