@@ -100,7 +100,7 @@ body <- dashboardBody(
 					 				 				 textInput("station", label = h3("Target Site"),
 					 				 				 					placeholder = "Enter Station ID..."),
 					 				 				 textInput("periodString", label = h3("Return Period"),
-					 				 				 					value = "2, 5, 10, 20, 50, 100")
+					 				 				 					placeholder = "e.g. 2, 5, 10, 20, 50, 100")
 
 					 				 ),
 					 				 ## Right side --------------------------------
@@ -126,7 +126,7 @@ body <- dashboardBody(
 					 				 				 conditionalPanel(condition = "input.method == 'amax' || input.method == 'rfaAmax'",
 					 				 				 								 # disthresh used instead of seperate distr and thresh ... otherwise cannot merge in table
 					 				 				 								 selectInput("disthresh", label = h3("Distribution"),
-					 				 				 								 						choices = list("Auto" =  "Default",
+					 				 				 								 						choices = list("Automatic" =  "Default",
 					 				 				 								 													 "gev" = "gev",
 					 				 				 								 													 "glo" = "glo",
 					 				 				 								 													 "gno" = "gno",
@@ -134,14 +134,28 @@ body <- dashboardBody(
 					 				 				 								 						), selected = "Default")
 					 				 				 ),
 
-					 				 				 ## The option to select the threshold is only available for AMAX
-					 				 				 ## Therefore this selectInput is hidden for POT
+					 				 				 ## The option to select the threshold is only available for POT
+					 				 				 ## Therefore this selectInput is hidden for AMAX
 					 				 				 conditionalPanel(condition = "input.method == 'pot' || input.method == 'rfaPot'",
-					 				 				 								 selectInput("disthresh", label = h3("Threshold"),
-					 				 				 								 						choices = list("Default" =  "Default",
-					 				 				 								 													 "Read from List..." = "etc"
-					 				 				 								 						), selected = "Default")
-					 				 				 ),
+					 				 				 								 column(6,
+			 				 				 								 			 tags$div(radioButtons("threshOption", label = h3("Threshold"),
+			 				 				 								 						 choices = list("Automatic" = "Default",
+			 				 				 								 						 							 "Choose" = "choose",
+			 				 				 								 						 							 "Manual" = "manual"
+			 				 				 								 						 							 ), selected = "Default"), style = "margin-left: -15px")), #-15px left to adjust for column padding and align with other inputs
+					 				 				 								 column(6,
+						 				 				 								 conditionalPanel(condition = "input.threshOption == 'choose'",
+						 				 				 								 								 tags$div(selectInput("disthresh", label = h4("List of Thresholds"),
+						 				 				 								 								 						choices = list("Read from List..." =  "etc",
+						 				 				 								 								 													 "Example2" = "example2"
+						 				 				 								 								 						), selected = "etc")
+	 	 				 								 								 ), style = "width: 180px; margin-top: 16px;"),
+						 				 				 								 conditionalPanel(condition = "input.threshOption == 'manual'",
+						 				 				 								 								 tags$div(textInput("disthresh", label = h4("Manual Thresholds"),
+						 				 				 								 								 					placeholder = "e.g. 20, 40, 100"),
+						 				 				 								 ), style = "width: 180px; margin-top: 16px;")
+
+					 				 				 )),
 
 					 				 				 ## Action button for running the model - always on bottom right
 					 				 				 actionButton("fitModel", class = "bottom-button red-button right-button", label = "Fit")
