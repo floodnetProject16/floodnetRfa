@@ -381,7 +381,8 @@ FormatPlot <- function(plt, main) {
 plt <- MapCA(polygon.args = list(fill = 'white', colour = 'grey')) + 
 	geom_point(data = xd, aes(x = lon, y = lat, colour = region)) +
 	geom_point(data = xd[5,], aes(x = lon, y = lat), 
-						 colour = 'black', size = 5, shape = 10)
+						 colour = 'black', size = 5, shape = 10) +
+	coord_map('lambert', parameters = c(40,60), xlim = c(-100,-50), ylim = c(40,60))
 
 FormatPlot(plt, 'Geograpical space')
   	
