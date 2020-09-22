@@ -125,7 +125,7 @@ body <- dashboardBody(
 					 				 				 ## Therefore this selectInput is hidden for POT
 					 				 				 conditionalPanel(condition = "input.method == 'amax' || input.method == 'rfaAmax'",
 					 				 				 								 # disthresh used instead of seperate distr and thresh ... otherwise cannot merge in table
-					 				 				 								 selectInput("disthresh", label = h3("Distribution"),
+					 				 				 								 selectInput("distribution", label = h3("Distribution"),
 					 				 				 								 						choices = list("Automatic" =  "Default",
 					 				 				 								 													 "gev" = "gev",
 					 				 				 								 													 "glo" = "glo",
@@ -136,31 +136,40 @@ body <- dashboardBody(
 
 					 				 				 ## The option to select the threshold is only available for POT
 					 				 				 ## Therefore this selectInput is hidden for AMAX
-					 				 				 conditionalPanel(condition = "input.method == 'pot' || input.method == 'rfaPot'",
+					 				 				 ## Splitting types based on RFA/non-RFA POT
+					 				 				 conditionalPanel(condition = "input.method == 'pot'",
 					 				 				 								 column(6,
-			 				 				 								 			 tags$div(radioButtons("threshOption", label = h3("Threshold"),
+			 				 				 								 			 tags$div(radioButtons("threshOptionPot", label = h3("Threshold"),
 			 				 				 								 						 choices = list("Automatic" = "Default",
-			 				 				 								 						 							 "Choose" = "choose",
 			 				 				 								 						 							 "Manual" = "manual"
 			 				 				 								 						 							 ), selected = "Default"), style = "margin-left: -15px")), #-15px left to adjust for column padding and align with other inputs
 					 				 				 								 column(6,
-						 				 				 								 conditionalPanel(condition = "input.threshOption == 'choose'",
-						 				 				 								 								 tags$div(selectInput("disthresh", label = h4("List of Thresholds"),
-						 				 				 								 								 						choices = list("Read from List..." =  "etc",
-						 				 				 								 								 													 "Example2" = "example2"
-						 				 				 								 								 						), selected = "etc")
-	 	 				 								 								 ), style = "width: 180px; margin-top: 16px;"),
-						 				 				 								 conditionalPanel(condition = "input.threshOption == 'manual'",
-						 				 				 								 								 tags$div(textInput("disthresh", label = h4("Manual Thresholds"),
+						 				 				 								 conditionalPanel(condition = "input.threshOptionPot == 'manual'",
+						 				 				 								 								 tags$div(textInput("manualThreshPot", label = h4("Manual Thresholds"),
 						 				 				 								 								 					placeholder = "e.g. 20, 40, 100"),
 						 				 				 								 ), style = "width: 180px; margin-top: 16px;")
 
 					 				 				 )),
 
+					 				 				 conditionalPanel(condition = "input.method == 'rfaPot'",
+					 				 				 								 column(6,
+			 				 				 								 			 tags$div(radioButtons("threshOptionRfaPot", label = h3("Threshold"),
+			 				 				 								 			 											choices = list("Automatic" = "Default",
+			 				 				 								 			 																		 "Manual" = "manual"
+			 				 				 								 			 											), selected = "Default"), style = "margin-left: -15px")), #-15px left to adjust for column padding and align with other inputs
+					 				 				 								 column(6,
+			 				 				 								 			 conditionalPanel(condition = "input.threshOptionRfaPot == 'manual'",
+														 				 				 								 tags$div(selectInput("manualThreshRfa", label = h4("List of Thresholds"),
+														 				 				 								 										 choices = list("Read from List..." =  "etc",
+														 				 				 								 										 							 "Example2" = "example2"
+														 				 				 								 										 ), selected = "etc")
+									 				 				 								 ), style = "width: 180px; margin-top: 16px;")
+					 				 				 )),
+
 					 				 				 ## Action button for running the model - always on bottom right
 					 				 				 actionButton("fitModel", class = "bottom-button red-button right-button", label = "Fit")
 					 				 )
-					 )
+	 				 )
 
 		), ## -- End of Model Configuration box --
 
@@ -324,7 +333,16 @@ resultsBody <- dashboardBody(
 		# 			 				 plotOutput("coordinatesPlot")
 		# 			 ))
 
-	)
+	),
+
+
+
+	# Script to update input$modelSelect when re-showing models
+	tags$script("
+    Shiny.addCustomMessageHandler('resetValue', function(variableName) {
+      Shiny.onInputChange(variableName, null);
+    });
+  ")
 )
 
 ui <- tagList(shinyjs::useShinyjs(),  # Include shinyjs,
@@ -365,6 +383,7 @@ server <- function(input, output, session) {
 	values$dbPath <- ""
 	values$gaugedSites <- ""
 	values$gaugedSitesPath <- ""
+	values$distThresh <- ""
 	spacePlots <- reactiveValues()
 	# spacePlots$descriptor <- "" #Initialized so they can be saved and loaded without risk of errors
 	# spacePlots$seasonal <- ""
@@ -553,20 +572,39 @@ server <- function(input, output, session) {
 
 		# Check that this model ID hasn't already been used
 		if ( is.null(resultList[[input$mID]]) ) {
-			# # Setting DB_HYDAT when file selected with Hydrometric Data button
-			# db_hydat <- as.character(parseFilePaths(volumes,input$hydroData)$datapath)
-			# # Setting secondary Station Data filepath (I believe GAUGEDSITES is the correct name for this one? Or should it be DESCRIPTORS? Or something else entirely?)
-			# gaugedSites <- read.csv(as.character(parseFilePaths(volumes,input$stationData)$datapath))
-
-			result <- floodnetRfa::.ClickUpdate(input, db = values$db_hydat, values$gaugedSites)
-
 			# When a model is fit, a new line is made for the Fitted Models datatable and contains the model info
-			if (input$method == "amax" || input$method == "pot") { #need to create NA for superregion for non-RFA methods
-				values$supReg <- "N/A"   ## Can't modify input... have to create new reactive value
+			# Mix distribution/threshold values into single variable, so they can be stored together
+			#need to create NA for superregion for non-RFA methods, so they can be stored together
+			if (input$method == "amax") {
+				values$supReg <- "N/A"
+				values$distThresh <- input$distribution
+				values$threshType <- "none"
+			} else if (input$method == "pot") {
+				values$supReg <- "N/A"
+				values$threshType <- "pot"
+				if (input$threshOptionPot == "Default") {
+					values$distThresh <- input$threshOptionPot
+				} else {
+					values$distThresh <- input$manualThreshPot
+				}
+			} else if (input$method == "rfaPot") {
+				values$supReg <- input$supReg # Store input supreg in same reactive value as non-rfa, so it can be used together in DT
+				values$threshType <- "rfaPot"
+				if (input$threshOptionRfaPot == "Default") {
+					values$distThresh <- input$threshOptionRfaPot
+				} else {
+					values$distThresh <- input$manualThreshRfa
+				}
 			} else {
 				values$supReg <- input$supReg # Store input supreg in same reactive value as non-rfa, so it can be used together in DT
+				values$threshType <- "none"
 			}
-			newLine <- isolate(cbind.data.frame(input$mID, input$station, input$periodString, input$method, input$disthresh, values$supReg))
+
+			# calculte result
+			result <- floodnetRfa::.ClickUpdate(input, db = values$db_hydat, gaugedSites = values$gaugedSites, distThresh = values$distThresh, threshType = values$threshType)
+
+			# add to Fitted Models datatable
+			newLine <- isolate(cbind.data.frame(input$mID, input$station, input$periodString, input$method, values$distThresh, values$supReg))
 			isolate(values$df <- rbind.data.frame(values$df, newLine))
 
 
@@ -690,6 +728,10 @@ server <- function(input, output, session) {
 
 		mListMIDsCopy <<- mListMIDs #I have no idea why mListMIDs is innacessible outside of this observeEvent, but this lets us see it elsewhere..
 
+		# Reset value, for when the same model ID is the 1st selected in another "show" event, so that plots can be properly updated
+		# Credit to K. Rohde for sharing this method on https://stackoverflow.com/questions/38347913/shiny-in-r-how-to-set-an-input-value-to-null-after-clicking-on-a-button
+		session$sendCustomMessage(type = "resetValue", message = "modelSelect")
+
 		updateSelectInput(session = session, inputId = "modelSelect", choices = mListMIDs,
 											selected = modelName)
 
@@ -701,8 +743,8 @@ server <- function(input, output, session) {
 	# ----- Start of Results Page -----
 
 	observeEvent(input$backButton, {
-	# Switch view to Models tab
-	updateTabsetPanel(session, inputId = "pageId", selected = "Models")
+		# Switch view to Models tab
+		updateTabsetPanel(session, inputId = "pageId", selected = "Models")
 	})
 
  # Update plots when model is selected
@@ -774,6 +816,8 @@ server <- function(input, output, session) {
 				output$descriptorPlot <-shiny::renderPlot(spacePlots$descriptor, height = PLOTHEIGHT)
 				## Descriptor space
 				output$seasonalPlot <-shiny::renderPlot(spacePlots$seasonal, height = PLOTHEIGHT)
+				shinyjs::show("seasonalBox")
+				shinyjs::show("descriptorBox")
 			} else {
 				shinyjs::hide("seasonalBox")
 				shinyjs::hide("descriptorBox")

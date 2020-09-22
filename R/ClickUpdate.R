@@ -1,26 +1,31 @@
 #' @export
-.ClickUpdate <- function(input, db, gaugedSites){
+.ClickUpdate <- function(input, db, gaugedSites, distThresh, threshType){
 
 	# Extract return periods from string
 	period.str <- as.numeric(unlist(strsplit(input$periodString,',')))
 
 	# Setup thresh depending on option chosen
-	if (input$threshOption == "Default") {
-		thresh <- NULL
-	}  else if (input$threshOption == "choose") {
-		thresh <- input$disthresh
-	} else {
-		thresh <- as.numeric(unlist(strsplit(input$disthresh,',')))
+	if (threshType == "pot") {
+		if (distThresh == "Default") {
+			thresh <- NULL
+		} else {
+			thresh <- as.numeric(unlist(strsplit(distThresh,',')))
+		}
+	} else if (threshType == "rfaPot") {
+		if (distThresh == "Default") {
+			thresh <- NULL
+		} else {
+			thresh <- distThresh
+		}
 	}
 
 
-
 	if(input$method == "amax"){
-		ans <- .ClickUpdateAmax(input$station, period.str, input$disthresh, db, input$confidenceLevel, input$simulations, input$pool)
+		ans <- .ClickUpdateAmax(input$station, period.str, distThresh, db, input$confidenceLevel, input$simulations, input$pool)
 	} else if(input$method == "pot"){
 		ans <- .ClickUpdatePot(input$station, period.str, db, thresh, input$confidenceLevel, input$simulations, input$pool)
 	} else if(input$method == "rfaAmax"){
-		ans <- .ClickUpdateRfaAmax(input$station, period.str, input$disthresh, db, gaugedSites, input$supReg, input$confidenceLevel, input$simulations,
+		ans <- .ClickUpdateRfaAmax(input$station, period.str, distThresh, db, gaugedSites, input$supReg, input$confidenceLevel, input$simulations,
 															 input$heterogeneity, input$pool, input$intersite)
 	} else if(input$method == "rfaPot"){
 		ans <- .ClickUpdateRfaPot(input$station, period.str, db, thresh, gaugedSites, input$supReg, input$confidenceLevel, input$simulations,
@@ -129,7 +134,7 @@
 
 		floodnetRfa::DailyData(station, size = size) %>%
 
-		floodnetRfa::FloodnetPot(area = 184, u = thresh, period = period, level = level, nsim = nsim, out.model = TRUE)
+		floodnetRfa::FloodnetPot(area = 184, period = period, u = thresh, level = level, nsim = nsim, out.model = TRUE)
 	#it looks like u is no longer used? trying to use custom input other than 20 gives "Error: non-numeric argument to binary operator", with as.numeric(thresh), it has another "expecting TRUE/FALSE"-like error
 
 	return(out)
@@ -171,7 +176,8 @@
 
 		floodnetRfa::DailyPeaksData(info, target = station, size = size) %>%
 
-		floodnetRfa::FloodnetPool(target = station, thresh = thresh, period = period, level = level, nsim = nsim, tol.H = tol.H, corr = corr, verbose = TRUE, out.model = TRUE)
+		floodnetRfa::FloodnetPool(target = station, period = period, level = level, nsim = nsim, tol.H = tol.H, corr = corr, verbose = TRUE, out.model = TRUE)
+	#thresh = thresh,
 				#Thresh not actually a parameter... looks like it's set to automatically be taken from dataset
 	return(out)
 }
