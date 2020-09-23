@@ -1,5 +1,5 @@
 ---
-title: "FloodnetRfa Shiny app"
+title: "FloodnetRfa GUI"
 author: "Martin Durocher"
 date: ""
 output:
@@ -9,134 +9,146 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Introduction
 
 ## Objective
 
-- The purpose of this presentation is to guide the user throught the common steps of using the Graphical User Interface (GUI) of the `floodnetRfa` package.
+- The purpose of this presentation is to guide the user throughout the steps of using the Graphical User Interface (GUI) of the R package `floodnetRfa`.
 
-- Compare to the terminal interface, the resulting analysis follows more stricly the Floodnet guidelines.
+- The GUI allows performing flood frequency analysis of hydrometric stations using local and regional methods.
 
-- The GUI focus on at-site and regional flood frequency analysis of hydrometric gauged stations.
+- Utilities for predicting flood quantiles at ungauged basins are only available from the R terminal.
 
-## Main Screens
 
-First, let's have a quick look at the two mean screen:
+## Starting the GUI
 
-## Main Screens
+- The GUI runs inside a web browser.
+- It is normally launched from the R terminal.
+- A script can be used to launch the GUI from the system terminal.
 
-Model: Used for fitting and managing models.
+```{r, eval=FALSE}
+library(floodnetRfa)
+FloodnetApp()
 
-<img src="fig_gui/main_model_mod.PNG" style="height: auto; width: 800px;"/>
-
-## Main Screens
-
-Resutls: Used to visualized and export model results.
-
-<img src="fig_gui/main_result_mod.PNG" style="height: auto; width: 800px;"/>
+# Create a shortcut on the desktop
+FloodnetApp(shortcut = "C:/Users/JohnDoe/Desktop/FloodnetApp.cmd")
+```
 
 ## Table of contents
 
-In the rest of the presentation, we will discuss the following points:
+- For the rest of the presentation, we will discuss the following points.
+  - Guideline summary
+  - Input data
+  - Configuring models
+  - Managing models
+  - Exporting results
 
-- Guidelines summaries
+# Guideline summary
 
-- Data Input
+## Annual maximum (AMAX)
 
-- Fitting models
-
-- Managing models
-
-- Visualizing models
-
-- Exporting results
-
-# Guidelines summaries
-
-## Annual maximum discharge (AMAX)
-
-- The simplest approach to the frequency analysis of extremes, like floods, is to fit a distribution on the sample of annual maxima. 
-
-- The distribution can be selected manually or automatically according to the Akaiky Information Criteria (AIC)
-
-- Estimation is done using the method of linear moments (L-moments).
+- The principal method in flood frequency analysis consists to fit a distribution on the sample of annual maximum streamflow. 
+- Estimation is performed by the method of linear moments (L-moments).
 
 - Dispersion and confidence intervals are evaluated using parametric bootstrap.
 
 ## Peaks over threshold (POT)
 
-- A second approach consists to model the peaks above a given threshold using a Generalized Pareto distribution (GPA) with 2 parameters. 
+- A second approach is to fit a distribution of streamflow peaks using the Generalized Pareto distribution (GPA). 
 
-- Exceedances are extracted using the declustering method presented by [Lang _et al._ 1999](https://doi.org/10.1016/S0022-1694(99)00167-5)
+- Peaks are exceedances extracted from a declustering method based on a threshold and the basin drainage area
 
 - Estimation is done using the method of maximum likelihood.
 
 - Dispersion and confidence intervals are evaluated using parametric bootstrap.
 	
-## Regional Frequency analysis
+## Regional Frequency analysis (RFA)
 
-- Regional estimates are obtained by the Index-flood model using sample mean as scaling factor.
+- RFA used the index-flood model, which assumes that all distributions inside a homogenous region are proportional.
 
-- Estimation is done using the L-moment algorithm introduced by [Hosking and Wallis, 1997](https://www.cambridge.org/core/books/regional-frequency-analysis/8C59835F9361705DAAE1ADFDEA7ECD30#)
+- The sample mean is used as a scaling factor.
 
-- Homogenous regions are formed using pooling groups according to the floodnet guidelines. See [Mostofi and Burn, 2019](https://doi.org/10.1080/07011784.2018.1548946)
+- Estimation is done by averaging the L-moments of the scaled sample.
 
 - Dispersion and confidence intervals are evaluated using parametric bootstrap.
+
+## Regional Frequency analysis (RFA)
+
+- An homogenous region is neighborhoods (pooling group) formed around a target site.
+
+- It used a similarity measure based on the timing and regularity of the annual maximum discharge.
+
+- The homogeneity is assessed by a heterogeneity measure based on the Linear Coefficient of Variation (LCV).
+
+- Heterogeneous sites are sequentially removed from an initial pooling group.
+
+## Package documentation
+
+For more details on the methodologies, please consult the Floodnet guideline or the documentation of the following R functions.
+
+- `FloodnetAmax`
+- `FloodnetPot`
+- `FloodnetPool`
 	
-	
-# Data Input
+# Input data
+
+## Model Screen
+
+- This image present an overlook of the model screen that is used for configuring and managing models.
+
+<img src="fig_gui/main_model_mod.PNG" style="height: 400px; width: auto;"/>
+
 
 ## Source of information
 
-- The GUI accept two sources of data
-	- Hydrometric data that containing streamflow data.
-	- Station data that are general information about stations and their basins.
+- The GUI may need two sources of data.
+	- Hydrometric data.
+	- Station data.
 	
 -  Hydrometric data
-	- The input file is either a CSV file or a locall HYDAT database (sqlite3)
-	- The CSV file has 3 columns: Station, Date, Value.
-	- Station is a unique identifiant (alphanumeric).
-	- The date must be in a valid format (e.g. `'2020-07-15'`)
+	- Either a CSV file or an HYDAT database (sqlite3)
+	- The CSV file must have 3 columns: Station, Date, Value.
+	- Station is a unique identifier (alphanumeric).
+	- The date must be in a valid format, _e.g._ `'2020-07-15'`
 	- Depending on the analysis, the values can be annual maxima or daily discharges.
 	
 
 ## Source of information
 
-- Station data are meta information about stations.
-	- Needed only for Reginal Frequency Analysis (RFA)
-	- The input must be a CSV file.
-	- Each row represent a station with multiple attributes in column.
+- Station data
+	- Contains meta information about the stations.
+	- Must be a CSV file.
+	- Each row represents a station with multiple attributes in column.
 
 - List of attributes
 	- Station ID. Same as in hydrometric data
 	- Drainage area in  $km^2$.
 	- Mean annual precipitation (MAP) in $mm$.
 	- Super Region.
-	- Threshold (only for RFA POT)
+	- Threshold.
 	
 ## Data Panel
 
-Use the two buttons to select data input. 
+- Use the two buttons to select the input data. 
 
-<img src="fig_gui/data_input_empty.PNG" style="height: 400px; width: auto;"/>
+<img src="fig_gui/data_input_empty_mod.PNG" style="height: 400px; width: auto;"/>
 
 ## Data Panel
 
-A explorer windows will appear. Select the desired file.
+- An explorer window appears.
 
 <img src="fig_gui/file_explorer.PNG" style="height: 400px; width: auto;"/>
 
 ## Data Panel
 
-When the file is selected the name appears below the button.
+- After a file is selected the name appears below.
 
 <img src="fig_gui/data_input_full.PNG" style="height: 400px; width: auto;"/>
 
-
-# Fitting models
+# Configuring models
 
 ## Model Configuration
 
@@ -147,74 +159,82 @@ Once configured, press the `Fit` button.
 
 ## Model Configuration
 
-- Model ID: Identifiant of the model. Must be unique and meaningful.
+- Model ID: An identifier of the model. It must be unique and meaningful.
 
-- Method: Method use to perform the frequency analysis.
+- Method: Method used to perform frequency analysis (_e.g._ AMAX, POT, RFA).
 
-- Target Site: Station of interest. Must correspond to the ID of one hydrometric station.
+- Target Site: Station ID of the site of interest.
 
-- Return period: List of return periods separated by a comma, and for which flood quantiles will be evaluated.
+- Return period: List of return periods used to evaluate the flood quantiles. Must be separated by a comma.
 
 ## Model Configuration (AMAX)
 
-- For an AMAX analysis the distribution must be selected.
-
-- There are four distribution choices: 
+- For AMAX, a distribution is selected among four choices: 
   - Generalized Extreme Values(GEV)
   - Generalized Logistic (GLO)
   - Generalized Normal (GNO)
   - Pearson type III (PE3)
 
-- A best distribution can be automatically selected using AIC.
+- The best distribution can also be selected automatically using the AIC.
 
 ## Model Configuration (AMAX)
 
-Select the distribution using the drop-down list
+- Select the distribution using the drop-down list
 
 <img src="fig_gui/model_configuration_droplist.PNG" style="height: 400px; width: auto;"/>
 
 ## Model Configuration (POT)
 
-No distribution is selected for POT. However, a threshold must be passed manually or automatically according to the procedure developed by [Durocher _et al._, 2018](https://onlinelibrary.wiley.com/doi/abs/10.1002/hyp.13223)
+- For POT, the distribution is known but the threshold and the target drainage area must be passed. 
+
+- The automatic procedure selects the lowest threshold that respects the modeling assumptions.
 
 <img src="fig_gui/model_configuration_pot_mod.PNG" style="height: 300px; width: auto;"/>
 
 ## Model Configuration (RFA)
 
-For RFA the user must select a `Super Regions`. 
-It corresponds to a column of the station data that classified all stations. 
-Only the stations inside the same super region as the target site are considered for forming the pooling groups. 
+- For RFA, the user must select a `Super Region` that identifies a class of stations similar to the target site.
+
+- Pooling groups include only stations inside the target super region.
+
+- The super region is associated with a column of the station data file. 
 
 <img src="fig_gui/model_configuration_rfa_mod.PNG" style="height: 200px; width: auto;"/>
 
+## Model Configuration (RFA POT)
+
+- RFA can be applied to both AMAX and POT approaches.
+
+- RFA POT requires that the threshold are known for all sites in the pooling group.
+
 ## Options
 
-An Options Panel is available to better control the results of the fitted models.
+- A panel of options is available to control the fitting process.
 
-<img src="fig_gui/option.PNG" style="height: 200px; width: auto;"/>
+<img src="fig_gui/options.PNG" style="height: 400px; width: auto;"/>
 
 ## Options
 
-- Confidence Level: Control the probability coverage of the confidence intervals.
-- Simulations: Size of bootstrap sample.
-- Heterogeneity: Threshold for the measure of heterogeneity to classify a pooling group as an homogenous region.
+- Confidence Level: Probability coverage of the confidence intervals.
+- Simulations: Size of the bootstrap samples.
+- Heterogeneity: Level of heterogeneity measure above which a pooling group is considered as homogenous.
 - Pooling group: Initial size of the pooling group.
-- Intersite Correlation: Coefficient of correlation used for the regional bootstrap sample.
-- Graphical Theme: Style of the ouput graphics.
+- Intersite Correlation: Coefficient of correlation used to simulate a bootstrap sample with RFA.
+- Graphical Theme: Style of the output graphics.
 
 ## Return level Plot
 
-After pressing the `Fit` button, the graphics of the flood quantiles (Return Levels) with respect of the return period is produced for assessing the quality of the fitted model. 
+- After pressing the `Fit` button, the graphics of the return levels (flood quantiles) versus the return period is produced for assessing the quality of the fit. 
 
 <img src="fig_gui/return_level.PNG" style="height: 350px; width: auto;"/>
 
-## Flood quantile
+## Flood quantiles
 
-The flood quantiles are also presented in the form of a table.
+- The flood quantiles are presented in the form of a table.
 
 <img src="fig_gui/flood_quantile_qua.PNG" style="height: 350px; width: auto;"/>
 
-## Flood quantile
+## Flood quantiles
 
 The standard error (se) and the confidence intervals (lower, upper) are also available.
 
@@ -225,23 +245,70 @@ The standard error (se) and the confidence intervals (lower, upper) are also ava
 ## Fitted Models
 
 After pressing the `Fit` button, the fitted model is added to a list, where 
-each entry is identified by the `Model ID`.
+each entry is identified by its `Model ID`.
 
 <img src="fig_gui/fitted.PNG" style="height: 350px; width: auto;"/>
 
 ## Fitted Models
  
-- One or more model can be selected by clicking the list.
-- Selected models can be removed from the list using the `Remove` button.
-- Further results are presented by clicking on the `Show` button.
-- When multiple models are selected, comparison graphics are produced.
+- One or more models can be selected by clicking the list.
+- Selected models can be removed from the list by using the `Remove` button.
+- Additional results can be displayed by clicking on the `Show` button.
 
 ## Saving models
 
-- A list of fitted models can be saved using the `Save` buttons.
-- A file explorer will open and allow you to select where to save the models
-- The saved models are saved in common R format: `.Rdata`.
-- The `Open` button will load previously saved models. 
-- The `Reset` button will empty the current list of model.
+- The list of fitted models can be saved using the `Save` buttons.
+- A file explorer will open and allow the user to select the file name and location.
+- The saved models are in an R format with extension `.Rdata`.
+- The `Open` button load previously saved models. 
+- The `Reset` button empties the current list of models.
 
 <img src="fig_gui/save.PNG" style="height: 200px; width: auto;"/>
+
+# Exporting results
+
+## Result Screen
+
+- Here is an overview of the result screen displayed by the `Show` button.
+
+<img src="fig_gui/main_result_mod.PNG" style="height: 400px; width: auto;"/>
+
+## Display model
+
+- If multiple models were selected, the display panel allows switching between them.
+
+- The `<-Back` button allows going back the the model screen
+
+<img src="fig_gui/display_model.PNG" style="height: 400px; width: auto;"/>
+
+## Comparison Graphics
+
+- Some graphics are specific to a model, some include mutiple models.
+
+- For example, the comparison of the confidence intervals allows visualizing the difference the estimated flood quantiles and it variability.
+
+<img src="fig_gui/ci.PNG" style="height: 300px; width: auto;"/>
+
+## Regional Graphics
+
+- Some graphics provides information on the selected pooling groups.
+
+- For example, the L-ratio diagram shows the dispersion of  3rd and 4th L-moment among the pooling group.
+
+<img src="fig_gui/ldiag.PNG" style="height: 300px; width: auto;"/>
+
+## Export 
+
+- The `Export` button saved the element of the screen in a PDF.
+- The button will open a file explorer that allows to select the file name and location.
+
+<img src="fig_gui/export_button_mod.PNG" style="height: 400px; width: auto;"/>
+
+## Export 
+
+- Specific elements of the result screen can be selected.
+- The flood quantiles and the parameters can also be exported in CSV.
+
+<img src="fig_gui/export_button_mod2.PNG" style="height: 300px; width: auto;"/>
+
+# End - Please refer to the Floodnet guideline for more details.
