@@ -1,34 +1,35 @@
 #' @export
-.ClickUpdate <- function(input, db, gaugedSites, distThresh, threshType){
+.ClickUpdate <- function(input, db, gaugedSites, distThresh){
 
 	# Extract return periods from string
 	period.str <- as.numeric(unlist(strsplit(input$periodString,',')))
 
-	# Setup thresh depending on option chosen
-	if (threshType == "pot") {
-		if (distThresh == "Default") {
-			thresh <- NULL
-		} else {
-			thresh <- as.numeric(unlist(strsplit(distThresh,',')))
-		}
-	} else if (threshType == "rfaPot") {
-		if (distThresh == "Default") {
-			thresh <- NULL
-		} else {
-			thresh <- distThresh
-		}
-	}
+	# Don't need to do this here, since any 'pot' type will be done only in 'pot' runs, 'rfaPot' in rfaPot...
+	# # Setup thresh depending on option chosen
+	# if (threshType == "pot") {
+	# 	if (distThresh == "Default") {
+	# 		thresh <- NULL
+	# 	} else {
+	# 		thresh <- as.numeric(unlist(strsplit(distThresh,',')))
+	# 	}
+	# } else if (threshType == "rfaPot") {
+	# 	if (distThresh == "Default") {
+	# 		thresh <- 'auto'
+	# 	} else {
+	# 		thresh <- distThresh
+	# 	}
+	# }
 
 
 	if(input$method == "amax"){
 		ans <- .ClickUpdateAmax(input$station, period.str, distThresh, db, input$confidenceLevel, input$simulations, input$pool)
 	} else if(input$method == "pot"){
-		ans <- .ClickUpdatePot(input$station, period.str, db, thresh, input$confidenceLevel, input$simulations, input$pool)
+		ans <- .ClickUpdatePot(input$station, period.str, db, distThresh, input$confidenceLevel, input$simulations, input$pool)
 	} else if(input$method == "rfaAmax"){
 		ans <- .ClickUpdateRfaAmax(input$station, period.str, distThresh, db, gaugedSites, input$supReg, input$confidenceLevel, input$simulations,
 															 input$heterogeneity, input$pool, input$intersite)
 	} else if(input$method == "rfaPot"){
-		ans <- .ClickUpdateRfaPot(input$station, period.str, db, thresh, gaugedSites, input$supReg, input$confidenceLevel, input$simulations,
+		ans <- .ClickUpdateRfaPot(input$station, period.str, db, distThresh, gaugedSites, input$supReg, input$confidenceLevel, input$simulations,
 															input$heterogeneity, input$pool, input$intersite)
 	}
 
@@ -75,20 +76,24 @@
 	}
 
 	## Filter nonstationary sites from the super region of the target
-	## If/else (switch case possible?) needed to access different names of gaugedSites -- is it possible to access gaugedSites$"variable" directly?
-	if (supregSelected == "supreg_hc6") {
-		target.supreg <- gaugedSites$supreg_hc6[gaugedSites$station == station][1]
-		cond.supreg <- with(gaugedSites, supreg_hc6 == target.supreg)
-	} else if (supregSelected == "supreg_hc12") {
-		target.supreg <- gaugedSites$supreg_hc12[gaugedSites$station == station][1]
-		cond.supreg <- with(gaugedSites, supreg_hc12 == target.supreg)
-	} else if (supregSelected == "supreg_km6") {
-		target.supreg <- gaugedSites$supreg_km6[gaugedSites$station == station][1]
-		cond.supreg <- with(gaugedSites, supreg_km6 == target.supreg)
-	} else {
-		target.supreg <- gaugedSites$supreg_km12[gaugedSites$station == station][1]
-		cond.supreg <- with(gaugedSites, supreg_km12 == target.supreg)
-	}
+	target.supreg <- gaugedSites[gaugedSites$station == station, supregSelected] #get target supreg for type and station selected
+	cond.supreg <- gaugedSites[, supregSelected] == target.supreg
+
+
+	# ## If/else (switch case possible?) needed to access different names of gaugedSites -- is it possible to access gaugedSites$"variable" directly?
+	# if (supregSelected == "supreg_hc6") {
+	# 	target.supreg <- gaugedSites$supreg_hc6[gaugedSites$station == station][1]
+	# 	cond.supreg <- with(gaugedSites, supreg_hc6 == target.supreg)
+	# } else if (supregSelected == "supreg_hc12") {
+	# 	target.supreg <- gaugedSites$supreg_hc12[gaugedSites$station == station][1]
+	# 	cond.supreg <- with(gaugedSites, supreg_hc12 == target.supreg)
+	# } else if (supregSelected == "supreg_km6") {
+	# 	target.supreg <- gaugedSites$supreg_km6[gaugedSites$station == station][1]
+	# 	cond.supreg <- with(gaugedSites, supreg_km6 == target.supreg)
+	# } else {
+	# 	target.supreg <- gaugedSites$supreg_km12[gaugedSites$station == station][1]
+	# 	cond.supreg <- with(gaugedSites, supreg_km12 == target.supreg)
+	# }
 
 
 #	pval.mk <- gaugedSites$trend_mk ## Mann-Kendall
@@ -130,6 +135,13 @@
 
 .ClickUpdatePot <- function(station, period, db, thresh, level, nsim, size){
 
+	# Set up thresh
+		if (thresh == "Default") {
+			thresh <- NULL
+		} else {
+			thresh <- as.numeric(unlist(strsplit(thresh,',')))
+		}
+
 	out <- db %>%
 
 		floodnetRfa::DailyData(station, size = size) %>%
@@ -151,34 +163,35 @@
 .ClickUpdateRfaPot <- function(station, period, db, thresh, gaugedSites, supregSelected, level, nsim, tol.H, size, corr){
 
 	## Filter nonstationary sites from the super region of the target
+	target.supreg <- gaugedSites[gaugedSites$station == station, supregSelected] #get target supreg for type and station selected
+	cond.supreg <- gaugedSites[, supregSelected] == target.supreg
+
 	## If/else (switch case possible?) needed to access different names of gaugedSites -- is it possible to access gaugedSites$"variable" directly?
-	if (supregSelected == "supreg_hc6") {
-		target.supreg <- gaugedSites$supreg_hc6[gaugedSites$station == station][1]
-		cond.supreg <- with(gaugedSites, supreg_hc6 == target.supreg)
-	} else if (supregSelected == "supreg_hc12") {
-		target.supreg <- gaugedSites$supreg_hc12[gaugedSites$station == station][1]
-		cond.supreg <- with(gaugedSites, supreg_hc12 == target.supreg)
-	} else if (supregSelected == "supreg_km6") {
-		target.supreg <- gaugedSites$supreg_km6[gaugedSites$station == station][1]
-		cond.supreg <- with(gaugedSites, supreg_km6 == target.supreg)
-	} else {
-		target.supreg <- gaugedSites$supreg_km12[gaugedSites$station == station][1]
-		cond.supreg <- with(gaugedSites, supreg_km12 == target.supreg)
-	}
+	# if (supregSelected == "supreg_hc6") {
+	# 	target.supreg <- gaugedSites$supreg_hc6[gaugedSites$station == station][1]
+	# 	cond.supreg <- with(gaugedSites, supreg_hc6 == target.supreg)
+	# } else if (supregSelected == "supreg_hc12") {
+	# 	target.supreg <- gaugedSites$supreg_hc12[gaugedSites$station == station][1]
+	# 	cond.supreg <- with(gaugedSites, supreg_hc12 == target.supreg)
+	# } else if (supregSelected == "supreg_km6") {
+	# 	target.supreg <- gaugedSites$supreg_km6[gaugedSites$station == station][1]
+	# 	cond.supreg <- with(gaugedSites, supreg_km6 == target.supreg)
+	# } else {
+	# 	target.supreg <- gaugedSites$supreg_km12[gaugedSites$station == station][1]
+	# 	cond.supreg <- with(gaugedSites, supreg_km12 == target.supreg)
+	# }
 
 # pval.mx <- gaugedSites$trend_mx ## Mann-Kendall
 # pval.lg <- gaugedSites$trend_lg ## logistic regression
 #	cond.trend <- pval.lg >= .05 & pval.mx >= .05
 
-	info <- gaugedSites[cond.supreg, c('station','auto','area')]
+	info <- gaugedSites[cond.supreg, c('station', thresh,'area')] #use thresh type selected, or 'auto' if default
 
 	out <- db %>%
 
 		floodnetRfa::DailyPeaksData(info, target = station, size = size) %>%
 
 		floodnetRfa::FloodnetPool(target = station, period = period, level = level, nsim = nsim, tol.H = tol.H, corr = corr, verbose = TRUE, out.model = TRUE)
-	#thresh = thresh,
-				#Thresh not actually a parameter... looks like it's set to automatically be taken from dataset
 	return(out)
 }
 

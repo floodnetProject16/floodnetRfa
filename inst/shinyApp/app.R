@@ -114,11 +114,8 @@ body <- dashboardBody(
 
 					 				 				 conditionalPanel(condition = "input.method == 'rfaAmax' || input.method == 'rfaPot'",
 					 				 				 								 selectInput("supReg", label = h3("Super Region"),
-					 				 				 								 						choices = list("HC6" = "supreg_hc6",
-					 				 				 								 													 "HC12" = "supreg_hc12",
-					 				 				 								 													 "KM6" = "supreg_km6",
-					 				 				 								 													 "KM12" = "supreg_km12"
-					 				 				 								 													 ), selected = "supreg_km12")
+					 				 				 								 						choices = list("Please load Station Data first..." = "Default"
+					 				 				 								 													 ), selected = "Default")
 					 				 				 ),
 
 					 				 				 ## The option to select the distribution method is only available for AMAX
@@ -154,15 +151,14 @@ body <- dashboardBody(
 					 				 				 conditionalPanel(condition = "input.method == 'rfaPot'",
 					 				 				 								 column(6,
 			 				 				 								 			 tags$div(radioButtons("threshOptionRfaPot", label = h3("Threshold"),
-			 				 				 								 			 											choices = list("Automatic" = "Default",
+			 				 				 								 			 											choices = list("Automatic" = "auto",
 			 				 				 								 			 																		 "Manual" = "manual"
-			 				 				 								 			 											), selected = "Default"), style = "margin-left: -15px")), #-15px left to adjust for column padding and align with other inputs
+			 				 				 								 			 											), selected = "auto"), style = "margin-left: -15px")), #-15px left to adjust for column padding and align with other inputs
 					 				 				 								 column(6,
 			 				 				 								 			 conditionalPanel(condition = "input.threshOptionRfaPot == 'manual'",
 														 				 				 								 tags$div(selectInput("manualThreshRfa", label = h4("List of Thresholds"),
-														 				 				 								 										 choices = list("Read from List..." =  "etc",
-														 				 				 								 										 							 "Example2" = "example2"
-														 				 				 								 										 ), selected = "etc")
+														 				 				 								 										 choices = list("Please load Station Data first..." = "Default"
+														 				 				 								 										 ), selected = "Default")
 									 				 				 								 ), style = "width: 180px; margin-top: 16px;")
 					 				 				 )),
 
@@ -419,6 +415,21 @@ server <- function(input, output, session) {
 		if (nrow(loadPath) > 0) {
 			values$gaugedSitesPath <- loadPath$datapath
 			values$gaugedSites <- read.csv(as.character(values$gaugedSitesPath))
+
+			dataNames <- names(values$gaugedSites)
+			# Get supreg names and update list for selection
+			supRegList <- c()
+			for (eachIndex in grep("^supreg", dataNames)) {
+				supRegList <- c(supRegList, dataNames[eachIndex])
+			}
+			updateSelectInput(session, inputId = "supReg", choices = supRegList, selected = supRegList[1])
+
+			# Get threshold names and update list for selection
+			threshList <- c()
+			for (eachIndex in grep("^ppy", dataNames)) {
+				threshList <- c(threshList, dataNames[eachIndex])
+			}
+			updateSelectInput(session, inputId = "manualThreshRfa", choices = threshList, selected = threshList[1])
 		} ) #end isolate
 	})
 
@@ -562,6 +573,7 @@ server <- function(input, output, session) {
 		stopApp()
 	})
 
+	# --- FIT MODEL ---
 	observeEvent(input$fitModel, {
 		# Check that fields are filled in
 		if ((input$mID != "") && (input$station != "") && (input$periodString != "")) {
@@ -578,30 +590,27 @@ server <- function(input, output, session) {
 			if (input$method == "amax") {
 				values$supReg <- "N/A"
 				values$distThresh <- input$distribution
-				values$threshType <- "none"
 			} else if (input$method == "pot") {
 				values$supReg <- "N/A"
-				values$threshType <- "pot"
 				if (input$threshOptionPot == "Default") {
 					values$distThresh <- input$threshOptionPot
 				} else {
 					values$distThresh <- input$manualThreshPot
 				}
-			} else if (input$method == "rfaPot") {
+			} else if (input$method == "rfaAmax") {
 				values$supReg <- input$supReg # Store input supreg in same reactive value as non-rfa, so it can be used together in DT
-				values$threshType <- "rfaPot"
-				if (input$threshOptionRfaPot == "Default") {
+				values$distThresh <- input$distribution
+			} else { #rfaPot
+				values$supReg <- input$supReg # Store input supreg in same reactive value as non-rfa, so it can be used together in DT
+				if (input$threshOptionRfaPot == "auto") {
 					values$distThresh <- input$threshOptionRfaPot
 				} else {
 					values$distThresh <- input$manualThreshRfa
 				}
-			} else {
-				values$supReg <- input$supReg # Store input supreg in same reactive value as non-rfa, so it can be used together in DT
-				values$threshType <- "none"
 			}
 
 			# calculte result
-			result <- floodnetRfa::.ClickUpdate(input, db = values$db_hydat, gaugedSites = values$gaugedSites, distThresh = values$distThresh, threshType = values$threshType)
+			result <- floodnetRfa::.ClickUpdate(input, db = values$db_hydat, gaugedSites = values$gaugedSites, distThresh = values$distThresh)
 
 			# add to Fitted Models datatable
 			newLine <- isolate(cbind.data.frame(input$mID, input$station, input$periodString, input$method, values$distThresh, values$supReg))
