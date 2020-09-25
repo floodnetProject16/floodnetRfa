@@ -4,6 +4,14 @@
 	# Extract return periods from string
 	period.str <- as.numeric(unlist(strsplit(input$periodString,',')))
 
+	# Check if csv or sqlite
+	if (substring(db,nchar(db)-2,nchar(db)) == "csv") {
+		csv <- read.csv(db)
+		data <- floodnetRfa::SequenceData(value = csv$value,  site = csv$site,  date = csv$date)
+	} else { #else if not csv, should be sqlite
+		data <- db
+	}
+
 	# Don't need to do this here, since any 'pot' type will be done only in 'pot' runs, 'rfaPot' in rfaPot...
 	# # Setup thresh depending on option chosen
 	# if (threshType == "pot") {

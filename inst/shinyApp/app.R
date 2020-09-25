@@ -399,12 +399,6 @@ server <- function(input, output, session) {
 		isolate(
 		if (nrow(loadPath) > 0) {
 				values$dbPath <- loadPath$datapath # Can't use datapath before check, since it won't exist before anything loaded
-				# Check if csv or sqlite
-				ifelse(substring(values$dbPath,nchar(values$dbPath)-3,nchar(loadPath)) == "csv",
-							 values$db_hydat <- read.csv(as.character(values$dbPath)),
-							 #else if not csv, should be sqlite
-							 values$db_hydat <- as.character(values$dbPath)
-				)
 		}	) #end isolate
 	})
 	# -- Load Station Data
