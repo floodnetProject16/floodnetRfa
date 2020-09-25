@@ -8,13 +8,13 @@
 #
 
 # Although against convention, nearly all of the ui uses shiny so this avoids very repetative calls
-library(shiny)
-library(shinydashboard)
-library(shinyjs)
-library(shinyFiles)
-library(DT)
-library(floodnetRfa) #needed for supporting functions... I think the problem was ggplots wasn't loading but is loaded through floodnetRfa?
-library(gridExtra) #needed for outputting dataframes to pdf
+#library(shiny)
+#library(shinydashboard)
+#library(shinyjs)
+#library(shinyFiles)
+#library(DT)
+#library(floodnetRfa) #needed for supporting functions... I think the problem was ggplots wasn't loading but is loaded through floodnetRfa?
+#library(gridExtra) #needed for outputting dataframes to pdf
 
 
 # Load global variable from the config file
@@ -70,10 +70,13 @@ sidebar <- dashboardSidebar(
 						 numericInput(inputId = 'intersite', label = "Intersite Correlation", value = 0, min = -1, max = 1, step = NA, width = NULL),
 						 # Graphical theme (Character): Possibility to chose a theme for the graphical output. See `ggplot2::ggtheme`. To be discussed.
 						 selectInput(inputId = "theme", label = "Graphical Theme",
-						 					 choices = list("Light" = "light"
-						 					 							 #"POT" = "pot",
-						 					 							 #"RFA AMAX" = "rfaAmax",
-						 					 							 #"RFA POT" = "rfaPot"
+						 					 choices = list("Light" = "light",
+						 					 							 "Dark" = "dark"
+						 					 							 # "Gray" = "gray",
+						 					 							 # "Black/White" = "bw",
+						 					 							 # "Minimal" = "minimal",
+						 					 							 # "Classic" = "classic",
+						 					 							 # "Void" = "void"
 						 					 ), selected = "light")
 		)
 	)
@@ -213,7 +216,18 @@ resultsSidebar <- dashboardSidebar(
 
 	## --- Model Selector ---
 	tags$div(class = "sidebar-box model-box",
-					 selectInput("modelSelect", label = h2("Display Model"), choices = NULL, selected = NULL)
+					 selectInput("modelSelect", label = h2("Display Model"), choices = NULL, selected = NULL),
+
+					 #Select theme for results plots
+					 selectInput(inputId = "themeResults", label = "Graphical Theme",
+					 						choices = list("Light" = "light",
+					 													 "Dark" = "dark"
+					 													 #"Gray" = "gray",
+					 													 #"Black/White" = "bw",
+					 													 # "Minimal" = "minimal",
+					 													 # "Classic" = "classic",
+					 													 # "Void" = "void"
+					 						), selected = "light")
 	),
 
 	## --- Export Settings ---
@@ -396,6 +410,26 @@ server <- function(input, output, session) {
 	mListMIDs <- reactiveVal()
 	mListMIDsCopy <- reactiveVal()
 
+	themeSelected <- shiny::eventReactive(input$theme,
+																if(input$theme == "light"){ ggplot2::theme_light()}
+																else if (input$theme == "dark"){ ggplot2::theme_dark()}
+																# else if (input$theme == "gray"){ ggplot2::theme_gray()}
+																# else if (input$theme == "bw"){ ggplot2::theme_bw()}
+																# else if (input$theme == "gray"){ ggplot2::theme_minimal()}
+																# else if (input$theme == "gray"){ ggplot2::theme_classic()}
+																# else if (input$theme == "gray"){ ggplot2::theme_void()}
+										)
+
+	themeResultsSelected <- shiny::eventReactive(input$themeResults,
+																				if(input$themeResults == "light"){ ggplot2::theme_light()}
+																				else if (input$themeResults == "dark"){ ggplot2::theme_dark()}
+																				# else if (input$theme == "gray"){ ggplot2::theme_gray()}
+																				# else if (input$theme == "bw"){ ggplot2::theme_bw()}
+																				# else if (input$theme == "gray"){ ggplot2::theme_minimal()}
+																				# else if (input$theme == "gray"){ ggplot2::theme_classic()}
+																				# else if (input$theme == "gray"){ ggplot2::theme_void()}
+	)
+
 	# --- ShinyFiles File Selection ---
 	volumes <- getVolumes()
 	# -- Load Hydro Data
@@ -502,12 +536,7 @@ server <- function(input, output, session) {
 		updateNumericInput(session, inputId = 'heterogeneity', value = 2, min = 0, max = NA, step = NA)
 		updateNumericInput(session, inputId = 'pool', value = 25, min = 0, max = NA, step = 1)
 		updateNumericInput(session, inputId = 'intersite', value = 0, min = -1, max = 1, step = NA)
-		updateSelectInput(session, inputId = "theme",
-											choices = list("Light" = "light"
-																		 #"POT" = "pot",
-																		 #"RFA AMAX" = "rfaAmax",
-																		 #"RFA POT" = "rfaPot"
-											), selected = "light")
+		updateSelectInput(session, inputId = "theme", selected = "light")
 
 		# Model config
 		updateTextInput(session, "mID", value = "")
@@ -634,8 +663,7 @@ server <- function(input, output, session) {
 					#paging = FALSE #FALSE = becomes one long list instead of multiple properly-sized lists
 				)
 			)
-			output$plot <- shiny::renderPlot(plot(result) + ggplot2::ggtitle(isolate(input$station)), height = PLOTHEIGHT ) #327 height leaves 20px bottom margin - same as buttons
-
+			output$plot <- shiny::renderPlot(plot(result) + ggplot2::ggtitle(isolate(input$station)) + themeSelected(), height = PLOTHEIGHT ) #327 height leaves 20px bottom margin - same as buttons
 		} #end of Check that this model ID hasn't already been used
 			else {
 				showNotification("Model ID has already been used. Please enter a unique Model ID.", type = "warning")
@@ -799,20 +827,20 @@ server <- function(input, output, session) {
 				)
 			)
 			# Return level plot
-			output$graphicsReturnPlot <- shiny::renderPlot(plot(resultGraphics), height = PLOTHEIGHT)
+			output$graphicsReturnPlot <- shiny::renderPlot(plot(resultGraphics) + themeResultsSelected(), height = PLOTHEIGHT)
 			# Confidence intervals plot
-			output$confIntervals <- shiny::renderPlot(plot(lst.fit), height = PLOTHEIGHT)
+			output$confIntervals <- shiny::renderPlot(plot(lst.fit) + themeResultsSelected(), height = PLOTHEIGHT)
 			# Coefficient of variation plot
-			output$ceoffVariation <- shiny::renderPlot(plot(lst.fit, 'cv'), height = PLOTHEIGHT)
+			output$ceoffVariation <- shiny::renderPlot(plot(lst.fit, 'cv') + themeResultsSelected(), height = PLOTHEIGHT)
 			# Histogram
-			output$histogram <- shiny::renderPlot(hist(resultGraphics, histogram.args = list( bins = 15)), height = PLOTHEIGHT)
+			output$histogram <- shiny::renderPlot(hist(resultGraphics, histogram.args = list( bins = 15)) + themeResultsSelected(), height = PLOTHEIGHT)
 
 			#print(mList[[input$modelSelect]][1])
 
 			# L-Moment Ratio Diagram --- only display when model is RFA AMAX
 			if (mList[[input$modelSelect]][2]$method == "pool_amax") {
 				shinyjs::show("lMomentBox")
-				output$lMomentPlot <- shiny::renderPlot(plot(resultGraphics, 'l'), height = PLOTHEIGHT)
+				output$lMomentPlot <- shiny::renderPlot(plot(resultGraphics, 'l') + themeResultsSelected(), height = PLOTHEIGHT)
 			} else {
 				shinyjs::hide("lMomentBox")
 			}
@@ -896,20 +924,20 @@ server <- function(input, output, session) {
 
 					#returnPlot
 					if ("returnPlot" %in% input$exportPlots) {
-						print(plot(resultGraphics) + ggplot2::ggtitle(paste("Return Levels: ", modelTitle)))
+						print(plot(resultGraphics) + ggplot2::ggtitle(paste("Return Levels: ", modelTitle)) + themeResultsSelected())
 					}
 
 
 					#histogramPlot
 					if ("histogramPlot" %in% input$exportPlots) {
-						print(hist(resultGraphics, histogram.args = list( bins = 15)) + ggplot2::ggtitle(paste("Histogram (better name for this?): ",modelTitle)))
+						print(hist(resultGraphics, histogram.args = list( bins = 15)) + ggplot2::ggtitle(paste("Histogram (better name for this?): ",modelTitle)) + themeResultsSelected())
 					}
 
 
 					#lMomentPlot (check if method == "pool_amax")
 					if ("lMomentPlot" %in% input$exportPlots) {
 						if (mList[[eachModel]][2]$method == "pool_amax") {
-						print(plot(resultGraphics, 'l') + ggplot2::ggtitle(paste("L-Moment Ratio Diagram: ",modelTitle)))
+						print(plot(resultGraphics, 'l') + ggplot2::ggtitle(paste("L-Moment Ratio Diagram: ",modelTitle)) + themeResultsSelected())
 					}
 					}
 
@@ -922,27 +950,27 @@ server <- function(input, output, session) {
 				spacePlots <- floodnetRfa::.spacePlots(values$gaugedSites, siteList)
 
 				if ("intervalsPlot" %in% input$exportPlots) {
-					print(plot(lst.fit) + ggplot2::ggtitle("Confidence Intervals"))
+					print(plot(lst.fit) + ggplot2::ggtitle("Confidence Intervals") + themeResultsSelected())
 				}
 
 				if ("variationsPlot" %in% input$exportPlots) {
-					print(plot(lst.fit, 'cv') + ggplot2::ggtitle("Coefficients of Variation"))
+					print(plot(lst.fit, 'cv') + ggplot2::ggtitle("Coefficients of Variation") + themeResultsSelected())
 				}
 
 				if ("descriptorPlot" %in% input$exportPlots) {
 					if (rfaCheck == 1) {
-						print(spacePlots$descriptor + ggplot2::ggtitle("Descriptor Space"))
+						print(spacePlots$descriptor + ggplot2::ggtitle("Descriptor Space") + themeResultsSelected())
 					}
 				}
 
 				if ("seasonalPlot" %in% input$exportPlots) {
 					if (rfaCheck == 1) {
-						print(spacePlots$seasonal + ggplot2::ggtitle("Seasonal Space"))
+						print(spacePlots$seasonal + ggplot2::ggtitle("Seasonal Space") + themeResultsSelected())
 					}
 				}
 
 				if ("coordinates" %in% input$exportPlots) {
-					print(spacePlots$coordinates + ggplot2::ggtitle("Coordinates of Stations"))
+					print(spacePlots$coordinates + ggplot2::ggtitle("Coordinates of Stations") + themeResultsSelected())
 				}
 
 
