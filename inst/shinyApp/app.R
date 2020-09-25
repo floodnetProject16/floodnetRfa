@@ -163,7 +163,12 @@ body <- dashboardBody(
 					 				 				 )),
 
 					 				 				 ## Action button for running the model - always on bottom right
-					 				 				 actionButton("fitModel", class = "bottom-button red-button right-button", label = "Fit")
+					 				 				 actionButton("fitModel", class = "bottom-button red-button right-button", label = "Fit"),
+
+					 				 				 # loading message and css taken from user1603038's post at https://stackoverflow.com/questions/17325521/r-shiny-display-loading-message-while-function-is-running
+					 				 				 # will be customized in the future - a placeholder for now
+					 				 				 conditionalPanel(condition = "$('html').hasClass('shiny-busy')",
+					 				 				 								 tags$div("Loading...", id = "loadmessage"))
 					 				 )
 	 				 )
 
@@ -399,6 +404,7 @@ server <- function(input, output, session) {
 		isolate(
 		if (nrow(loadPath) > 0) {
 				values$dbPath <- loadPath$datapath # Can't use datapath before check, since it won't exist before anything loaded
+				values$db_hydat <- as.character(values$dbPath)
 		}	) #end isolate
 	})
 	# -- Load Station Data
