@@ -222,7 +222,8 @@ resultsSidebar <- dashboardSidebar(
 					 checkboxGroupInput("exportPlots", label = h2("Export Settings"),
 					 									 choices = list("Flood Quantiles (PDF)" = "quantilesPdf",
 					 									 							 "Flood Quantiles (CSV)" = "quantilesCsv",
-					 									 							 "Model Parameters" = "modelParameters",
+					 									 							 "Model Parameters (PDF)" = "modelParametersPdf",
+					 									 							 "Model Parameters (CSV)" = "modelParametersCsv",
 					 									 							 "Return Level Plot" = "returnPlot",
 					 									 							 "Histogram" = "histogramPlot",
 					 									 							 "Condifence Intervals" = "intervalsPlot",
@@ -861,10 +862,22 @@ server <- function(input, output, session) {
 					resultGraphics <- reactiveValuesToList(resultList)[[eachModel]] #get the result for eachModel from resultList
 
 					# --- CSV Output ---
-					csvFile <- paste(substring(exportPath$datapath,1,nchar(exportPath$datapath)-4), eachModel, sep = "_") #Make unique name for each model, extract .pdf out of name
-					csvFile <- paste(csvFile, ".csv", sep = "") #Add .csv to end
-					print(csvFile)
-					write.csv(as.data.frame(resultGraphics), file = csvFile)
+					#quantilesCsv
+					if ("quantilesCsv" %in% input$exportPlots) {
+						csvFile <- paste(substring(exportPath$datapath,1,nchar(exportPath$datapath)-4), eachModel, sep = "_") #Make unique name for each model, extract .pdf out of name
+						csvFile <- paste(csvFile, "Quantiles.csv", sep = "") #Add Quantiles.csv to end
+						print(csvFile)
+						write.csv(as.data.frame(resultGraphics), file = csvFile)
+					}
+
+					#modelParametersCsv
+					if ("modelParametersCsv" %in% input$exportPlots) {
+						csvFile <- paste(substring(exportPath$datapath,1,nchar(exportPath$datapath)-4), eachModel, sep = "_") #Make unique name for each model, extract .pdf out of name
+						csvFile <- paste(csvFile, "Parameters.csv", sep = "") #Add Parameters.csv to end
+						print(csvFile)
+						write.csv(as.data.frame(resultGraphics), file = csvFile)
+					}
+
 
 					modelTitle <- paste(eachModel, mList[[eachModel]][1]$site, mList[[eachModel]][2]$method,  sep = " - ")
 					print(modelTitle) #Print ID of model as a title for the model-section .. any way to do this like a title in pdf?
@@ -876,7 +889,7 @@ server <- function(input, output, session) {
 					}
 
 					#modelParameters
-					if ("modelParameters" %in% input$exportPlots) {
+					if ("modelParametersPdf" %in% input$exportPlots) {
 						plot.new()
 						print(gridExtra::grid.table(as.data.frame(resultGraphics, type = 'p')))
 					}
