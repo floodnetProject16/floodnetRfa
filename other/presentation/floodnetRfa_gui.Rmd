@@ -37,6 +37,13 @@ FloodnetApp()
 FloodnetApp(shortcut = "C:/Users/JohnDoe/Desktop/FloodnetApp.cmd")
 ```
 
+## Minimum requirement
+
+- Before starting to use the GUI, the user must make sure that he has collected the following information.
+	- Streamflow measurements
+	- Drainage Area
+	- Mean annual precipitation
+
 ## Table of contents
 
 - For the rest of the presentation, we will discuss the following points.
@@ -51,6 +58,7 @@ FloodnetApp(shortcut = "C:/Users/JohnDoe/Desktop/FloodnetApp.cmd")
 ## Annual maximum (AMAX)
 
 - The principal method in flood frequency analysis consists to fit a distribution on the sample of annual maximum streamflow. 
+
 - Estimation is performed by the method of linear moments (L-moments).
 
 - Dispersion and confidence intervals are evaluated using parametric bootstrap.
@@ -59,7 +67,7 @@ FloodnetApp(shortcut = "C:/Users/JohnDoe/Desktop/FloodnetApp.cmd")
 
 - A second approach is to fit a distribution of streamflow peaks using the Generalized Pareto distribution (GPA). 
 
-- Peaks are exceedances extracted from a declustering method based on a threshold and the basin drainage area
+- Peaks are exceedances extracted from a declustering method based on a given threshold and the basin drainage area
 
 - Estimation is done using the method of maximum likelihood.
 
@@ -77,13 +85,43 @@ FloodnetApp(shortcut = "C:/Users/JohnDoe/Desktop/FloodnetApp.cmd")
 
 ## Regional Frequency analysis (RFA)
 
-- An homogenous region is neighborhoods (pooling group) formed around a target site.
+- An homogenous region is a neighborhood (pooling group) formed around a target site.
 
 - It used a similarity measure based on the timing and regularity of the annual maximum discharge.
 
 - The homogeneity is assessed by a heterogeneity measure based on the Linear Coefficient of Variation (LCV).
 
-- Heterogeneous sites are sequentially removed from an initial pooling group.
+- Heterogeneous sites are sequentially removed from an initial pooling group until homogeneity is reached.
+	
+- However this process will be stopped if the number of station-year fall below $5T$, where $T$ is the return period.
+
+## Super regions
+
+- A super region represents a classification of all stations found in station data file.
+
+- It can be used to filter the stations that will be used to form the pooling group.
+
+- A simple example of super region would be Canadian provinces.
+
+- However, floodnet recommends to use a classification based on the drainage area and the mean annual precipitation.
+
+## Super regions
+
+- The GUI does not include a procedure to create the super regions, but the R terminal does.
+- The example below creates `N` super regions using the Ward's method.
+
+```{r, eval = FALSE}
+csv <- read.csv(file = "station_data.csv")
+
+# add a column containing the super regions
+csv$supreg_new <- 
+    dist(csv[,c('area','map')]) %>%
+    hclust(method = 'ward') %>%
+    cutree(N)
+
+write.csv(csv, file = "station_data_modif.csv")
+```
+
 
 ## Package documentation
 
@@ -97,19 +135,19 @@ For more details on the methodologies, please consult the Floodnet guideline or 
 
 ## Model Screen
 
-- This image present an overlook of the model screen that is used for configuring and managing models.
+- This image presents an overlook of the model screen that is used for configuring and managing models.
 
 <img src="fig_gui/main_model_mod.PNG" style="height: 400px; width: auto;"/>
 
 
 ## Source of information
 
-- The GUI may need two sources of data.
+- The application need two sources of data.
 	- Hydrometric data.
 	- Station data.
 	
 -  Hydrometric data
-	- Either a CSV file or an HYDAT database (sqlite3)
+	- Either a CSV file or a local HYDAT database (sqlite3)
 	- The CSV file must have 3 columns: Station, Date, Value.
 	- Station is a unique identifier (alphanumeric).
 	- The date must be in a valid format, _e.g._ `'2020-07-15'`
@@ -129,6 +167,12 @@ For more details on the methodologies, please consult the Floodnet guideline or 
 	- Mean annual precipitation (MAP) in $mm$.
 	- Super Region.
 	- Threshold.
+	
+## Source of information
+
+- Example of a station data file.
+
+<img src="fig_gui/excel.PNG" style="height: 300px; width: auto;"/>
 	
 ## Data Panel
 
@@ -189,7 +233,9 @@ Once configured, press the `Fit` button.
 
 - The automatic procedure selects the lowest threshold that respects the modeling assumptions.
 
-<img src="fig_gui/model_configuration_pot_mod.PNG" style="height: 300px; width: auto;"/>
+- The drainage area is read from the column `area` in the station data file .
+
+<img src="fig_gui/model_configuration_pot_mod.PNG" style="height: 250px; width: auto;"/>
 
 ## Model Configuration (RFA)
 

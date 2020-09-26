@@ -34,7 +34,7 @@
 #' @param ... Other parameters
 #'
 #'
-#' @seealso \link{DailyData}, link{FloodnetPool}.
+#' @seealso \link{DailyData}, \link{FloodnetPool}.
 #'
 #' @export
 #'
