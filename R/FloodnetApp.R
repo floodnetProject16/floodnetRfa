@@ -7,6 +7,14 @@
 #'
 #' @param shortcut File path of the launching script.
 #'
+#' @import shiny
+#' @import shinydashboard
+#' @import shinyjs
+#' @import shinyFiles
+#' @import DT
+#' @import floodnetRfa
+#' @import gridExtra
+#'
 #' @export
 #'
 #' @examples

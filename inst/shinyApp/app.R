@@ -1,20 +1,27 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
+#' Shiny GUI for some floodnetRfa functionality
+#'
+#' Contains the UI and Server functionality. Run from RStudio with 'Run App', or with FloodnetApp.R function
+#'
+#'
+#' @import shiny
+#' @import shinydashboard
+#' @import shinyjs
+#' @import shinyFiles
+#' @import DT
+#' @import floodnetRfa
+#' @import gridExtra
+#'
+#' @export
 
 # Although against convention, nearly all of the ui uses shiny so this avoids very repetative calls
-#library(shiny)
-#library(shinydashboard)
-#library(shinyjs)
-#library(shinyFiles)
-#library(DT)
-#library(floodnetRfa) #needed for supporting functions... I think the problem was ggplots wasn't loading but is loaded through floodnetRfa?
-#library(gridExtra) #needed for outputting dataframes to pdf
+# It seems since this file isn't included in the R folder, imports are not handled properly, so library() required
+library(shiny)
+library(shinydashboard)
+library(shinyjs)
+library(shinyFiles)
+library(DT)
+library(floodnetRfa) #needed for supporting functions... I think the problem was ggplots wasn't loading but is loaded through floodnetRfa?
+library(gridExtra) #needed for outputting dataframes to pdf
 
 
 # Load global variable from the config file
@@ -26,14 +33,14 @@ options(shiny.maxRequestSize = 10000*1024^2) # Arbitrarily-large (~10GB) max upl
 jscode <- "shinyjs.closeWindow = function() { window.close(); }"
 #jscode <- "Shiny.addCustomMessageHandler('closeWindow', function(m) {window.close();});" #native-shiny application, jscode was giving "attempt to apply non-function" error #jscode <- "shinyjs.closewindow = function() { window.close(); }"
 
-sidebar <- dashboardSidebar(
+sidebar <- shinydashboard::dashboardSidebar(
 
 	# --- Button box ---
 	fluidRow(
 		tags$div(class = "sidebar-box button-box",
 			# Red buttons - open and save
-			shinyFilesButton(id = "openButton", label = "Open" , title = "Open Saved Session's Data", class = "sidebar-button red-button left-sidebar-button top-sidebar-button", multiple = FALSE, buttonType = "data"),
-			shinySaveButton("saveButton", label = "Save", title = "Save Session", class = "sidebar-button red-button right-sidebar-button top-sidebar-button", filetype =  ".Rdata"),
+			shinyFiles::shinyFilesButton(id = "openButton", label = "Open" , title = "Open Saved Session's Data", class = "sidebar-button red-button left-sidebar-button top-sidebar-button", multiple = FALSE, buttonType = "data"),
+			shinyFiles::shinySaveButton("saveButton", label = "Save", title = "Save Session", class = "sidebar-button red-button right-sidebar-button top-sidebar-button", filetype =  ".Rdata"),
 
 			# Blue buttons - Reset and Quit
 			actionButton("resetButton", class = "sidebar-button blue-button left-sidebar-button bottom-sidebar-button", label = "Reset"),
@@ -46,9 +53,9 @@ sidebar <- dashboardSidebar(
 		tags$div(class = "sidebar-box data-box",
 			 ## Headline
 			 tags$h2("Data"),
-			 shinyFilesButton(id = "hydroData", label = "Hydrometric Data" , title = "Hydrometric Data:", multiple = FALSE, buttonType = "data", class = NULL),
+			 shinyFiles::shinyFilesButton(id = "hydroData", label = "Hydrometric Data" , title = "Hydrometric Data:", multiple = FALSE, buttonType = "data", class = NULL),
 			 textOutput("hydroFile"),
-			 shinyFilesButton(id = "stationData", label = "Station Data" , title = "Station Data:", multiple = FALSE, buttonType = "data", class = NULL),
+			 shinyFiles::shinyFilesButton(id = "stationData", label = "Station Data" , title = "Station Data:", multiple = FALSE, buttonType = "data", class = NULL),
 			 textOutput("stationFile")
 		)
 	),
@@ -82,7 +89,7 @@ sidebar <- dashboardSidebar(
 	)
 )
 
-body <- dashboardBody(
+body <- shinydashboard::dashboardBody(
 
 	#Use custom css
 	tags$head(
@@ -210,7 +217,7 @@ body <- dashboardBody(
 	)
 )
 
-resultsSidebar <- dashboardSidebar(
+resultsSidebar <- shinydashboard::dashboardSidebar(
 	## --- Back Button ---
 	actionButton("backButton", class = "back-button blue-button", label = "← Back"),
 
@@ -252,7 +259,7 @@ resultsSidebar <- dashboardSidebar(
 					 )
 )
 
-resultsBody <- dashboardBody(
+resultsBody <- shinydashboard::dashboardBody(
 
 	#Use custom css
 	tags$head(
@@ -364,8 +371,8 @@ resultsBody <- dashboardBody(
 ui <- tagList(shinyjs::useShinyjs(),  # Include shinyjs,
 							navbarPage("FloodNet RFA", id="pageId",
 								 tabPanel("Models",
-								 				 dashboardPage(
-								 				 	dashboardHeader(disable = TRUE,
+								 				 shinydashboard::dashboardPage(
+								 				 	shinydashboard::dashboardHeader(disable = TRUE,
 								 				 									#For some reason, color styling had to be done like this and not in css
 								 				 									title = tags$div(tags$span(id = "floodnetText", "FloodNet"),
 								 				 																	 tags$span(id = "rfaText", "RFA"))
@@ -374,8 +381,8 @@ ui <- tagList(shinyjs::useShinyjs(),  # Include shinyjs,
 								 				 	body)
 								 ),
 								 tabPanel("Results",
-								 				 dashboardPage(
-								 				 	dashboardHeader(disable = TRUE,
+								 				 shinydashboard::dashboardPage(
+								 				 	shinydashboard::dashboardHeader(disable = TRUE,
 								 				 									#For some reason, color styling had to be done like this and not in css
 								 				 									title = tags$div(tags$span(id = "floodnetText", "FloodNet"),
 								 				 																	 tags$span(id = "rfaText", "RFA"))
@@ -396,13 +403,9 @@ server <- function(input, output, session) {
 	# Add fitted model to list
 	values <- reactiveValues() # Found a similar solution on stackoverflow (23236944), but do we need all of values just for df?
 	values$db_hydat <- "" #Initialize DB and GUAGED as empty strings, so they can be checked before fitting model
-	values$dbPath <- ""
 	values$gaugedSites <- ""
 	values$gaugedSitesPath <- ""
 	values$distThresh <- ""
-	spacePlots <- reactiveValues()
-	# spacePlots$descriptor <- "" #Initialized so they can be saved and loaded without risk of errors
-	# spacePlots$seasonal <- ""
 	resultList <- reactiveValues() # Store each result here with the "key" being the unique identifier mID
 	PLOTHEIGHT <- 327 #Constant value - Height for plots
 	savePath <- "NA"
@@ -438,8 +441,7 @@ server <- function(input, output, session) {
 		loadPath <- parseFilePaths(volumes,input$hydroData) #get path for file
 		isolate(
 		if (nrow(loadPath) > 0) {
-				values$dbPath <- loadPath$datapath # Can't use datapath before check, since it won't exist before anything loaded
-				values$db_hydat <- as.character(values$dbPath)
+				values$db_hydat <- as.character(loadPath$datapath) # Can't use datapath before check, since it won't exist before anything loaded
 		}	) #end isolate
 	})
 	# -- Load Station Data
@@ -479,7 +481,6 @@ server <- function(input, output, session) {
 		if (nrow(savePath) > 0) {
 			savedValues <- values
 			savedResultList <- resultList
-			# savedSpacePlots <- spacePlots
 			save(savedValues, savedResultList, file = savePath$datapath)
 		}
 		) #end isolate
@@ -509,24 +510,19 @@ server <- function(input, output, session) {
 
 			values$df <- savedValues$df # overwrite values with the new savedValues
 			values$db_hydat <- savedValues$db_hydat # the data files will always at least be "", so no risk of not existing
-			values$dbPath <-  savedValues$dbPath
 			values$gaugedSites <- savedValues$gaugedSites
 			values$gaugedSitesPath <- savedValues$gaugedSitesPath
-
-			# # load spacePlots..
-			# spacePlots$descriptor <- savedSpacePlots$descriptor
-			# spacePlots$seasonal <- savedSpacePlots$seasonal
+			values$spacePlots <- savedValues$spacePlots
 		} ) #end isolate
 	})
 
-	output$hydroFile <- renderText(as.character(values$dbPath)) # Display the hydro data file loaded
+	output$hydroFile <- renderText(as.character(values$db_hydat)) # Display the hydro data file loaded
 	output$stationFile <- renderText(as.character(values$gaugedSitesPath)) # Display the station data file loaded
 
 	# --- Reset Button - set all data and fields back to default
 	observeEvent(input$resetButton, {
 		# Data Input
 		values$db_hydat <- ""
-		values$dbPath <- ""
 		values$gaugedSites <- ""
 		values$gaugedSitesPath <- ""
 
@@ -585,7 +581,6 @@ server <- function(input, output, session) {
 			if (nrow(savePath) > 0) {
 				savedValues <- values
 				savedResultList <- resultList
-				# savedSpacePlots <- spacePlots
 				save(savedValues, savedResultList, file = savePath$datapath)
 
 				# QUIT
@@ -630,6 +625,10 @@ server <- function(input, output, session) {
 			} else if (input$method == "rfaAmax") {
 				values$supReg <- input$supReg # Store input supreg in same reactive value as non-rfa, so it can be used together in DT
 				values$distThresh <- input$distribution
+
+				# Create spacePlots for model
+				values$spacePlots[[input$mID]] <- floodnetRfa::.spacePlots(values$db_hydat, values$gaugedSites, target = input$station, method = input$method, supReg = values$supReg)
+
 			} else { #rfaPot
 				values$supReg <- input$supReg # Store input supreg in same reactive value as non-rfa, so it can be used together in DT
 				if (input$threshOptionRfaPot == "auto") {
@@ -637,6 +636,9 @@ server <- function(input, output, session) {
 				} else {
 					values$distThresh <- input$manualThreshRfa
 				}
+
+				# Create spacePlots for model
+				values$spacePlots[[input$mID]] <- floodnetRfa::.spacePlots(values$db_hydat, values$gaugedSites, target = input$station, method = input$method, supReg = values$supReg)
 			}
 
 			# calculte result
@@ -846,14 +848,14 @@ server <- function(input, output, session) {
 			}
 
 			# Space diagrams --- only display when model is RFA AMAX or POT
-			if (rfaCheck == 1) {
-				spacePlots <- floodnetRfa::.spacePlots(values$gaugedSites, siteList)
+			if (mList[[input$modelSelect]][2]$method == "pool_amax" || mList[[input$modelSelect]][2]$method == "pool_pot") {
+
 				# ## Geographical Space
 				# output$coordinatesPlot <-shiny::renderPlot(spacePlots$coordinates, height = PLOTHEIGHT)
 				## Seasonal space
-				output$descriptorPlot <-shiny::renderPlot(spacePlots$descriptor, height = PLOTHEIGHT)
+				output$descriptorPlot <-shiny::renderPlot(values$spacePlots[[input$modelSelect]]$descriptor + themeResultsSelected(), height = PLOTHEIGHT)
 				## Descriptor space
-				output$seasonalPlot <-shiny::renderPlot(spacePlots$seasonal, height = PLOTHEIGHT)
+				output$seasonalPlot <-shiny::renderPlot(values$spacePlots[[input$modelSelect]]$seasonal + themeResultsSelected(), height = PLOTHEIGHT)
 				shinyjs::show("seasonalBox")
 				shinyjs::show("descriptorBox")
 			} else {
@@ -874,7 +876,6 @@ server <- function(input, output, session) {
 			if (nrow(exportPath) > 0) {
 				rfaCheck <- 0
 				siteList <- c()
-				# gaugedSites <- read.csv(as.character(parseFilePaths(volumes,isolate(input$stationData))$datapath))  # Needs to be re-initialized here
 				mList <- reactiveValues()  # Needs to be re-initialized here
 				for (eachModel in mListMIDsCopy) { #get list of models into local memory
 					mList[[eachModel]] <- resultList[[eachModel]]
@@ -941,13 +942,31 @@ server <- function(input, output, session) {
 					}
 					}
 
+					# Spaceplots - descriptor
+					if ("descriptorPlot" %in% input$exportPlots) {
+						if (mList[[eachModel]][2]$method == "pool_amax" || mList[[eachModel]][2]$method == "pool_pot") {
+							print(values$spacePlots[[eachModel]]$descriptor + ggplot2::ggtitle("Descriptor Space") + themeResultsSelected())
+						}
+					}
+
+					# Spaceplots - seasonal
+					if ("seasonalPlot" %in% input$exportPlots) {
+						if (mList[[eachModel]][2]$method == "pool_amax" || mList[[eachModel]][2]$method == "pool_pot") {
+							print(values$spacePlots[[eachModel]]$seasonal + ggplot2::ggtitle("Seasonal Space") + themeResultsSelected())
+						}
+					}
+
+				# if ("coordinates" %in% input$exportPlots) {
+				# 	if (mList[[eachModel]][2]$method == "pool_amax" || mList[[eachModel]][2]$method == "pool_pot") {
+				# 			print(values$spacePlots[[eachModel]]$coordinates + ggplot2::ggtitle("Coordinates of Stations") + themeResultsSelected())
+				# 	}
+				# }
 
 				} #end of individual plots section
 
 				# --- Group plots ---
 				# Create a compareModels list with each selected model from the table (for comparative plots)
 				lst.fit <- do.call(floodnetRfa::CompareModels, reactiveValuesToList(mList)) # compare all models in mList
-				spacePlots <- floodnetRfa::.spacePlots(values$gaugedSites, siteList)
 
 				if ("intervalsPlot" %in% input$exportPlots) {
 					print(plot(lst.fit) + ggplot2::ggtitle("Confidence Intervals") + themeResultsSelected())
@@ -957,31 +976,9 @@ server <- function(input, output, session) {
 					print(plot(lst.fit, 'cv') + ggplot2::ggtitle("Coefficients of Variation") + themeResultsSelected())
 				}
 
-				if ("descriptorPlot" %in% input$exportPlots) {
-					if (rfaCheck == 1) {
-						print(spacePlots$descriptor + ggplot2::ggtitle("Descriptor Space") + themeResultsSelected())
-					}
-				}
-
-				if ("seasonalPlot" %in% input$exportPlots) {
-					if (rfaCheck == 1) {
-						print(spacePlots$seasonal + ggplot2::ggtitle("Seasonal Space") + themeResultsSelected())
-					}
-				}
-
-				if ("coordinates" %in% input$exportPlots) {
-					print(spacePlots$coordinates + ggplot2::ggtitle("Coordinates of Stations") + themeResultsSelected())
-				}
-
-
 				dev.off() # End pdf-printing session
-
-				# NEED some way to stop printing pdf once complete... otherwise any changes in boxes will change what's been printed to pdf when button pressed
-				# will something like this work? exportPath <- NULL ??
 			}
 		)
-
-		#		}
 	}) # END of Export Button Functions
 }
 
