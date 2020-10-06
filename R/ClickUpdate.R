@@ -4,6 +4,10 @@
 	# Extract return periods from string
 	period.str <- as.numeric(unlist(strsplit(input$periodString,',')))
 
+
+	print("DB before any changes")
+	print(db)
+
 	# Check if csv or sqlite
 	if (substring(db,nchar(db)-2,nchar(db)) == "csv") {
 		csv <- read.csv(db)
@@ -11,6 +15,9 @@
 	} else { #else if not csv, should be sqlite
 		data <- db
 	}
+
+	print("DB after changes")
+	print(data)
 
 	# Don't need to do this here, since any 'pot' type will be done only in 'pot' runs, 'rfaPot' in rfaPot...
 	# # Setup thresh depending on option chosen
@@ -32,7 +39,7 @@
 	if(input$method == "amax"){
 		ans <- .ClickUpdateAmax(input$station, period.str, distThresh, db, input$confidenceLevel, input$simulations, input$pool)
 	} else if(input$method == "pot"){
-		ans <- .ClickUpdatePot(input$station, period.str, db, distThresh, input$confidenceLevel, input$simulations, input$pool)
+		ans <- .ClickUpdatePot(input$station, period.str, db, distThresh, input$confidenceLevel, input$simulations, input$pool, gaugedSites)
 	} else if(input$method == "rfaAmax"){
 		ans <- .ClickUpdateRfaAmax(input$station, period.str, distThresh, db, gaugedSites, input$supReg, input$confidenceLevel, input$simulations,
 															 input$heterogeneity, input$pool, input$intersite)
@@ -141,7 +148,7 @@
 # 	return(out)
 # }
 
-.ClickUpdatePot <- function(station, period, db, thresh, level, nsim, size){
+.ClickUpdatePot <- function(station, period, db, thresh, level, nsim, size, gaugedSites){
 
 	# Set up thresh
 		if (thresh == "Default") {
@@ -150,11 +157,14 @@
 			thresh <- as.numeric(unlist(strsplit(thresh,',')))
 		}
 
+	# Get area for site
+	area <- gaugedSites[gaugedSites$station == station, 'area']
+
 	out <- db %>%
 
 		floodnetRfa::DailyData(station, size = size) %>%
 
-		floodnetRfa::FloodnetPot(area = 184, period = period, u = thresh, level = level, nsim = nsim, out.model = TRUE)
+		floodnetRfa::FloodnetPot(area = area, period = period, u = thresh, level = level, nsim = nsim, out.model = TRUE)
 	#it looks like u is no longer used? trying to use custom input other than 20 gives "Error: non-numeric argument to binary operator", with as.numeric(thresh), it has another "expecting TRUE/FALSE"-like error
 
 	return(out)

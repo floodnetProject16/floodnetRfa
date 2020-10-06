@@ -437,7 +437,7 @@ server <- function(input, output, session) {
 	volumes <- getVolumes()
 	# -- Load Hydro Data
 	observe({
-		shinyFileChoose(input,'hydroData', roots=volumes, filetypes = c('csv', 'sqlite3'))
+		shinyFileChoose(input,'hydroData', roots=volumes, filetypes = c('sqlite3')) # 'csv', taken out for now since needs to be handled throughout whole floodnetRfa
 		loadPath <- parseFilePaths(volumes,input$hydroData) #get path for file
 		isolate(
 		if (nrow(loadPath) > 0) {
@@ -604,8 +604,8 @@ server <- function(input, output, session) {
 		if ((input$mID != "") && (input$station != "") && (input$periodString != "")) {
 		# Check that values$db_hydat has been loaded
 		if (values$db_hydat != "") {
-		# If RFA/pool, check for values$gaugedSites
-		if ((input$method == "amax" || input$method == "pot") || (values$gaugedSites != "")) {
+		# If RFA/pool or POT, check for values$gaugedSites
+		if ((input$method == "amax") || (values$gaugedSites != "")) {
 
 		# Check that this model ID hasn't already been used
 		if ( is.null(resultList[[input$mID]]) ) {
@@ -671,7 +671,7 @@ server <- function(input, output, session) {
 				showNotification("Model ID has already been used. Please enter a unique Model ID.", type = "warning")
 		}} #end check for station data (RFA/Pool)
 			else {
-				showNotification("Please load Station Data before fitting an RFA model")
+				showNotification("Please load Station Data before fitting an RFA or local-POT model")
 		}} #end of check for data selected
 			else {
 				showNotification("Please select files for Hydrometric Data before fitting a model.", type = "warning")

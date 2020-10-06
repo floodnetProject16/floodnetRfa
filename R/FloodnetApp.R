@@ -12,7 +12,6 @@
 #' @import shinyjs
 #' @import shinyFiles
 #' @import DT
-#' @import floodnetRfa
 #' @import gridExtra
 #'
 #' @export
