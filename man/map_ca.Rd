@@ -4,7 +4,9 @@
 \name{map_ca}
 \alias{map_ca}
 \title{Map of Canada}
-\format{An object of class \code{SpatialPolygonsDataFrame} with 1 rows and 63 columns.}
+\format{
+An object of class \code{SpatialPolygonsDataFrame} with 13 rows and 83 columns.
+}
 \usage{
 map_ca
 }

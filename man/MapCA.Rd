@@ -27,7 +27,7 @@ xd <- DemoData('descriptor')
 
 MapCA() +
   geom_point(data = xd, aes(x = lon, y = lat), colour = 'orange') +
-  coord_cartesian(xlim = c(-90,-50), ylim = c(42,60))
+  coord_cartesian(xlim = c(-70,-58), ylim = c(43,50))
 
 }
 \seealso{

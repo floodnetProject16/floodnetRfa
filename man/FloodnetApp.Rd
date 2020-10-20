@@ -4,17 +4,26 @@
 \alias{FloodnetApp}
 \title{Floodnet App}
 \usage{
-FloodnetApp()
+FloodnetApp(shortcut = NULL)
 }
-\value{
-None
+\arguments{
+\item{shortcut}{File path of the launching script.}
 }
 \description{
-A simple function used to run the Shiny GUI from the floodnetRfa package
+A simple function used to start launch a Graphical User Interface (GUI)
+inside a the default web browser.
+Alternatively, if a path is passed in argument it create a script that will
+launch the GUI from the system terminal.
 }
 \examples{
 
 \dontrun{
-  FloodnetToolbox()
+  FloodnetApp()
+
+  #On Windows
+  floodnetApp("C:/Users/JohnDoe/Desktop/FloodnetApp.cmd")
+
+  #On Unix
+  floodnetApp("/home/JohnDoe/Desktop/FloodnetApp.sh")
 }
 }
