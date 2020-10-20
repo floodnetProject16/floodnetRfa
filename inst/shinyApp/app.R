@@ -14,8 +14,7 @@
 #'
 #' @export
 
-# Although against convention, nearly all of the ui uses shiny so this avoids very repetative calls
-# It seems since this file isn't included in the R folder, imports are not handled properly, so library() required
+# Library calls were used for quick testing, import preferred for package
 # library(shiny)
 # library(shinydashboard)
 # library(shinyjs)
@@ -977,7 +976,7 @@ server <- function(input, output, session) {
 
 					#histogramPlot
 					if ("histogramPlot" %in% input$exportPlots) {
-						print(hist(resultGraphics, histogram.args = list( bins = 15)) + ggplot2::ggtitle(paste("Histogram (better name for this?): ",modelTitle)) + themeResultsSelected())
+						print(hist(resultGraphics, histogram.args = list( bins = 15)) + ggplot2::ggtitle(paste("Histogram: ",modelTitle)) + themeResultsSelected())
 					}
 
 
