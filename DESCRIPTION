@@ -26,6 +26,7 @@ Imports:
     shinydashboard,
     shinyjs,
     shinyFiles,
+    shinyBS,
     DT,
     gridExtra
 Suggests: 
