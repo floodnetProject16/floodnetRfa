@@ -11,6 +11,7 @@
 #' @import shinydashboard
 #' @import shinyjs
 #' @import shinyFiles
+#' @import shinyBS
 #' @import DT
 #' @import gridExtra
 #'

@@ -7,6 +7,7 @@
 #' @import shinydashboard
 #' @import shinyjs
 #' @import shinyFiles
+#' @import shinyBS
 #' @import DT
 #' @import floodnetRfa
 #' @import gridExtra
@@ -15,13 +16,14 @@
 
 # Although against convention, nearly all of the ui uses shiny so this avoids very repetative calls
 # It seems since this file isn't included in the R folder, imports are not handled properly, so library() required
-library(shiny)
-library(shinydashboard)
-library(shinyjs)
-library(shinyFiles)
-library(DT)
-library(floodnetRfa) #needed for supporting functions... I think the problem was ggplots wasn't loading but is loaded through floodnetRfa?
-library(gridExtra) #needed for outputting dataframes to pdf
+# library(shiny)
+# library(shinydashboard)
+# library(shinyjs)
+# library(shinyFiles)
+# library(shinyBS)
+# library(DT)
+# library(floodnetRfa) #needed for supporting functions... I think the problem was ggplots wasn't loading but is loaded through floodnetRfa?
+# library(gridExtra) #needed for outputting dataframes to pdf
 
 
 # Load global variable from the config file
@@ -40,11 +42,15 @@ sidebar <- shinydashboard::dashboardSidebar(
 		tags$div(class = "sidebar-box button-box",
 			# Red buttons - open and save
 			shinyFiles::shinyFilesButton(id = "openButton", label = "Open" , title = "Open Saved Session's Data", class = "sidebar-button red-button left-sidebar-button top-sidebar-button", multiple = FALSE, buttonType = "data"),
+			shinyBS::bsTooltip("openButton", "Load data from a saved session", placement = "bottom", trigger = "hover"),
 			shinyFiles::shinySaveButton("saveButton", label = "Save", title = "Save Session", class = "sidebar-button red-button right-sidebar-button top-sidebar-button", filetype =  ".Rdata"),
+			shinyBS::bsTooltip("saveButton", "Save models and data from this session.", placement = "bottom", trigger = "hover"),
 
 			# Blue buttons - Reset and Quit
 			actionButton("resetButton", class = "sidebar-button blue-button left-sidebar-button bottom-sidebar-button", label = "Reset"),
-			actionButton("quitButton", class = "sidebar-button blue-button right-sidebar-button bottom-sidebar-button", label = "Quit")
+			shinyBS::bsTooltip("resetButton", "Delete all models and data, reset options back to default"),
+			actionButton("quitButton", class = "sidebar-button blue-button right-sidebar-button bottom-sidebar-button", label = "Quit"),
+			shinyBS::bsTooltip("quitButton", "Safely quit FloodNet RFA")
 		)
 	),
 
@@ -54,8 +60,10 @@ sidebar <- shinydashboard::dashboardSidebar(
 			 ## Headline
 			 tags$h2("Data"),
 			 shinyFiles::shinyFilesButton(id = "hydroData", label = "Hydrometric Data" , title = "Hydrometric Data:", multiple = FALSE, buttonType = "data", class = NULL),
+			 shinyBS::bsTooltip("hydroData", "Load Hydrometric Data file"),
 			 textOutput("hydroFile"),
 			 shinyFiles::shinyFilesButton(id = "stationData", label = "Station Data" , title = "Station Data:", multiple = FALSE, buttonType = "data", class = NULL),
+			 shinyBS::bsTooltip("stationData", "Load Station Data file"),
 			 textOutput("stationFile")
 		)
 	),
@@ -67,14 +75,19 @@ sidebar <- shinydashboard::dashboardSidebar(
 						 tags$h2("Options"),
 						 # Confidence Level - Corresponds to argument `level` in `FloodnetAmax`, `FloodnetPOT` and `FloodnetPool`
 						 numericInput(inputId = 'confidenceLevel', label = "Confidence Level", value = 0.95, min = 0, max = 1, step = NA, width = NULL),
+						 shinyBS::bsTooltip("confidenceLevel", "Determine the width of the confidence intervals during bootstrap. (Real in [0,1])"),
 						 # Simulations - size of bootstrap sample - Corresponds to argument `nsim` in `FloodnetAmax`, `FloodnetPOT` and `FloodnetPool`
 						 numericInput(inputId = 'simulations', label = "Simulations", value = 1000, min = 1, max = NA, step = 1, width = NULL),
+						 shinyBS::bsTooltip("simulations", "Size of bootstrap sample. (Integer, >1)"),
 						 # Heterogeneity - Corresponds to argument `tol.H` in `FloodnetPool`
 						 numericInput(inputId = 'heterogeneity', label = "Heterogeneity", value = 2, min = 0, max = NA, step = NA, width = NULL),
+						 shinyBS::bsTooltip("heterogeneity", "Threshold for heterogeneity measure. (Real)"),
 						 # Pooling group - Corresponds to argument `size` in `AmaxData`, `DailyData` and `DailyPeaksData`
 						 numericInput(inputId = 'pool', label = "Pooling Group", value = 25, min = 0, max = NA, step = 1, width = NULL),
+						 shinyBS::bsTooltip("pool", "Size of a pooling group. (Integer, >0)"),
 						 # Intersite Correlation  - Corresponds to argument `corr` in `FloodnetPool`
 						 numericInput(inputId = 'intersite', label = "Intersite Correlation", value = 0, min = -1, max = 1, step = NA, width = NULL),
+						 shinyBS::bsTooltip("intersite", "Average correlation among sites of a pooling group. (Real, -1 < x < 1)"),
 						 # Graphical theme (Character): Possibility to chose a theme for the graphical output. See `ggplot2::ggtheme`. To be discussed.
 						 selectInput(inputId = "theme", label = "Graphical Theme",
 						 					 choices = list("Light" = "light",
@@ -84,13 +97,13 @@ sidebar <- shinydashboard::dashboardSidebar(
 						 					 							 # "Minimal" = "minimal",
 						 					 							 # "Classic" = "classic",
 						 					 							 # "Void" = "void"
-						 					 ), selected = "light")
+						 					 ), selected = "light"),
+						 shinyBS::bsTooltip("theme", "Theme for plots")
 		)
 	)
 )
 
 body <- shinydashboard::dashboardBody(
-
 	#Use custom css
 	tags$head(
 		tags$link(rel = "stylesheet", type = "text/css", href = "mystyle.css"),
@@ -123,9 +136,10 @@ body <- shinydashboard::dashboardBody(
 					 				 				 						), selected = "amax"),
 
 					 				 				 conditionalPanel(condition = "input.method == 'rfaAmax' || input.method == 'rfaPot'",
-					 				 				 								 selectInput("supReg", label = h3("Super Region"),
+					 				 				 								 selectInput("supReg", label = tags$div(h3("Super Region"), id="supRegLabel"),
 					 				 				 								 						choices = list("Please load Station Data first..." = "Default"
-					 				 				 								 													 ), selected = "Default")
+					 				 				 								 													 ), selected = "Default"),
+					 				 				 								 shinyBS::bsPopover("supRegLabel", title = "Super Region", content = "Select the desired Super Region column from your Station Data file.", placement = "left")
 					 				 				 ),
 
 					 				 				 ## The option to select the distribution method is only available for AMAX
@@ -166,19 +180,15 @@ body <- shinydashboard::dashboardBody(
 			 				 				 								 			 											), selected = "auto"), style = "margin-left: -15px")), #-15px left to adjust for column padding and align with other inputs
 					 				 				 								 column(6,
 			 				 				 								 			 conditionalPanel(condition = "input.threshOptionRfaPot == 'manual'",
-														 				 				 								 tags$div(selectInput("manualThreshRfa", label = h4("List of Thresholds"),
+														 				 				 								 tags$div(selectInput("manualThreshRfa", tags$div(h4("Threshold Column"), id="threshLabel"),
 														 				 				 								 										 choices = list("Please load Station Data first..." = "Default"
-														 				 				 								 										 ), selected = "Default")
+														 				 				 								 										 ), selected = "Default"),
+														 				 				 								 				 shinyBS::bsPopover("threshLabel", title = "Threshold Column", "Select the desired Threshold column from your Station Data file.", placement = "right", options = list(container="body"))
 									 				 				 								 ), style = "width: 180px; margin-top: 16px;")
 					 				 				 )),
 
 					 				 				 ## Action button for running the model - always on bottom right
 					 				 				 actionButton("fitModel", class = "bottom-button red-button right-button", label = "Fit"),
-
-					 				 				 # loading message and css taken from user1603038's post at https://stackoverflow.com/questions/17325521/r-shiny-display-loading-message-while-function-is-running
-					 				 				 # will be customized in the future - a placeholder for now
-					 				 				 conditionalPanel(condition = "$('html').hasClass('shiny-busy')",
-					 				 				 								 tags$div("Loading...", id = "loadmessage"))
 					 				 )
 	 				 )
 
@@ -255,7 +265,7 @@ resultsSidebar <- shinydashboard::dashboardSidebar(
 					 									 							 #"Coordinates" = "coordinates"
 					 									 							 )
 					 									 ),
-					 shinySaveButton("exportButton", label = "Export", title = "Export Plots", class = "sidebar-button red-button bottom-sidebar-button", filetype = ".pdf")
+					 shinyFiles::shinySaveButton("exportButton", label = "Export", title = "Export Plots", class = "sidebar-button red-button bottom-sidebar-button", filetype = ".pdf")
 					 )
 )
 
@@ -369,7 +379,22 @@ resultsBody <- shinydashboard::dashboardBody(
 )
 
 ui <- tagList(shinyjs::useShinyjs(),  # Include shinyjs,
-							navbarPage("FloodNet RFA", id="pageId",
+							fluidPage(
+								div(style="padding: 0px 0px; width: '100%'",
+										titlePanel(
+											title="", windowTitle="FloodNet RFA"
+										),
+										tags$a(href="https://www.nsercfloodnet.ca/", target="_blank", img(src="FloodNet Text_2_1.jpg", id="floodnetLink")), #"FloodNet-Logo-Rev1-Bev.jpg" suits the colour scheme, but is too smallx
+										actionButton("helpButton", class="help-button red-button", label = "Help", icon = NULL),
+
+										# loading message and css taken from user1603038's post at https://stackoverflow.com/questions/17325521/r-shiny-display-loading-message-while-function-is-running
+										# will be customized in the future - a placeholder for now
+										conditionalPanel(condition = "$('html').hasClass('shiny-busy')",
+																		 class="loading-img",
+																		 tags$div(img(src="loading.gif"), id = "loadmessage"))
+								),
+							navbarPage(title = img(src="FloodNET RFA logo.png", id="floodnetRfaImg"), id="pageId",
+							#navbarPage(title = "FloodNet RFA", id="pageId",
 								 tabPanel("Models",
 								 				 shinydashboard::dashboardPage(
 								 				 	shinydashboard::dashboardHeader(disable = TRUE,
@@ -391,6 +416,7 @@ ui <- tagList(shinyjs::useShinyjs(),  # Include shinyjs,
 								 				 	resultsBody
 								 				 )
 								 )
+							)
 ))
 
 
@@ -407,7 +433,7 @@ server <- function(input, output, session) {
 	values$gaugedSitesPath <- ""
 	values$distThresh <- ""
 	resultList <- reactiveValues() # Store each result here with the "key" being the unique identifier mID
-	PLOTHEIGHT <- 327 #Constant value - Height for plots
+	PLOTHEIGHT <- 377 #Constant value - Height for plots
 	savePath <- "NA"
 	exportPath <- "NA"
 	mListMIDs <- reactiveVal()
@@ -434,11 +460,11 @@ server <- function(input, output, session) {
 	)
 
 	# --- ShinyFiles File Selection ---
-	volumes <- getVolumes()
+	volumes <- shinyFiles::getVolumes()
 	# -- Load Hydro Data
 	observe({
-		shinyFileChoose(input,'hydroData', roots=volumes, filetypes = c('sqlite3')) # 'csv', taken out for now since needs to be handled throughout whole floodnetRfa
-		loadPath <- parseFilePaths(volumes,input$hydroData) #get path for file
+		shinyFiles::shinyFileChoose(input,'hydroData', roots=volumes, filetypes = c('sqlite3')) # 'csv', taken out for now since needs to be handled throughout whole floodnetRfa
+		loadPath <- shinyFiles::parseFilePaths(volumes,input$hydroData) #get path for file
 		isolate(
 		if (nrow(loadPath) > 0) {
 				values$db_hydat <- as.character(loadPath$datapath) # Can't use datapath before check, since it won't exist before anything loaded
@@ -446,8 +472,8 @@ server <- function(input, output, session) {
 	})
 	# -- Load Station Data
 	observe({
-		shinyFileChoose(input,'stationData', roots=volumes, filetypes = c('csv'))
-		loadPath <- parseFilePaths(volumes,input$stationData) #get path for file
+		shinyFiles::shinyFileChoose(input,'stationData', roots=volumes, filetypes = c('csv'))
+		loadPath <- shinyFiles::parseFilePaths(volumes,input$stationData) #get path for file
 		isolate(
 		if (nrow(loadPath) > 0) {
 			values$gaugedSitesPath <- loadPath$datapath
@@ -456,15 +482,15 @@ server <- function(input, output, session) {
 			dataNames <- names(values$gaugedSites)
 			# Get supreg names and update list for selection
 			supRegList <- c()
-			for (eachIndex in grep("^supreg", dataNames)) {
-				supRegList <- c(supRegList, dataNames[eachIndex])
+			for (eachIndex in dataNames){ #grep("^supreg", dataNames)) { #grep used to get only columns starting with "supreg"
+				supRegList <- c(supRegList, dataNames)#[eachIndex])
 			}
 			updateSelectInput(session, inputId = "supReg", choices = supRegList, selected = supRegList[1])
 
 			# Get threshold names and update list for selection
 			threshList <- c()
-			for (eachIndex in grep("^ppy", dataNames)) {
-				threshList <- c(threshList, dataNames[eachIndex])
+			for (eachIndex in dataNames){ #grep("^ppy", dataNames)) {
+				threshList <- c(threshList, dataNames)#[eachIndex])
 			}
 			updateSelectInput(session, inputId = "manualThreshRfa", choices = threshList, selected = threshList[1])
 		} ) #end isolate
@@ -472,8 +498,8 @@ server <- function(input, output, session) {
 
 	# -- Save Button Functions --
 	observe({
-		shinyFileSave(input, "saveButton", roots=volumes, session=session)
-		savePath <- parseSavePath(volumes, input$saveButton) #get path for file
+		shinyFiles::shinyFileSave(input, "saveButton", roots=volumes, session=session)
+		savePath <- shinyFiles::parseSavePath(volumes, input$saveButton) #get path for file
 		#if (length(resultList) == 0) { -- I cannot find a way to get this to work.. resultList doesn't seem to actually delete entries when set to null
 	#		showNotification("No fitted models to save. Please Fit a model before saving.", type = "warning")
 	#	} else {
@@ -489,8 +515,8 @@ server <- function(input, output, session) {
 
 	# -- Load Rdata File --
 	observe({ # observeEvent needed over observe so that values/resultList can be updated
-		shinyFileChoose(input, "openButton", roots=volumes, filetypes = c('Rdata'))
-		loadPath <- parseFilePaths(volumes, input$openButton) #get path for file
+		shinyFiles::shinyFileChoose(input, "openButton", roots=volumes, filetypes = c('Rdata'))
+		loadPath <- shinyFiles::parseFilePaths(volumes, input$openButton) #get path for file
 		isolate(
 		if (nrow(loadPath) > 0) {
 			load(loadPath$datapath)
@@ -557,7 +583,6 @@ server <- function(input, output, session) {
 	})
 
 	observeEvent(input$quitButton, {
-		print("Quit")
 		showModal(modalDialog(
 			title = "Quit",
 			"Do you want to save before quitting?",
@@ -565,7 +590,7 @@ server <- function(input, output, session) {
 
 			footer = tagList(
 				# Save button
-				shinySaveButton("saveQuitButton", label = "Save & Quit", title = "Save Session", class = "red-button", filetype =  ".Rdata"),
+				shinyFiles::shinySaveButton("saveQuitButton", label = "Save & Quit", title = "Save Session", class = "red-button", filetype =  ".Rdata"),
 				actionButton(inputId = "nosaveQuitButton", label = "Don't Save", class = "blue-button"),
 										# onclick = "setTimeout(function(){window.close();},500);"),  # close browser
 				modalButton("Cancel")
@@ -575,8 +600,8 @@ server <- function(input, output, session) {
 	# Save & Quit Button
 	# -- Save Button Functions --
 	observe({
-		shinyFileSave(input, "saveQuitButton", roots=volumes, session=session)
-		savePath <- parseSavePath(volumes, input$saveQuitButton) #get path for file
+		shinyFiles::shinyFileSave(input, "saveQuitButton", roots=volumes, session=session)
+		savePath <- shinyFiles::parseSavePath(volumes, input$saveQuitButton) #get path for file
 		isolate(
 			if (nrow(savePath) > 0) {
 				savedValues <- values
@@ -596,6 +621,25 @@ server <- function(input, output, session) {
 		shinyjs::runjs("window.close();")
 		#shinyjs::js$closeWindow() for some reason functions now working -- "attempt to apply non-function
 		stopApp()
+	})
+
+	observeEvent(input$helpButton, {
+		showModal(modalDialog(
+			title = "Help",
+			tags$div("For frequently asked questions, please see the FAQ in our ",
+				tags$a(href='https://github.com/floodnetProject16/floodnetRfa', target="_blank", "ReadMe"),),
+			tags$div(tags$a(href="https://drive.google.com/uc?export=download&id=1nwzV-U4BNG7xbHrAkustucB4um1y4bau", target="_blank", "A first-time user's guide"),
+							 " is available. Download the file and open it with your preferred web browser."),
+			"For any questions, please email floodnetproject16@gmail.com",
+			easyClose = TRUE,
+
+			# footer = tagList(
+			# 	# Save button
+			# 	shinySaveButton("saveQuitButton", label = "Save & Quit", title = "Save Session", class = "red-button", filetype =  ".Rdata"),
+			# 	actionButton(inputId = "nosaveQuitButton", label = "Don't Save", class = "blue-button"),
+			# 	# onclick = "setTimeout(function(){window.close();},500);"),  # close browser
+			# 	modalButton("Cancel")
+			))#)
 	})
 
 	# --- FIT MODEL ---
@@ -658,9 +702,10 @@ server <- function(input, output, session) {
 			updateTextInput(session, "mID", value="")
 
 			# output functions to table/plot
-			output$table <- renderDT(
+			output$table <- DT::renderDT(
 				as.data.frame(result), options = list(
-					pageLength = 6,
+					pageLength = 7,
+					lengthChange = FALSE,
 					scrollX = TRUE
 					#paging = FALSE #FALSE = becomes one long list instead of multiple properly-sized lists
 				)
@@ -685,11 +730,12 @@ server <- function(input, output, session) {
 
 	# List of Fitted Models
 	# observe(
-	output$modelsTable <- renderDT(
+	output$modelsTable <- DT::renderDT(
 		values$df,
 		colnames = c("Model ID", "Site", "Period", "Method", "Distribution/Threshold", "Super Region"),
 		options = list(
-			pageLength = 4,
+			pageLength = 5,
+			lengthChange = FALSE,
 			scrollX = TRUE
 		)
 	)
@@ -809,22 +855,24 @@ server <- function(input, output, session) {
 
 			# --- Plot result ---
 			# Flood quantiles
-			output$resultsQuantiles <- renderDT(
+			output$resultsQuantiles <- DT::renderDT(
 				as.data.frame(resultGraphics), options = list(
-					pageLength = 6,
+					pageLength = 7,
+					lengthChange = FALSE,
+					scrollX = TRUE
 					# autoWidth = TRUE,
 					# columnDefs = list(list(width = '10', visible = TRUE, targets = "_all")),
-					scrollX = TRUE
 					#paging = FALSE #FALSE -= becomes one long list instead of multiple properly-sized lists
 				)
 			)
 			# Model Parameters
-			output$resultsParameters <- renderDT(
+			output$resultsParameters <- DT::renderDT(
 				as.data.frame(resultGraphics, type = 'p'), options = list(
-					pageLength = 6,
+					pageLength = 7,
+					lengthChange = FALSE,
+					scrollX = TRUE
 					# autoWidth = TRUE,
 					# columnDefs = list(list(width = '10', visible = TRUE, targets = "_all")),
-					scrollX = TRUE
 					#paging = FALSE #FALSE -= becomes one long list instead of multiple properly-sized lists
 				)
 			)
@@ -836,8 +884,6 @@ server <- function(input, output, session) {
 			output$ceoffVariation <- shiny::renderPlot(plot(lst.fit, 'cv') + themeResultsSelected(), height = PLOTHEIGHT)
 			# Histogram
 			output$histogram <- shiny::renderPlot(hist(resultGraphics, histogram.args = list( bins = 15)) + themeResultsSelected(), height = PLOTHEIGHT)
-
-			#print(mList[[input$modelSelect]][1])
 
 			# L-Moment Ratio Diagram --- only display when model is RFA AMAX
 			if (mList[[input$modelSelect]][2]$method == "pool_amax") {
@@ -870,8 +916,8 @@ server <- function(input, output, session) {
 
 	# --- Export Button Functions ---
 	observe({
-		shinyFileSave(input, "exportButton", roots=volumes, session=session)
-		exportPath <- parseSavePath(volumes, input$exportButton) #get path for file
+		shinyFiles::shinyFileSave(input, "exportButton", roots=volumes, session=session)
+		exportPath <- shinyFiles::parseSavePath(volumes, input$exportButton) #get path for file
 		isolate( #isolating everything so updating tick-box after selecting save path doesn't end up rewriting pdf
 			if (nrow(exportPath) > 0) {
 				rfaCheck <- 0

@@ -1,269 +1,300 @@
 .skin-blue {
-		background-color: #70A8CA;
+	background-color: #70A8CA;
 }
 
 .container-fluid {
-	padding-left: 0px;
-	padding-right: 0px;
+padding-left: 0px;
+padding-right: 0px;
 }
 /*navbar styling*/
 .navbar-default {
-    background-color: #7BAC8F;
-	border-color: #000;
+background-color: #7BAC8F;
+border-color: #000;
 }
 
 /*navbar styling - fix bottom gap*/
 .navbar {
-	margin-bottom: 0px;
-	/* need some sort of left padding or centering */
+margin-bottom: 0px;
+z-index: 1;
+/* need some sort of left padding or centering */
 }
 
 .navbar-header {
-	width: 230px;
-	text-align: center;
-	background-color: #fff
+	margin-top: -5px;
+width: 230px;
+text-align: center;
+background-color: #fff
 }
 
 .navbar-brand {
-	float: none;
-	display: inline-block;
+float: none;
+display: inline-block;
 }
 
 .content-wrapper {
-	overflow-y: hidden;
+overflow-y: hidden;
 }
 
+
+/* logo img */
+#floodnetRfaImg {
+margin-top: -10px;
+}
+
+#floodnetLink {
+position: relative;
+float: right;
+padding: 0px;
+height: 54px;
+z-index: 2;
+}
 /* logo */
 .skin-blue .main-header .logo  {
-	font-family: Roboto;
-	font-style: normal;
-	font-weight: normal;
-	font-size: 24px;
-	line-height: 28px;
-	display: flex;
-	align-items: center;
-	text-align: center;
-	background-color: #fff;
+font-family: Roboto;
+font-style: normal;
+font-weight: normal;
+font-size: 24px;
+line-height: 28px;
+display: flex;
+align-items: center;
+text-align: center;
+background-color: #fff;
 }
 
 /* logo when hovered */
 
 .skin-blue .main-header .logo:hover {
-	background-color: rgba(75, 146, 104, 0.3);
+background-color: rgba(75, 146, 104, 0.3);
 }
 
 
 /* navbar (rest of the header) */
 .skin-blue .main-header .navbar {
-	background-color: #7BAC8F;
+background-color: #7BAC8F;
 }
 
 /* main sidebar */
 .skin-blue .main-sidebar {
-	background-color: #7BAC8F;
+background-color: #7BAC8F;
 }
 
 /* active selected tab in the sidebarmenu */
 /*
 .skin-blue .main-sidebar .sidebar .sidebar-menu .active a{
-	background-color: #ff0000;
+background-color: #ff0000;
 }
 */
 
 /* other links in the sidebarmenu */
 /*
 .skin-blue .main-sidebar .sidebar .sidebar-menu a{
-    background-color: #00ff00;
-    color: #000000;
+background-color: #00ff00;
+color: #000000;
 }
 */
 
 /* other links in the sidebarmenu when hovered */
 /*
 .skin-blue .main-sidebar .sidebar .sidebar-menu a:hover{
-    background-color: #ff69b4;
+background-color: #ff69b4;
 }
 */
 
 /* toggle button when hovered  */
 .skin-blue .main-header .navbar .sidebar-toggle:hover{
-	background-color: rgba(75, 146, 104, 0.3);
+background-color: rgba(75, 146, 104, 0.3);
 }
 
 
 .skin-blue .content-wrapper {
-	background-color: #70A8CA
+background-color: #70A8CA
 }
 
 .main-sidebar{
-	padding-top: 15px;
+padding-top: 15px;
 }
 
 #floodnetText {
-	color: #000000;
+color: #000000;
 }
 
 #rfaText {
-	font-weight: bold;
-	color: #DD2D1F;
+font-weight: bold;
+color: #DD2D1F;
 }
 
 .bodyText{
-	font-size: 24px;
-	color: #DD2D1F;
+font-size: 24px;
+color: #DD2D1F;
 }
 
 h2{		/* specifically not .h2  -- modifying so Box Titles have no spacing above */
-	margin: 0px;
+margin: 0px;
 }
 
 .background-box{
-	position: relative;
-	padding: 10px;
-	background-color: #CDE1D5;
-	border: 1px black;
-	box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
-	margin-bottom: 20px;
+position: relative;
+padding: 10px;
+background-color: #CDE1D5;
+border: 1px black;
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+margin-bottom: 20px;
 }
 
 .sidebar-box{
-	position: relative;
-	padding: 10px; 
-	background-color: #CDE1D5;
-	border: 1px black;
-	box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
-	margin-bottom: 20px;
-	margin-left: 30px;
-	margin-right: 30px;
-	color: black; /* for text colour - was ingeriting white due to sidebar defaults*/
+position: relative;
+padding: 10px; 
+background-color: #CDE1D5;
+border: 1px black;
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+margin-bottom: 20px;
+margin-left: 30px;
+margin-right: 30px;
+color: black; /* for text colour - was ingeriting white due to sidebar defaults*/
 }
 
 .button-box{
-	height: 120px;
+height: 120px;
 }
 
 .data-box{
-	height: 200px;
+height: 200px;
 }
 
 .options-box{
-	height: 490px;
+height: 490px;
 }
 
 .export-box{
-	height: 600px;
+height: 600px;
 }
 
 .fixed-height{
-	height: 430px;
+height: 430px;
 }
 
 .left-item{
-	float: left;
-	width: 35%;
+float: left;
+width: 35%;
 }
 
 .right-item{
-	float: right;
-	width: 35%;
-	margin-right: 15%;
+float: right;
+width: 35%;
+margin-right: 15%;
 }
 
 /*Change margin-bottom for input boxes */
 .form-group{
-	margin-bottom: 0px;
+margin-bottom: 0px;
 }
 
 /* Align select boxes with text input boxes */
 .selectize-control{
-	margin-bottom: 0px;
-	height: 34px;
+margin-bottom: 0px;
+height: 34px;
 }
 
 .bottom-button{
-	position: absolute;
-	bottom: 20px;
-	width: 135px;
-	font-size: 24px;
-	border-radius: 5px;
+position: absolute;
+bottom: 20px;
+width: 135px;
+font-size: 24px;
+border-radius: 5px;
 }
 
 .sidebar-button{
-	position: absolute;
-	width: 78px !important;
-	height: 30px;
-	border-radius: 5px;
+position: absolute;
+width: 78px !important;
+height: 30px;
+border-radius: 5px;
 
-	align-items: center;
-	text-align: center;
+align-items: center;
+text-align: center;
 }
 
 .left-sidebar-button{
-	left: 1px;
+left: 1px;
 }
 
 .right-sidebar-button{
-	right: 11px;
+right: 11px;
 }
 
 .top-sidebar-button{
-	top: 10px;
+top: 10px;
 }
 
 .bottom-sidebar-button{
-	bottom: 10px;
+bottom: 10px;
 }
 
 .red-button{
-	background-color: #DD2D1F;
-	color: #fff;
-	border-color: black;
+background-color: #DD2D1F;
+color: #fff;
+border-color: black;
 }
 
 .blue-button{
-	background-color: #0C3F86;
-	color: #fff;
-	border-color: black;
+background-color: #0C3F86;
+color: #fff;
+border-color: black;
 }
 
 .right-button{
-	right: 20px;
+right: 20px;
 }
 
 .left-button{
-	left: 20px;
+left: 20px;
 }
 
 .progress{
-	margin-bottom: 0px;
+margin-bottom: 0px;
 }
 
 .back-button{
-	position: relative;
-	width: 134px;
-	height: 40px;
-	top: 0px;
-	left: 33px;
-	
-	font-size: 24px;
-	line-height: 28px;
-	align-items: center;
-	text-align: center;
-	border-radius: 5px;
+position: relative;
+width: 134px;
+height: 40px;
+top: 0px;
+left: 33px;
+
+font-size: 24px;
+line-height: 28px;
+align-items: center;
+text-align: center;
+border-radius: 5px;
 }
 
 .btn-data{
-	width: 150px;
-	box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
-	margin-bottom: 12px !important;
+width: 150px;
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+margin-bottom: 12px !important;
+}
+
+.help-button{
+position: relative;
+float: right;
+margin: 10px;
+z-index: 2;
+}
+
+.loading-img{
+	position: fixed;
+	/*top: -10px; in the navbar rather than the middle of the page, make translate(-50%, 0%) too */
+	top: 50%;;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 3;
 }
 
 .shiny-text-output{
-	width: 150px;
-	margin-left: 15px;
-	white-space: nowrap;
-    overflow: hidden;
-    display: block;
-	text-overflow: ellipsis;
-	direction: rtl; /* rtl causes the elipsis to be on left side so we can see the file selected*/
+width: 150px;
+margin-left: 15px;
+white-space: nowrap;
+overflow: hidden;
+display: block;
+text-overflow: ellipsis;
+direction: rtl; /* rtl causes the elipsis to be on left side so we can see the file selected*/
 }

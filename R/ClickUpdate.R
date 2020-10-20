@@ -4,10 +4,6 @@
 	# Extract return periods from string
 	period.str <- as.numeric(unlist(strsplit(input$periodString,',')))
 
-
-	print("DB before any changes")
-	print(db)
-
 	# Check if csv or sqlite
 	if (substring(db,nchar(db)-2,nchar(db)) == "csv") {
 		csv <- read.csv(db)
@@ -15,25 +11,6 @@
 	} else { #else if not csv, should be sqlite
 		data <- db
 	}
-
-	print("DB after changes")
-	print(data)
-
-	# Don't need to do this here, since any 'pot' type will be done only in 'pot' runs, 'rfaPot' in rfaPot...
-	# # Setup thresh depending on option chosen
-	# if (threshType == "pot") {
-	# 	if (distThresh == "Default") {
-	# 		thresh <- NULL
-	# 	} else {
-	# 		thresh <- as.numeric(unlist(strsplit(distThresh,',')))
-	# 	}
-	# } else if (threshType == "rfaPot") {
-	# 	if (distThresh == "Default") {
-	# 		thresh <- 'auto'
-	# 	} else {
-	# 		thresh <- distThresh
-	# 	}
-	# }
 
 
 	if(input$method == "amax"){
@@ -67,21 +44,6 @@
 	return(out)
 }
 
-# .ClickUpdateAmax <- function(station, period, distr, db)
-# {
-#
-# 	if(distr == "Default") {
-# 		distr = NULL
-# 	}
-#
-# 	xd <- floodnetRfa::AmaxData(db, station) # Due to change in AmaxData, needed to flip order of db/station
-# 	out <- floodnetRfa::FloodnetAmax(xd, period = period,
-# 																	 distr = distr, out.model = TRUE)
-#
-#
-#
-# 	return(out)
-# }
 
 .ClickUpdateRfaAmax <- function(station, period, distr, db, gaugedSites, supregSelected, level, nsim, tol.H, size, corr)
 {
@@ -94,26 +56,6 @@
 	target.supreg <- gaugedSites[gaugedSites$station == station, supregSelected] #get target supreg for type and station selected
 	cond.supreg <- gaugedSites[, supregSelected] == target.supreg
 
-
-	# ## If/else (switch case possible?) needed to access different names of gaugedSites -- is it possible to access gaugedSites$"variable" directly?
-	# if (supregSelected == "supreg_hc6") {
-	# 	target.supreg <- gaugedSites$supreg_hc6[gaugedSites$station == station][1]
-	# 	cond.supreg <- with(gaugedSites, supreg_hc6 == target.supreg)
-	# } else if (supregSelected == "supreg_hc12") {
-	# 	target.supreg <- gaugedSites$supreg_hc12[gaugedSites$station == station][1]
-	# 	cond.supreg <- with(gaugedSites, supreg_hc12 == target.supreg)
-	# } else if (supregSelected == "supreg_km6") {
-	# 	target.supreg <- gaugedSites$supreg_km6[gaugedSites$station == station][1]
-	# 	cond.supreg <- with(gaugedSites, supreg_km6 == target.supreg)
-	# } else {
-	# 	target.supreg <- gaugedSites$supreg_km12[gaugedSites$station == station][1]
-	# 	cond.supreg <- with(gaugedSites, supreg_km12 == target.supreg)
-	# }
-
-
-#	pval.mk <- gaugedSites$trend_mk ## Mann-Kendall
-#	pval.pt <- gaugedSites$trend_pt ## Pettitt
-#	cond.trend <- pval.mk >= .05 & pval.pt >= .05
 	mysites <- gaugedSites[cond.supreg, 'station'] #& cond.trend, 'station']
 
 	out <- db %>%
@@ -125,28 +67,6 @@
 	return(out)
 }
 
-# .ClickUpdateRfaAmax <- function(station, period, distr, db)#, file, period)
-# {
-#
-# 	if(distr == "Default") {
-# 		distr = NULL
-# 	}
-#
-# 	## Filter nonstationary sites from the super region of the target
-# 	target.supreg <- gaugedSites$supreg_km12[gaugedSites$station == station][1]
-# 	cond.supreg <- with(gaugedSites, supreg_km12 == target.supreg)
-#
-# 	pval.mk <- gaugedSites$trend_mk ## Mann-Kendall
-# 	pval.pt <- gaugedSites$trend_pt ## Pettitt
-# 	cond.trend <- pval.mk >= .05 & pval.pt >= .05
-# 	mysites <- gaugedSites[cond.supreg & cond.trend, 'station']
-#
-# 	xd <- AmaxData(mysites, db, target = station, size = 15)
-#
-# 	out <- FloodnetPool(x = xd, target = station,
-# 											period = period, distr = distr, verbose = FALSE)
-# 	return(out)
-# }
 
 .ClickUpdatePot <- function(station, period, db, thresh, level, nsim, size, gaugedSites){
 
@@ -170,38 +90,12 @@
 	return(out)
 }
 
-# .ClickUpdatePot <- function(station, period, db){
-#
-# 	xd <- DailyData(db, station)
-# 	out <- FloodnetPot(xd, area = 184, u = 20, period = period)
-#
-# 	return(out)
-# }
 
 .ClickUpdateRfaPot <- function(station, period, db, thresh, gaugedSites, supregSelected, level, nsim, tol.H, size, corr){
 
 	## Filter nonstationary sites from the super region of the target
 	target.supreg <- gaugedSites[gaugedSites$station == station, supregSelected] #get target supreg for type and station selected
 	cond.supreg <- gaugedSites[, supregSelected] == target.supreg
-
-	## If/else (switch case possible?) needed to access different names of gaugedSites -- is it possible to access gaugedSites$"variable" directly?
-	# if (supregSelected == "supreg_hc6") {
-	# 	target.supreg <- gaugedSites$supreg_hc6[gaugedSites$station == station][1]
-	# 	cond.supreg <- with(gaugedSites, supreg_hc6 == target.supreg)
-	# } else if (supregSelected == "supreg_hc12") {
-	# 	target.supreg <- gaugedSites$supreg_hc12[gaugedSites$station == station][1]
-	# 	cond.supreg <- with(gaugedSites, supreg_hc12 == target.supreg)
-	# } else if (supregSelected == "supreg_km6") {
-	# 	target.supreg <- gaugedSites$supreg_km6[gaugedSites$station == station][1]
-	# 	cond.supreg <- with(gaugedSites, supreg_km6 == target.supreg)
-	# } else {
-	# 	target.supreg <- gaugedSites$supreg_km12[gaugedSites$station == station][1]
-	# 	cond.supreg <- with(gaugedSites, supreg_km12 == target.supreg)
-	# }
-
-# pval.mx <- gaugedSites$trend_mx ## Mann-Kendall
-# pval.lg <- gaugedSites$trend_lg ## logistic regression
-#	cond.trend <- pval.lg >= .05 & pval.mx >= .05
 
 	info <- gaugedSites[cond.supreg, c('station', thresh,'area')] #use thresh type selected, or 'auto' if default
 
@@ -212,24 +106,6 @@
 		floodnetRfa::FloodnetPool(target = station, period = period, level = level, nsim = nsim, tol.H = tol.H, corr = corr, verbose = TRUE, out.model = TRUE)
 	return(out)
 }
-
-# .ClickUpdateRfaPot <- function(station, period, db){
-#
-# 	## Filter nonstationary sites from the super region of the target
-# 	target.supreg <- gaugedSites$supreg_km12[gaugedSites$station == station][1]
-# 	cond.supreg <- with(gaugedSites, supreg_km12 == target.supreg)
-# 	pval.mx <- gaugedSites$trend_mx ## Mann-Kendall
-# 	pval.lg <- gaugedSites$trend_lg ## logistic regression
-# 	cond.trend <- pval.lg >= .05 & pval.mx >= .05
-#
-# 	info <- gaugedSites[cond.supreg, c('station','auto','area')]
-#
-# 	xd <- DailyPeaksData(info, db, target = station, size = 25)
-#
-# 	out <- FloodnetPool(xd, target = station, period = period, verbose = TRUE, out.model = TRUE)
-#
-# 	return(out)
-# }
 
 
 
