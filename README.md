@@ -5,7 +5,7 @@
 ## Introduction
 
 One objective of [FloodNet](http://www.nsercfloodnet.ca/) is to provide Canadian engineers and hydrologists with a set of tools that allows them to perform flood frequency analysis (FFA) efficiently and accurately.
-To this end, a fork of the R-package [CSHShydRology](https://github.com/floodnetProject16/CSHShydRology) was created and the methods the recommended methods were added.
+To this end, a fork of the R-package [CSHShydRology](https://github.com/floodnetProject16/CSHShydRology) was created and the recommended methods were added.
 Another tool available to the Canadian water science community is the R-package [HYDAT](https://github.com/CentreForHydrology/HYDAT) that simplifies the communication between R and a local version of the [National Water Data Archive](https://www.canada.ca/en/environment-climate-change/services/water-overview/quantity/monitoring/survey/data-products-services/national-archive-hydat.html).
 The R-package `floodnetRfa` is built on the top of these two R-packages and aims to create a coherent environment for carrying out the Floodnet recommendations.
 The package includes functions that are invoked directly from the R terminal or via a shiny app.
